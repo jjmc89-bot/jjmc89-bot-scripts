@@ -129,7 +129,7 @@ def main(lang_src, lang_dest):
             except KeyboardInterrupt:
                 break
             except:
-			    pywikibot.output(page.title(asLink=True))
+                pywikibot.output(page.title(asLink=True))
                 traceback.print_exc()
 
     audit_txt = u''
