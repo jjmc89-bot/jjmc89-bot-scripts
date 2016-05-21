@@ -28,7 +28,7 @@ date_rx = re.compile(r'(\d+) (%s) (\d\d\d\d)' % ('|'.join(MONTHS),), re.IGNORECA
 
 
 def parseNews(page):
-    pywikibot.output(page.title(asLink=True))
+    #pywikibot.output(page.title(asLink=True))
     site = page.site
     #response, data = pywikibot.comms.http.request(site, '/w/api.php', {'action':'parse','format':'json','page':page.title()})
     rq = api.Request(site=site, action='parse', format='json', page=page.title())
@@ -56,7 +56,7 @@ def parseNews(page):
 
 
 def doOnePage(tpl, page, site_src):
-    pywikibot.output(page.title(asLink=True))
+    #pywikibot.output(page.title(asLink=True))
     txt = page.get().replace('_', ' ')
     rx = re.search(r'{{(%s\|.*?)}}' % (tpl.title()), txt)
     if not rx:
@@ -129,6 +129,7 @@ def main(lang_src, lang_dest):
             except KeyboardInterrupt:
                 break
             except:
+			    pywikibot.output(page.title(asLink=True))
                 traceback.print_exc()
 
     audit_txt = u''
