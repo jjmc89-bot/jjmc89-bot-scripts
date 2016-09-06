@@ -104,7 +104,7 @@ def doOnePage(tpl, page, site_src):
                 'lang' : site_src.lang,
                 }
         #pywikibot.output(text)
-        page.put(text, comment=u'Updating from [[n:%s|%s]]' % (newsPage.title(),newsPage.title(),))
+        page.put(text, summary=u'Updating from [[n:%s|%s]]' % (newsPage.title(),newsPage.title(),), minor=False)
 
     return {
         'src' : newsPage.title(),
@@ -148,6 +148,7 @@ def main(lang_src, lang_dest):
         audit_page.put(
             u'List of pages maintained by ~~~ by namespace\n\nLast updated: ~~~~~\n\n' + audit_txt,
             comment='Updating list of maintained pages (%d items).' % sum(len(i) for i in pages_maintained.values()),
+			minor=False
             )
 
 if __name__ == '__main__':
