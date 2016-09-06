@@ -83,7 +83,7 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot, NoRedirectPageBot):
 				summary = summary + u', failed to parse caption'
 				pywikibot.error(u'Failed to parse parameter 1 from {{Potd description}} on %s'
 					% captionPage.title(asLink=True))
-			self.put_current(u'[[File:<onlyinclude>{{#switch:{{{1|}}}|caption=%s|#default=%s}}</onlyinclude>|frameless]]\n{{%s}}' % (caption, file, doc), summary=summary)
+			self.put_current(u'[[File:<onlyinclude>{{#switch:{{{1|}}}|caption=%s|#default=%s}}</onlyinclude>|frameless]]\n{{%s}}' % (caption, file, doc), summary=summary, minor=False)
 		else:
 			pywikibot.error(u'Failed to parse parameter 1 from {{Potd filename}} on %s'
 				% filePage.title(asLink=True))
