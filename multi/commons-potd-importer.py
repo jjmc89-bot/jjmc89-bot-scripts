@@ -14,7 +14,7 @@ sys.path.append('/shared/pywikipedia/core/scripts')
 
 __version__ = '$Id$'
 
-import datetime
+import datetime, re
 import pywikibot
 from pywikibot import pagegenerators
 from pywikibot.bot import (MultipleSitesBot, ExistingPageBot, NoRedirectPageBot)
@@ -70,7 +70,9 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot, NoRedirectPageBot):
 			# try en instead
 			captionPage = pywikibot.Page(commons, u'Template:Potd/%s (en)' % today.isoformat())
 		caption = get_template_parameter_value(captionPage, u'Potd description', u'1')
-		# TODO: Parse caption to fix links (if not an interwiki then make it an interwiki to Commons)
+		caption = re.sub(r"\[\[([^:])", r"[[:\1", caption, flags=re.UNICODE) # Force links to start with ':'
+		caption = re.sub(r"\[\[(:Category:)", r"[[:c\1", caption, flags=re.UNICODE | re.IGNORECASE) # Make category links interwiki links
+		# TODO: Complete caption parsing to fix links (if not an interwiki then make it an interwiki to Commons)
 		
 		# TODO: Use [[d:Q4608595]] to get the local {{Documentation}}
 		doc = u'Documentation'
@@ -78,12 +80,13 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot, NoRedirectPageBot):
 		if file != u'':
 			summary = u'Updating Commons picture of the day'
 			if caption != u'':
-				summary = summary + u') ([[:c:%s|attribution]]' % captionPage.title()
+				summary = summary + u', [[:c:%s|caption attribution]]' % captionPage.title()
 			else:
 				summary = summary + u', failed to parse caption'
 				pywikibot.error(u'Failed to parse parameter 1 from {{Potd description}} on %s'
 					% captionPage.title(asLink=True))
-			self.put_current(u'[[File:<onlyinclude>{{#switch:{{{1|}}}|caption=%s|#default=%s}}</onlyinclude>|frameless]]\n{{%s}}' % (caption, file, doc), summary=summary, minor=False)
+			self.put_current(u'<includeonly>{{#switch:{{{1|}}}|caption=%s|#default=%s}}</includeonly><noinclude>\n{{%s}}</noinclude>'
+				% (caption, file, doc), summary=summary, minor=False)
 		else:
 			pywikibot.error(u'Failed to parse parameter 1 from {{Potd filename}} on %s'
 				% filePage.title(asLink=True))
