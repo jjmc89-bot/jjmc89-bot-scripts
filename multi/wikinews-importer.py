@@ -1,4 +1,4 @@
-﻿#/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 ##########################################################################################
@@ -11,12 +11,11 @@
 # Modified by      : JJMC89
 ##########################################################################################
 
-import os, sys, re, traceback
-sys.path.append('/shared/pywikipedia/core')
-sys.path.append('/shared/pywikipedia/core/externals/httplib2')
-sys.path.append('/shared/pywikipedia/core/scripts')
-
-import pywikibot, simplejson
+import sys
+import re
+import traceback
+import simplejson
+import pywikibot
 from pywikibot.data import api
 from xml.dom.minidom import parseString as minidom_parseString
 from xml.dom import Node
@@ -104,7 +103,7 @@ def doOnePage(tpl, page, site_src):
                 'lang' : site_src.lang,
                 }
         #pywikibot.output(text)
-        page.put(text, summary=u'Updating from [[n:%s|%s]]' % (newsPage.title(),newsPage.title(),), minor=False)
+        page.put(text, summary=u'Updating from [[n:%s|%s]]' % (newsPage.title(),newsPage.title(),))
 
     return {
         'src' : newsPage.title(),
@@ -148,7 +147,6 @@ def main(lang_src, lang_dest):
         audit_page.put(
             u'List of pages maintained by ~~~ by namespace\n\nLast updated: ~~~~~\n\n' + audit_txt,
             comment='Updating list of maintained pages (%d items).' % sum(len(i) for i in pages_maintained.values()),
-			minor=False
             )
 
 if __name__ == '__main__':
@@ -157,8 +155,8 @@ if __name__ == '__main__':
             lang_src = 'en'
             lang_dest = lang_src
         elif sys.argv[1] == 'test':
-         	  lang_src = 'en'
-         	  lang_dest = 'test'
+            lang_src = 'en'
+            lang_dest = 'test'
         else:
             lang_src = sys.argv[1]
             lang_dest = lang_src
