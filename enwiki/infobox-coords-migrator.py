@@ -11,7 +11,7 @@ The following parameters are required:
                     The config must contain:
                       - initialReplacementTemplate (string)
                       - parametersMap (object of string/array)
-                      - replacementParameter (string)
+                      - replacementParameterNames (string/array)
                       - template (string)
                     The config may optionally contain:
                       - editSummary (string)
@@ -27,6 +27,7 @@ __version__ = '$Id$'
 
 import json
 import re
+import statistics
 import sys
 from collections import OrderedDict
 import mwparserfromhell
@@ -48,7 +49,7 @@ def validate_config(config):
     requiredKeys = [
       'initialReplacementTemplate',
       'parametersMap',
-      'replacementParameter',
+      'replacementParameterNames',
       'template'
     ]
     configKeys = []
@@ -57,17 +58,8 @@ def validate_config(config):
         return False
     
     for key, value in config.items():
-        if key in (
-          'initialReplacementTemplate',
-          'replacementParameter'
-        ):
+        if key == 'initialReplacementTemplate':
             if isinstance(value, str):
-                if key in requiredKeys:
-                    configKeys.append(key)
-            else:
-                return False
-        elif key == 'editSummary':
-            if value is None or isinstance(value, str):
                 if key in requiredKeys:
                     configKeys.append(key)
             else:
@@ -88,11 +80,28 @@ def validate_config(config):
                     return False
             if key in requiredKeys:
                 configKeys.append(key)
+        elif key == 'replacementParameterNames':
+            if isinstance(value, str):
+                value = [value]
+            elif isinstance(value, list):
+                for name in value:
+                    if not isinstance(name, str):
+                        return False
+            else:
+                return False
+            if key in requiredKeys:
+                configKeys.append(key)
         elif key == 'template':
             template = pywikibot.Page(pywikibot.Site(),
               u'Template:%s' % value)
             if not template.isRedirectPage():
                 config[key] = template
+                if key in requiredKeys:
+                    configKeys.append(key)
+            else:
+                return False
+        elif key == 'editSummary':
+            if value is None or isinstance(value, str):
                 if key in requiredKeys:
                     configKeys.append(key)
             else:
@@ -122,7 +131,7 @@ class InfoboxCoordinatesParametersMigrator(
           'editSummary': None,
           'initialReplacementTemplate': None,
           'parametersMap': None,
-          'replacementParameter': None,
+          'replacementParameterNames': None,
           'template': None
         })
         
@@ -132,12 +141,12 @@ class InfoboxCoordinatesParametersMigrator(
           
         self.HTMLComment = re.compile(r'<!--.*?-->', flags=re.DOTALL)
         
-        self.initialReplacementParameterValue = mwparserfromhell.parse(
-          u'{{%s}}' % self.getOption('initialReplacementTemplate').strip()
-          ).filter_templates()[0]
+        self.initialReplacementParameterValue = (
+          mwparserfromhell.nodes.Template(
+          self.getOption('initialReplacementTemplate').strip()))
         self.parametersMap = self.getOption('parametersMap')
-        self.replacementParameter = self.getOption(
-          'replacementParameter').strip()
+        self.replacementParameterNames = self.getOption(
+          'replacementParameterNames')
         self.template = self.getOption('template')
         self.templateTitles = [self.template.title(withNamespace=False)]
         for tpl in self.template.backlinks(
@@ -148,11 +157,9 @@ class InfoboxCoordinatesParametersMigrator(
         summary = self.getOption('editSummary')
         if summary is None:
             self.summary = (
-              u'Migrate {{%s}} coordinates parameters to %s={{Coord}}, '
-              u'see [[Help:Coordinates in infoboxes]]' % (
-                self.template.title(withNamespace=False),
-                self.replacementParameter
-              )
+              u'Migrate {{%s}} coordinates parameters to {{Coord}}, '
+              u'see [[Help:Coordinates in infoboxes]]' %
+                self.template.title(withNamespace=False)
             )
         else:
             self.summary = summary.strip()
@@ -166,7 +173,7 @@ class InfoboxCoordinatesParametersMigrator(
             if content != u'':
                 sys.exit(u'Task disabled:\n%s' % content)
     
-    def get_replacement_parameter_spaces(self, templateText):
+    def get_replacement_parameter_spaces(self, templateText, parameterName):
         """
         Determine template spacing and return spaces for between the
           replacement parameter name and the =
@@ -185,35 +192,47 @@ class InfoboxCoordinatesParametersMigrator(
         )
         
         if matches:
-            spacing = max([(len(spaces) > 1, len(param) + len(spaces))
-              for param, spaces in matches])
-            if spacing[0]:
-                return max(spacing[1] - len(self.replacementParameter)
-                  , 1) * u' '
+            spaces = [(len(spaces) > 1) for param, spaces in matches]
+            if max(spaces):
+                fullParamLens = [(len(param) + len(spaces))
+                  for param, spaces in matches]
+                try:
+                    fullParamLen = statistics.mode(fullParamLens)
+                except statistics.StatisticsError:
+                    fullParamLen = statistics.median_high(fullParamLens)
+                return max(fullParamLen - len(parameterName), 1) * u' '
         
         return u' '
     
     def treat_page(self):
         self.check_enabled()
+        skip = False
         text = self.current_page.get().strip()
         wikicode = mwparserfromhell.parse(text)
-        replacementParameterValue = mwparserfromhell.parse(
-          u'{{%s}}' % self.getOption('initialReplacementTemplate').strip()
-          ).filter_templates()[0]
+        replacementParameterValue = mwparserfromhell.nodes.Template(
+          self.getOption('initialReplacementTemplate').strip())
         
         for tpl in wikicode.filter_templates():
             if tpl.name.matches(self.templateTitles):
+                replacementParameterName = None
                 before = None
-                spaces = self.get_replacement_parameter_spaces(str(tpl))
                 
-                if tpl.has(self.replacementParameter):
-                    paramValue = self.HTMLComment.sub(u'',
-                      tpl.get(self.replacementParameter).value.strip())
-                    if paramValue != u'':
-                        # No changes should be made.
-                        print(u'Non-empty replacement parameter: %s=%s'
-                          % (self.replacementParameter, paramValue))
-                        break
+                for parameterName in self.replacementParameterNames:
+                    if tpl.has(parameterName):
+                        parameterValue = self.HTMLComment.sub(u'',
+                          str(tpl.get(parameterName).value)).strip()
+                        if parameterValue != u'':
+                            skip = True
+                            print(u'Non-empty replacement parameter: %s=%s'
+                              % (parameterName, parameterValue))
+                        elif replacementParameterName is None:
+                            replacementParameterName = parameterName
+                if replacementParameterName is None:
+                    replacementParameterName = (
+                      self.replacementParameterNames[0])
+                
+                spaces = self.get_replacement_parameter_spaces(str(tpl),
+                  replacementParameterName)
                 
                 for key, value in self.parametersMap.items():
                     for param in value:
@@ -221,7 +240,7 @@ class InfoboxCoordinatesParametersMigrator(
                             if before is None:
                                 before = param
                             paramValue = self.HTMLComment.sub(u'',
-                              tpl.get(param).value.strip())
+                              str(tpl.get(param).value)).strip()
                             if paramValue != u'':
                                 replacementParameterValue.add(key, paramValue)
                                 # Only take the first alias with a value
@@ -231,7 +250,7 @@ class InfoboxCoordinatesParametersMigrator(
                   != str(self.initialReplacementParameterValue)
                 ):
                     tpl.add(
-                      self.replacementParameter,
+                      replacementParameterName,
                       replacementParameterValue,
                       before=before
                     )
@@ -246,19 +265,19 @@ class InfoboxCoordinatesParametersMigrator(
                 break
         
         newtext = str(wikicode).strip()
-        if newtext != text:
+        if not skip and newtext != text:
             # Fix spacing for the replacement parameter.
             newtext = re.sub(
-              r'\n?([ \t]*\|\s*%s)\s*=\s*(%s) *\n?\|' % (
-                  re.escape(self.replacementParameter),
+              r'\n?([ \t]*\|\s*%s)\s*=\s*(%s)\s*(\||\}\})' % (
+                  re.escape(replacementParameterName),
                   re.escape(str(replacementParameterValue))
                 ),
-              r'\n\1%s= \2\n|' % spaces,
+              r'\n\1%s= \2\n\3' % spaces,
               newtext
             )
             self.put_current(newtext, summary=self.summary, minor=False)
         else:
-            print(u'Skipping %s.' % self.current_page.title(asLink=True))
+            print(u'Skipping %s' % self.current_page.title(asLink=True))
 
 
 def main(*args):
