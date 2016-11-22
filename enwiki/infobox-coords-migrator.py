@@ -158,7 +158,7 @@ class InfoboxCoordinatesParametersMigrator(
         if summary is None:
             self.summary = (
               u'Migrate {{%s}} coordinates parameters to {{Coord}}, '
-              u'see [[Help:Coordinates in infoboxes]]' %
+              u'see [[Wikipedia:Coordinates in infoboxes]]' %
                 self.template.title(withNamespace=False)
             )
         else:
