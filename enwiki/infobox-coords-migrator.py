@@ -39,6 +39,8 @@ docuReplacements = {
     '&params;': pagegenerators.parameterHelp
 }
 
+HTMLCOMMENT = re.compile(r'<!--.*?-->', flags=re.DOTALL)
+
 
 def validate_config(config):
     """
@@ -46,72 +48,84 @@ def validate_config(config):
     @param config: configuration to validate
     @type config: dict
     """
-    requiredKeys = [
-      'initialReplacementTemplate',
-      'parametersMap',
-      'replacementParameterNames',
-      'template'
-    ]
-    configKeys = []
-    
     if not isinstance(config, dict):
         return False
-    
+    requiredKeys = [
+      'coordinatesSets',
+      'initialReplacementTemplate',
+      'template'
+    ]
+    hasKeys = []
     for key, value in config.items():
-        if key == 'initialReplacementTemplate':
+        if key == 'coordinatesSets':
+            if key in requiredKeys:
+                hasKeys.append(key)
+            if not isinstance(value, list):
+                return False
+            for coordinatesSet in value:
+                if not isinstance(coordinatesSet, dict):
+                    return False
+                requiredKeys2 = [
+                  'parametersMap',
+                  'replacementParameterNames'
+                ]
+                hasKeys2 = []
+                for key2, value2 in coordinatesSet.items():
+                    if key2 == 'parametersMap':
+                        if not isinstance(value2, dict):
+                            return False
+                        for key3, value3 in value2.items():
+                            if isinstance(value3, str):
+                                value2[key3] = [value3]
+                            elif isinstance(value3, list):
+                                for item in value3:
+                                    if not isinstance(item, str):
+                                        return False
+                            else:
+                                return False
+                        if key2 in requiredKeys2:
+                            hasKeys2.append(key2)
+                    elif key2 == 'replacementParameterNames':
+                        if isinstance(value2, str):
+                            coordinatesSet[key2] = [value2]
+                        elif isinstance(value2, list):
+                            for name in value2:
+                                if not isinstance(name, str):
+                                    return False
+                        else:
+                            return False
+                        if key2 in requiredKeys2:
+                            hasKeys2.append(key2)
+                    else:
+                        return False
+                if sorted(hasKeys2) != sorted(requiredKeys2):
+                    return False
+        elif key == 'initialReplacementTemplate':
             if isinstance(value, str):
                 if key in requiredKeys:
-                    configKeys.append(key)
+                    hasKeys.append(key)
             else:
                 return False
-        elif key == 'parametersMap':
-            if not isinstance(value, dict):
-                return False
-            for k, v in value.items():
-                if not isinstance(k, str):
-                    return False
-                if isinstance(v, str):
-                    value[k] = [v]
-                elif isinstance(v, list):
-                    for i in v:
-                        if not isinstance(i, str):
-                            return False
-                else:
-                    return False
-            if key in requiredKeys:
-                configKeys.append(key)
-        elif key == 'replacementParameterNames':
-            if isinstance(value, str):
-                config[key] = [value]
-            elif isinstance(value, list):
-                for name in value:
-                    if not isinstance(name, str):
-                        return False
-            else:
-                return False
-            if key in requiredKeys:
-                configKeys.append(key)
         elif key == 'template':
             template = pywikibot.Page(pywikibot.Site(),
-              u'Template:%s' % value)
+              'Template:%s' % value)
             if not template.isRedirectPage():
                 config[key] = template
                 if key in requiredKeys:
-                    configKeys.append(key)
+                    hasKeys.append(key)
+                    print('== %s ==' % template.title(asLink=True))
             else:
                 return False
         elif key == 'editSummary':
             if value is None or isinstance(value, str):
                 if key in requiredKeys:
-                    configKeys.append(key)
+                    hasKeys.append(key)
             else:
                 return False
         else:
             return False
-    
-    if sorted(configKeys) != sorted(requiredKeys):
+    if sorted(hasKeys) != sorted(requiredKeys):
         return False
-    
     return True
 
 
@@ -128,25 +142,20 @@ class InfoboxCoordinatesParametersMigrator(
         @type generator: generator
         """
         self.availableOptions.update({
+          'coordinatesSets': None,
           'editSummary': None,
           'initialReplacementTemplate': None,
-          'parametersMap': None,
-          'replacementParameterNames': None,
           'template': None
         })
         
         self.generator = generator
         super(InfoboxCoordinatesParametersMigrator, self).__init__(
           site=True, **kwargs)
-          
-        self.HTMLComment = re.compile(r'<!--.*?-->', flags=re.DOTALL)
         
+        self.coordinatesSets = self.getOption('coordinatesSets')
         self.initialReplacementParameterValue = (
           mwparserfromhell.nodes.Template(
           self.getOption('initialReplacementTemplate').strip()))
-        self.parametersMap = self.getOption('parametersMap')
-        self.replacementParameterNames = self.getOption(
-          'replacementParameterNames')
         self.template = self.getOption('template')
         self.templateTitles = [self.template.title(withNamespace=False)]
         for tpl in self.template.backlinks(
@@ -157,21 +166,21 @@ class InfoboxCoordinatesParametersMigrator(
         summary = self.getOption('editSummary')
         if summary is None:
             self.summary = (
-              u'Migrate {{%s}} coordinates parameters to {{Coord}}, '
-              u'see [[Wikipedia:Coordinates in infoboxes]]' %
+              'Migrate {{%s}} coordinates parameters to {{Coord}}, '
+              'see [[Wikipedia:Coordinates in infoboxes]]' %
                 self.template.title(withNamespace=False)
             )
         else:
             self.summary = summary.strip()
     
     def check_enabled(self):
-        """Test if the task is enabled"""
+        """Check if the task is enabled"""
         page = pywikibot.Page(self.site,
-          u'User:%s/shutoff/%s' % (self.site.user(), self.__class__.__name__))
+          'User:%s/shutoff/%s' % (self.site.user(), self.__class__.__name__))
         if page.exists():
             content = page.get().strip()
-            if content != u'':
-                sys.exit(u'Task disabled:\n%s' % content)
+            if content != '':
+                sys.exit('Task disabled:\n%s' % content)
     
     def get_replacement_parameter_spaces(self, templateText, parameterName):
         """
@@ -179,18 +188,18 @@ class InfoboxCoordinatesParametersMigrator(
           replacement parameter name and the =
         @param templateText: template text to parse
         @type templateText: str
+        @param parameterName: parameter name
+        @type parameterName: str
         """
-        # Remove parameter values so that the regex doesn't match in them.
-        wikicode = mwparserfromhell.parse(templateText.strip())
+        wikicode = mwparserfromhell.parse(
+          templateText.strip(),
+          skip_style_tags=True
+        )
         tpl = wikicode.filter_templates(recursive=False)[0]
+        # Remove parameter values so that the regex doesn't match in them.
         for param in tpl.params:
             tpl.remove(param, keep_field=True)
-        
-        matches = re.findall(
-          r'\n\s*\|\s*(\S+)(\s*)=',
-          str(wikicode)
-        )
-        
+        matches = re.findall(r'\n\s*\|\s*(\S+)(\s*)=',str(wikicode))
         if matches:
             spaces = [(len(spaces) > 1) for param, spaces in matches]
             if max(spaces):
@@ -200,84 +209,126 @@ class InfoboxCoordinatesParametersMigrator(
                     fullParamLen = statistics.mode(fullParamLens)
                 except statistics.StatisticsError:
                     fullParamLen = statistics.median_high(fullParamLens)
-                return max(fullParamLen - len(parameterName), 1) * u' '
-        
-        return u' '
+                return max(fullParamLen - len(parameterName), 1) * ' '
+        return ' '
     
     def treat_page(self):
         self.check_enabled()
-        skip = False
-        text = self.current_page.get().strip()
-        wikicode = mwparserfromhell.parse(text)
-        replacementParameterValue = mwparserfromhell.nodes.Template(
-          self.getOption('initialReplacementTemplate').strip())
         
+        skipPage = True
+        spacingFixNeeded = []
+        text = self.current_page.get().strip()
+        wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
+        
+        # Loop over all templates on the page.
         for tpl in wikicode.filter_templates():
-            if tpl.name.matches(self.templateTitles):
-                replacementParameterName = None
-                before = None
+            if not tpl.name.matches(self.templateTitles):
+                continue
+            
+            keepParameters = []
+            removeParameters = []
+            
+            # Loop over each set of coordinates.
+            for coordinatesSet in self.coordinatesSets:
                 
-                for parameterName in self.replacementParameterNames:
+                before = None
+                parametersMap = coordinatesSet.get('parametersMap')
+                replacementParameterName = None
+                replacementParameterNames = (
+                  coordinatesSet.get('replacementParameterNames'))
+                replacementParameterValue = mwparserfromhell.nodes.Template(
+                  self.getOption('initialReplacementTemplate').strip())
+                skipCoordinatesSet = False
+                
+                # Determine the replacement parameter name.
+                for parameterName in replacementParameterNames:
                     if tpl.has(parameterName):
-                        parameterValue = self.HTMLComment.sub(u'',
+                        parameterValue = HTMLCOMMENT.sub('',
                           str(tpl.get(parameterName).value)).strip()
-                        if parameterValue != u'':
-                            skip = True
-                            print(u'Non-empty replacement parameter: %s=%s'
-                              % (parameterName, parameterValue))
+                        if parameterValue != '':
+                            skipCoordinatesSet = True
+                            print('* %s has {{para|%s|<nowiki>%s</nowiki>}}'
+                              % (
+                                self.current_page.title(asLink=True),
+                                parameterName,
+                                parameterValue
+                              )
+                            )
                         elif replacementParameterName is None:
                             replacementParameterName = parameterName
                 if replacementParameterName is None:
-                    replacementParameterName = (
-                      self.replacementParameterNames[0])
+                    replacementParameterName = replacementParameterNames[0]
                 
-                spaces = self.get_replacement_parameter_spaces(str(tpl),
-                  replacementParameterName)
+                if skipCoordinatesSet:
+                    # Do not remove these parameters.
+                    for params in parametersMap.values():
+                        for param in params:
+                            if tpl.has(param):
+                                paramValue = HTMLCOMMENT.sub('',
+                                  str(tpl.get(param).value)).strip()
+                                if paramValue != '':
+                                    keepParameters.append(param)
+                    continue
                 
-                for key, value in self.parametersMap.items():
+                skipPage = False
+                
+                # Map dperecated paramters into the replacement.
+                for key, value in parametersMap.items():
                     for param in value:
                         if tpl.has(param):
                             if before is None:
                                 before = param
-                            paramValue = self.HTMLComment.sub(u'',
+                            paramValue = HTMLCOMMENT.sub('',
                               str(tpl.get(param).value)).strip()
-                            if paramValue != u'':
+                            if paramValue != '':
                                 replacementParameterValue.add(key, paramValue)
-                                # Only take the first alias with a value
+                                # Only take the first alias with a value.
                                 break
                 
+                # Slate parameters for removal.
+                for params in parametersMap.values():
+                    for param in params:
+                        if tpl.has(param):
+                            removeParameters.append(param)
+                
+                # Add the replacement parameter.
                 if (str(replacementParameterValue)
                   != str(self.initialReplacementParameterValue)
                 ):
+                    spacingFixNeeded.append((
+                      replacementParameterName,
+                      str(replacementParameterValue),
+                      self.get_replacement_parameter_spaces(
+                        str(tpl),
+                        replacementParameterName
+                      )
+                    ))
                     tpl.add(
                       replacementParameterName,
                       replacementParameterValue,
                       before=before
                     )
-                
-                for params in self.parametersMap.values():
-                    for param in params:
-                        if tpl.has(param):
-                            tpl.remove(param)
-                
-                # There should be only one match per page,
-                # so break the loop for speed.
-                break
+            
+            # Remove the mapped parameters.
+            for param in set(removeParameters):
+                if param not in set(keepParameters):
+                    tpl.remove(param)
         
         newtext = str(wikicode).strip()
-        if not skip and newtext != text:
-            # Fix spacing for the replacement parameter.
-            newtext = re.sub(
-              r'\n?([ \t]*\|\s*%s)\s*=\s*(%s)\s*(\||\}\})' % (
-                  re.escape(replacementParameterName),
-                  re.escape(str(replacementParameterValue))
-                ),
-              r'\n\1%s= \2\n\3' % spaces,
-              newtext
-            )
+        if not skipPage and newtext != text:
+            # Fix spacing for the replacement parameters.
+            for tup in spacingFixNeeded:
+                newtext = re.sub(
+                  r'\n?([ \t]*\|\s*%s)\s*=\s*(%s)\s*(\||\}\})' % (
+                      re.escape(tup[0]),
+                      re.escape(tup[1])
+                    ),
+                  r'\n\1%s= \2\n\3' % tup[2],
+                  newtext
+                )
             self.put_current(newtext, summary=self.summary, minor=False)
         else:
-            print(u'Skipping %s' % self.current_page.title(asLink=True))
+            print('* Skipped %s' % self.current_page.title(asLink=True))
 
 
 def main(*args):
@@ -298,8 +349,10 @@ def main(*args):
         option = arg[1:]
         if option in ('config'):
             if not value:
-                value = pywikibot.input('Please enter a value for %s' % arg,
-                  default=None)
+                value = pywikibot.input(
+                  'Please enter a value for %s' % arg,
+                  default=None
+                )
             options[option] = value
         else:
             options[option] = True
@@ -307,24 +360,22 @@ def main(*args):
     if 'config' not in options:
         pywikibot.bot.suggest_help(missing_parameters=['config'])
         return False
+    config = pywikibot.Page(pywikibot.Site(), options.pop('config')).get()
+    config = json.loads(config, object_pairs_hook=OrderedDict)
+    if validate_config(config):
+        options.update(config)
     else:
-        config = pywikibot.Page(pywikibot.Site(), options['config']).get()
-        del options['config']
-        config = json.loads(config, object_pairs_hook=OrderedDict)
-        if validate_config(config):
-            options.update(config)
-        else:
-            pywikibot.bot.suggest_help(
-              additional_text='The specified configuration is invalid.')
-            return False
-        if gen:
-            gen = pagegenerators.PreloadingGenerator(gen)
-            bot = InfoboxCoordinatesParametersMigrator(gen, **options)
-            bot.run()
-            return True
-        else:
-            pywikibot.bot.suggest_help(missing_generator=True)
-            return False
+        pywikibot.bot.suggest_help(
+          additional_text='The specified configuration is invalid.')
+        return False
+    if gen:
+        gen = pagegenerators.PreloadingGenerator(gen)
+        bot = InfoboxCoordinatesParametersMigrator(gen, **options)
+        bot.run()
+        return True
+    else:
+        pywikibot.bot.suggest_help(missing_generator=True)
+        return False
 
 
 if __name__ == "__main__":
