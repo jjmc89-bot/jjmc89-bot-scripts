@@ -82,7 +82,7 @@ def validate_config(config):
                 configKeys.append(key)
         elif key == 'replacementParameterNames':
             if isinstance(value, str):
-                value = [value]
+                config[key] = [value]
             elif isinstance(value, list):
                 for name in value:
                     if not isinstance(name, str):
