@@ -113,7 +113,7 @@ def validate_config(config):
                 config[key] = template
                 if key in requiredKeys:
                     hasKeys.append(key)
-                    print('== %s ==' % template.title(asLink=True))
+                    print('\n== %s ==' % template.title(asLink=True))
             else:
                 return False
         elif key == 'editSummary':
@@ -184,8 +184,8 @@ class InfoboxCoordinatesParametersMigrator(
     
     def get_replacement_parameter_spaces(self, templateText, parameterName):
         """
-        Determine template spacing and return spaces for between the
-          replacement parameter name and the =
+        Determine template spacing and return a tuple of spaces before the
+          pipe and spaces before the =
         @param templateText: template text to parse
         @type templateText: str
         @param parameterName: parameter name
@@ -199,18 +199,26 @@ class InfoboxCoordinatesParametersMigrator(
         # Remove parameter values so that the regex doesn't match in them.
         for param in tpl.params:
             tpl.remove(param, keep_field=True)
-        matches = re.findall(r'\n\s*\|\s*(\S+)(\s*)=',str(wikicode))
+        matches = re.findall(r'\n( *)\|\s*(\S+)(\s*)=',str(wikicode))
         if matches:
-            spaces = [(len(spaces) > 1) for param, spaces in matches]
-            if max(spaces):
-                fullParamLens = [(len(param) + len(spaces))
-                  for param, spaces in matches]
+            beforePipeSpacesLen = [len(match[0]) for match in matches]
+            try:
+                beforePipe = statistics.mode(beforePipeSpacesLen) * ' '
+            except statistics.StatisticsError:
+                beforePipe = statistics.median_low(beforePipeSpacesLen) * ' '
+            hasSpacesBeforeEquals = [(len(match[2]) > 1) for match in matches]
+            if max(hasSpacesBeforeEquals):
+                fullParamLens = [(len(match[1]) + len(match[2]))
+                  for match in matches]
                 try:
                     fullParamLen = statistics.mode(fullParamLens)
                 except statistics.StatisticsError:
                     fullParamLen = statistics.median_high(fullParamLens)
-                return max(fullParamLen - len(parameterName), 1) * ' '
-        return ' '
+                beforeEquals = max(fullParamLen - len(parameterName), 1) * ' '
+            else:
+                beforeEquals = ' '
+            return (beforePipe, beforeEquals)
+        return ('', ' ')
     
     def treat_page(self):
         self.check_enabled()
@@ -319,11 +327,11 @@ class InfoboxCoordinatesParametersMigrator(
             # Fix spacing for the replacement parameters.
             for tup in spacingFixNeeded:
                 newtext = re.sub(
-                  r'\n?([ \t]*\|\s*%s)\s*=\s*(%s)\s*(\||\}\})' % (
+                  r'\n?[ \t]*(\|\s*%s)\s*=\s*(%s)\s*(\||\}\})' % (
                       re.escape(tup[0]),
                       re.escape(tup[1])
                     ),
-                  r'\n\1%s= \2\n\3' % tup[2],
+                  r'\n%s\1%s= \2\n%s\3' % (tup[2][0], tup[2][1], tup[2][0]),
                   newtext
                 )
             self.put_current(newtext, summary=self.summary, minor=False)
