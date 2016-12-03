@@ -157,12 +157,15 @@ class InfoboxCoordinatesParametersMigrator(
           mwparserfromhell.nodes.Template(
           self.getOption('initialReplacementTemplate').strip()))
         self.template = self.getOption('template')
-        self.templateTitles = [self.template.title(withNamespace=False)]
+        self.templateTitles = [self.template.title(withNamespace=False), 
+          self.template.title(underscore=True, withNamespace=False)]
         for tpl in self.template.backlinks(
           filterRedirects=True,
           namespaces=self.site.namespaces.TEMPLATE
         ):
             self.templateTitles.append(tpl.title(withNamespace=False))
+            self.templateTitles.append(
+              tpl.title(underscore=True, withNamespace=False))
         summary = self.getOption('editSummary')
         if summary is None:
             self.summary = (
