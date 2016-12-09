@@ -9,9 +9,10 @@ The following parameters are required:
 
 -config           The page title that has the JSON config (object)
                     The config must contain:
-                      - initialReplacementTemplate (string)
-                      - parametersMap (object of string/array)
-                      - replacementParameterNames (string/array)
+                      - coordinatesSets (object)
+                        - initialReplacementTemplate (string)
+                        - parametersMap (object of string/array)
+                        - replacementParameterNames (string/array)
                       - template (string)
                     The config may optionally contain:
                       - editSummary (string)
@@ -52,26 +53,31 @@ def validate_config(config):
         return False
     requiredKeys = [
       'coordinatesSets',
-      'initialReplacementTemplate',
       'template'
     ]
     hasKeys = []
     for key, value in config.items():
+        if key in requiredKeys:
+            hasKeys.append(key)
         if key == 'coordinatesSets':
-            if key in requiredKeys:
-                hasKeys.append(key)
             if not isinstance(value, list):
                 return False
             for coordinatesSet in value:
                 if not isinstance(coordinatesSet, dict):
                     return False
                 requiredKeys2 = [
+                  'initialReplacementTemplate',
                   'parametersMap',
                   'replacementParameterNames'
                 ]
                 hasKeys2 = []
                 for key2, value2 in coordinatesSet.items():
-                    if key2 == 'parametersMap':
+                    if key2 in requiredKeys2:
+                        hasKeys2.append(key2)
+                    if key2 == 'initialReplacementTemplate':
+                        if not isinstance(value2, str):
+                            return False
+                    elif key2 == 'parametersMap':
                         if not isinstance(value2, dict):
                             return False
                         for key3, value3 in value2.items():
@@ -83,8 +89,6 @@ def validate_config(config):
                                         return False
                             else:
                                 return False
-                        if key2 in requiredKeys2:
-                            hasKeys2.append(key2)
                     elif key2 == 'replacementParameterNames':
                         if isinstance(value2, str):
                             coordinatesSet[key2] = [value2]
@@ -94,33 +98,20 @@ def validate_config(config):
                                     return False
                         else:
                             return False
-                        if key2 in requiredKeys2:
-                            hasKeys2.append(key2)
                     else:
                         return False
                 if sorted(hasKeys2) != sorted(requiredKeys2):
                     return False
-        elif key == 'initialReplacementTemplate':
-            if isinstance(value, str):
-                if key in requiredKeys:
-                    hasKeys.append(key)
-            else:
-                return False
         elif key == 'template':
             template = pywikibot.Page(pywikibot.Site(),
               'Template:%s' % value)
             if not template.isRedirectPage():
                 config[key] = template
-                if key in requiredKeys:
-                    hasKeys.append(key)
-                    print('\n== %s ==' % template.title(asLink=True))
+                print('\n== %s ==' % template.title(asLink=True))
             else:
                 return False
         elif key == 'editSummary':
-            if value is None or isinstance(value, str):
-                if key in requiredKeys:
-                    hasKeys.append(key)
-            else:
+            if not (value is None or isinstance(value, str)):
                 return False
         else:
             return False
@@ -153,9 +144,6 @@ class InfoboxCoordinatesParametersMigrator(
           site=True, **kwargs)
         
         self.coordinatesSets = self.getOption('coordinatesSets')
-        self.initialReplacementParameterValue = (
-          mwparserfromhell.nodes.Template(
-          self.getOption('initialReplacementTemplate').strip()))
         self.template = self.getOption('template')
         self.templateTitles = [self.template.title(withNamespace=False), 
           self.template.title(underscore=True, withNamespace=False)]
@@ -248,7 +236,7 @@ class InfoboxCoordinatesParametersMigrator(
                 replacementParameterNames = (
                   coordinatesSet.get('replacementParameterNames'))
                 replacementParameterValue = mwparserfromhell.nodes.Template(
-                  self.getOption('initialReplacementTemplate').strip())
+                  coordinatesSet.get('initialReplacementTemplate').strip())
                 skipCoordinatesSet = False
                 
                 # Determine the replacement parameter name.
@@ -303,8 +291,8 @@ class InfoboxCoordinatesParametersMigrator(
                             removeParameters.append(param)
                 
                 # Add the replacement parameter.
-                if (str(replacementParameterValue)
-                  != str(self.initialReplacementParameterValue)
+                if (str(replacementParameterValue).strip() != ('{{%s}}'
+                  % coordinatesSet.get('initialReplacementTemplate').strip())
                 ):
                     spacingFixNeeded.append((
                       replacementParameterName,
@@ -339,7 +327,10 @@ class InfoboxCoordinatesParametersMigrator(
                 )
             self.put_current(newtext, summary=self.summary, minor=False)
         else:
-            print('* Skipped %s' % self.current_page.title(asLink=True))
+            try:
+                print('* Skipped %s' % self.current_page.title(asLink=True))
+            except:
+                print('* Skipped page')
 
 
 def main(*args):
