@@ -172,6 +172,7 @@ class InfoboxCoordinatesParametersMigrator(
             )
         else:
             self.summary = summary.strip()
+        self.checkEnabledCount = 0
 
     def check_enabled(self):
         """Check if the task is enabled."""
