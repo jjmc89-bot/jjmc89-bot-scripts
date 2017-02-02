@@ -175,13 +175,22 @@ class InfoboxCoordinatesParametersMigrator(
 
     def check_enabled(self):
         """Check if the task is enabled."""
-        page = pywikibot.Page(self.site,
-                              'User:%s/shutoff/%s'
-                              % (self.site.user(), self.__class__.__name__))
+        if self.checkEnabledCount == 7:
+            self.checkEnabledCount = 1
+        else:
+            self.checkEnabledCount += 1
+        if self.checkEnabledCount != 1:
+            return
+
+        page = pywikibot.Page(
+            self.site,
+            'User:%s/shutoff/%s' % (self.site.user(), self.__class__.__name__)
+        )
         if page.exists():
             content = page.get().strip()
             if content != '':
-                sys.exit('Task disabled:\n%s' % content)
+                sys.exit('%s disabled:\n%s' %
+                         (self.__class__.__name__, content))
 
     def get_replacement_parameter_spaces(self, templateText, parameterName):
         """
@@ -306,8 +315,7 @@ class InfoboxCoordinatesParametersMigrator(
 
                 # Add the replacement parameter.
                 if (str(replacementParameterValue).strip() != (
-                        '{{%s}}'
-                        % coordinatesSet.get(
+                        '{{%s}}' % coordinatesSet.get(
                             'initialReplacementTemplate').strip())):
                     if 'parametersDefaults' in coordinatesSet:
                         for key, value in (coordinatesSet.get(
@@ -346,11 +354,6 @@ class InfoboxCoordinatesParametersMigrator(
                     newtext
                 )
             self.put_current(newtext, summary=self.summary, minor=False)
-        else:
-            try:
-                print('* Skipped %s' % self.current_page.title(asLink=True))
-            except:
-                print('* Skipped page')
 
 
 def main(*args):
