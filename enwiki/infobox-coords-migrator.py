@@ -366,6 +366,8 @@ def main(*args):
     options = {}
     # Process global arguments
     local_args = pywikibot.handle_args(args)
+    site = pywikibot.Site()
+    site.login()
     genFactory = pagegenerators.GeneratorFactory()
     # Parse command line arguments
     for arg in local_args:
