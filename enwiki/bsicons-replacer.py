@@ -251,11 +251,14 @@ def main(*args):
         if not (page.isRedirectPage() and
                 isinstance(page, pywikibot.FilePage)):
             continue
-        targetPage = page.getRedirectTarget()
         # Target must be a file.
         try:
-            targetFile = pywikibot.FilePage(targetPage)
-        except:
+            targetFile = pywikibot.FilePage(page.getRedirectTarget())
+        except (pywikibot.IsNotRedirectPage, ValueError) as e:
+            pywikibot.warning(e)
+            continue
+        except Exception as e:
+            pywikibot.exception(e, tb=True)
             continue
         # Target must be a BSicon.
         if not targetFile.title(underscore=True,
