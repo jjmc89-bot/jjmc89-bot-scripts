@@ -22,7 +22,7 @@ from pywikibot.bot import SingleSiteBot, ExistingPageBot, NoRedirectPageBot
 __version__ = '$Id$'
 
 HTMLCOMMENT = re.compile(r'<!--.*?-->', flags=re.S)
-ROUTEMAP = re.compile(r'(?=(\n|! !|!~|\\)(.+?)(\n|!~|~~|!@|__|!_|\\))')
+ROUTEMAPBSICON = re.compile(r'(?=(\n|! !|!~|\\)(.+?)(\n|!~|~~|!@|__|!_|\\))')
 
 
 def validate_config(config, site):
@@ -173,19 +173,21 @@ class BSiconsReplacer(
         # Loop over all templates on the page.
         for tpl in wikicode.filter_templates():
             if tpl.name.matches(self.routemapTitles):
-                if not tpl.has('map'):
-                    continue
-                map = str(tpl.get('map').value).strip()
-                matches = ROUTEMAP.findall(map)
-                if not matches:
-                    continue
-                for match in matches:
-                    if match[1] in self.BSiconsMap:
-                        map = map.replace(
-                            ''.join(match),
-                            match[0] + self.BSiconsMap[match[1]] + match[2]
-                        )
-                tpl.add('map', map)
+                for param in tpl.params:
+                    if not re.search(r'^map\d*$', str(param.name).strip()):
+                        continue
+                    paramValue = str(param.value)
+                    matches = ROUTEMAPBSICON.findall(paramValue)
+                    if not matches:
+                        continue
+                    for match in matches:
+                        if match[1] in self.BSiconsMap:
+                            paramValue = paramValue.replace(
+                                ''.join(match),
+                                match[0] + self.BSiconsMap[match[1]] +
+                                match[2]
+                            )
+                    param.value = paramValue
             elif tpl.name.matches(self.BSTemplateTitles):
                 for param in tpl.params:
                     paramValue = HTMLCOMMENT.sub('', str(param.value)).strip()
