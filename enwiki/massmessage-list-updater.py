@@ -43,6 +43,9 @@ def validate_config(config, site):
 
     @param config: configuration to validate
     @type config: dict
+    @param site: site used in the validation
+    @type site: L{pywikibot.Site}
+
     @rtype: bool
     """
     pywikibot.log('config:')
@@ -84,6 +87,8 @@ def validate_options(options, site):
 
     @param options: options to validate
     @type options: dict
+    @param site: site used in the validation
+    @type site: L{pywikibot.Site}
 
     @rtype: bool
     """
@@ -253,7 +258,7 @@ class UserGroupsMassMessageListUpdater(
                                set(pageDict.values())):
                 newPageJSON['targets'].append({'title': page.title()})
             newtext = json.dumps(newPageJSON, ensure_ascii=False, indent=4)
-            summary = ('Update mass message list: %s added, %s removed' %
+            summary = ('Update MassMessage list: %s added, %s removed' %
                        (addedCount, removedCount))
             if renamedCount > 0:
                 summary += ', %s renamed' % renamedCount
@@ -362,7 +367,6 @@ def main(*args):
     gen = pagegenerators.PreloadingGenerator(gen)
     bot = UserGroupsMassMessageListUpdater(gen, **options)
     bot.run()
-    return True
 
 
 if __name__ == "__main__":
