@@ -118,7 +118,7 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
         })
 
         self.generator = generator
-        super(EditnoticeDeployer, self).__init__(site=True, **kwargs)
+        super(EditnoticeDeployer, self).__init__(**kwargs)
 
         self.editnoticePage = self.getOption('editnoticePage')
         self.editnoticePageTitles = [
@@ -139,20 +139,16 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
 
     def check_enabled(self):
         """Check if the task is enabled."""
-        if self.checkEnabledCount == 7:
-            self.checkEnabledCount = 1
-        else:
-            self.checkEnabledCount += 1
-        if self.checkEnabledCount != 1:
+        self.checkEnabledCount += 1
+        if self.checkEnabledCount % 6 != 1:
             return
-
         page = pywikibot.Page(
             self.site,
             'User:%s/shutoff/%s' % (self.site.user(), self.__class__.__name__)
         )
         if page.exists():
             content = page.get().strip()
-            if content != '':
+            if content:
                 sys.exit('%s disabled:\n%s' %
                          (self.__class__.__name__, content))
 
@@ -169,7 +165,7 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
             for tpl in wikicode.filter_templates():
                 if tpl.name.matches(self.editnoticePageTitles):
                     skipPage = True
-                    continue
+                    break
         newtext = ('%s\n{{%s}}' % (text,
                                    self.editnoticePage.title(
                                        withNamespace=False))).strip()
