@@ -31,6 +31,8 @@ def validate_config(config, site):
 
     @param config: config to validate
     @type config: dict
+    @param site: site used in the validation
+    @type site: L{pywikibot.Site}
 
     @rtype: bool
     """
@@ -83,7 +85,7 @@ def validate_config(config, site):
 
 def get_BSicon_name(file):
     """
-    Return the file name without the extension.
+    Return the BSicon name.
 
     @param file: The file
     @type file: L{pywikibot.FilePage}
@@ -91,8 +93,7 @@ def get_BSicon_name(file):
     @rtype: str
     """
     title = file.title(withNamespace=False)
-    string = os.path.splitext(os.path.basename(title))[0][7:]
-    return string
+    return os.path.splitext(os.path.basename(title))[0][7:]
 
 
 class BSiconsReplacer(
@@ -278,7 +279,11 @@ def main(*args):
                                 withNamespace=False).startswith('BSicon_'):
             continue
         localFile = pywikibot.FilePage(site, page.title())
-        BSiconsMap[get_BSicon_name(localFile)] = get_BSicon_name(targetFile)
+        BSiconName = get_BSicon_name(localFile)
+        targetBSiconName = get_BSicon_name(targetFile)
+        BSiconsMap[BSiconName] = targetBSiconName
+        if BSiconName.find(' ') > -1:
+            BSiconsMap[BSiconName.replace(' ', '_')] = targetBSiconName
         pages = pages.union(pagegenerators.FileLinksGenerator(localFile))
     if pages:
         options['BSiconsMap'] = BSiconsMap
