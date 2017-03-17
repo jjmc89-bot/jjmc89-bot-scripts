@@ -7,7 +7,7 @@ Author : JJMC89
 The following parameters are required:
 
 -config           The page title that has the JSON config (object).
-                  Options set in the congig override those provided when
+                  Options set in the config override those provided when
                   running this script.
 """
 import json
