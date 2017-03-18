@@ -207,7 +207,7 @@ def save_list(list, page, summary):
 
 
 def output_log(logtype=None, start=None, end=None, site=None, options=dict(),
-               BSiconTemplateTitle='bsq'):
+               BSiconTemplateTitle='bsq2'):
     """
     Writes logevents to a page.
 
@@ -295,7 +295,7 @@ def output_move_log(start=None, end=None, site=None, options=dict()):
             logText += file.title(asLink=True, textlink=True)
         logText += ' || '
         if targetIsBSicon:
-            logText += '{{bsq|%s}}' % get_BSicon_name(targetPage)
+            logText += '{{bsq2|%s}}' % get_BSicon_name(targetPage)
         else:
             logText += targetPage.title(asLink=True, textlink=True)
         logText += (
@@ -417,7 +417,7 @@ def main(*args):
             endtime=end,
             reverse=True
         ):
-            fileChanges += '\n|-\n| {{bsq|%s}}' % get_BSicon_name(file)
+            fileChanges += '\n|-\n| {{bsq2|%s}}' % get_BSicon_name(file)
             fileChanges += (
                 ' || {r.revid} || {r.timestamp} || {r.user} || '
                 '<nowiki>{r.comment}</nowiki>'.format(r=rev.hist_entry())
