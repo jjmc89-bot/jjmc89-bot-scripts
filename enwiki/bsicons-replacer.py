@@ -113,13 +113,10 @@ class BSiconsReplacer(
         self.availableOptions.update({
             'BSiconsMap': None
         })
-
         self.generator = generator
         super(BSiconsReplacer, self).__init__(**kwargs)
-
         self.BSiconsMap = self.getOption('BSiconsMap')
         self.checkEnabledCount = 0
-
         # Build a list of titles for Template:Routemap.
         routemapTitles = set(['Routemap'])
         for tpl in pywikibot.Page(self.site, 'Template:Routemap').backlinks(
@@ -167,10 +164,9 @@ class BSiconsReplacer(
 
     def treat_page(self):
         self.check_enabled()
-
         text = self.current_page.get().strip()
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
-
+        replacements = set()
         # Loop over all templates on the page.
         for tpl in wikicode.filter_templates():
             if tpl.name.matches(self.routemapTitles):
@@ -183,25 +179,33 @@ class BSiconsReplacer(
                         continue
                     for match in matches:
                         if match[1] in self.BSiconsMap:
+                            replacement = self.BSiconsMap[match[1]]
                             paramValue = paramValue.replace(
                                 ''.join(match),
-                                match[0] + self.BSiconsMap[match[1]] +
-                                match[2]
+                                match[0] + replacement + match[2]
                             )
+                            replacements.add('\u2192'.join([match[1],
+                                                            replacement]))
                     param.value = paramValue
             elif tpl.name.matches(self.BSTemplateTitles):
                 for param in tpl.params:
                     paramValue = HTMLCOMMENT.sub('', str(param.value)).strip()
                     if paramValue in self.BSiconsMap:
+                        replacement = self.BSiconsMap[paramValue]
                         param.value = re.sub(
                             r'\b%s\b' % re.escape(paramValue),
-                            self.BSiconsMap[paramValue],
+                            replacement,
                             str(param.value)
                         )
-
+                        replacements.add('\u2192'.join([paramValue,
+                                                        replacement]))
         newtext = str(wikicode).strip()
         if newtext != text:
-            self.put_current(newtext, summary='Replace BSicon(s)')
+            summary = 'Replace BSicon'
+            if len(replacements) > 1:
+                summary += 's'
+            summary += ': ' + ', '.join(replacements)
+            self.put_current(newtext, summary=summary)
 
 
 def main(*args):
@@ -251,6 +255,7 @@ def main(*args):
                         options.update(config)
                 else:
                     pywikibot.error('Invalid config format.')
+                    return False
         else:
             pywikibot.error('%s does not exist.' % config.title())
             return False
@@ -289,10 +294,7 @@ def main(*args):
         options['BSiconsMap'] = BSiconsMap
         gen = (page for page in pages)
         gen = pagegenerators.PreloadingGenerator(gen)
-        bot = BSiconsReplacer(
-            gen,
-            **options
-        )
+        bot = BSiconsReplacer(gen, **options)
         bot.run()
 
 
