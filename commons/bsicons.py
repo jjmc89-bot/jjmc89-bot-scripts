@@ -410,7 +410,7 @@ def main(*args):
     largeFiles = []
     BSicons = pagegenerators.PrefixingPageGenerator('File:BSicon_')
     for file in BSicons:
-        if not page_is_BSicon(file):
+        if not (file.exists() and page_is_BSicon(file)):
             continue
         for rev in file.revisions(
             starttime=start,
