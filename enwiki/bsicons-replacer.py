@@ -25,6 +25,25 @@ HTMLCOMMENT = re.compile(r'<!--.*?-->', flags=re.S)
 ROUTEMAPBSICON = re.compile(r'(?=(\n|! !|!~|\\)(.+?)(\n|!~|~~|!@|__|!_|\\))')
 
 
+def get_json_from_page(page):
+    """
+    Return JSON from the page.
+
+    @param page: Page to read
+    @type page: L{pywikibot.Page}
+
+    @rtype: dict or None
+    """
+    if not page.exists():
+        pywikibot.error('%s does not exist.' % page.title())
+        return
+    text = page.get().strip()
+    try:
+        return json.loads(text)
+    except:
+        return
+
+
 def validate_config(config, site):
     """
     Validate the config and return bool.
@@ -38,7 +57,7 @@ def validate_config(config, site):
     """
     pywikibot.log('Config:')
     requiredKeys = [
-        'BSicons',
+        'redirects',
         'repository'
     ]
     hasKeys = []
@@ -46,7 +65,7 @@ def validate_config(config, site):
         pywikibot.log('-%s = %s' % (key, value))
         if key in requiredKeys:
             hasKeys.append(key)
-        if key in ('blacklist' 'BSicons' 'whitelist'):
+        if key in ('blacklist' 'redirects' 'whitelist'):
             if isinstance(value, str):
                 config[key] = [value]
             elif not isinstance(value, list):
@@ -58,28 +77,57 @@ def validate_config(config, site):
                 fileSite = site.image_repository()
             else:
                 fileSite = site
+        elif key == 'replacementMap':
+            pass
         else:
             return False
     if sorted(hasKeys) != sorted(requiredKeys):
         return False
     fileSite.login()
-    for key in ('blacklist', 'BSicons', 'whitelist'):
+    for key in ('blacklist', 'redirects', 'whitelist'):
         if key in config:
             generatorFactory = pagegenerators.GeneratorFactory(fileSite)
             for item in config[key]:
-                if generatorFactory.handleArg(item):
-                    continue
-                else:
+                if not generatorFactory.handleArg(item):
                     return False
             gen = generatorFactory.getCombinedGenerator()
             config[key] = set(gen)
         else:
             config[key] = set()
-    config['BSicons'] = frozenset(
-        config.pop('BSicons') -
+    config['redirects'] = frozenset(
+        config.pop('redirects') -
         (config.pop('blacklist') - config.pop('whitelist'))
     )
     config.pop('repository', None)
+    replacementMap = config.pop('replacementMap', dict())
+    if isinstance(replacementMap, str):
+        page = pywikibot.Page(fileSite, replacementMap)
+        replacementMap = get_json_from_page(page) or dict()
+    if not isinstance(replacementMap, dict):
+        replacementMap = dict()
+    for value in replacementMap.values():
+        if not isinstance(value, str):
+            return False
+    config['replacementMap'] = replacementMap
+    return True
+
+
+def page_is_BSicon(page):
+    """
+    Returns whether the page is a BSicon
+
+    @param page: The page
+    @type page: L{pywikibot.Page}
+
+    @rtype: bool
+    """
+    try:
+        file = pywikibot.FilePage(page)
+    except:
+        return False
+    title = file.title(underscore=True, withNamespace=False)
+    if not title.startswith('BSicon_'):
+        return False
     return True
 
 
@@ -240,24 +288,15 @@ def main(*args):
             options[option] = True
     if 'config' in options:
         config = pywikibot.Page(site, options.pop('config'))
-        if config.exists():
-            config = config.get().strip()
-            try:
-                config = json.loads(config)
-            except:
-                raise
+        config = get_json_from_page(config)
+        if isinstance(config, dict):
+            if not validate_config(config, site):
+                pywikibot.error('Invalid config.')
+                return False
             else:
-                if isinstance(config, dict):
-                    if not validate_config(config, site):
-                        pywikibot.error('Invalid config.')
-                        return False
-                    else:
-                        options.update(config)
-                else:
-                    pywikibot.error('Invalid config format.')
-                    return False
+                options.update(config)
         else:
-            pywikibot.error('%s does not exist.' % config.title())
+            pywikibot.error('Invalid config format.')
             return False
     else:
         pywikibot.bot.suggest_help(missing_parameters=['config'])
@@ -265,7 +304,7 @@ def main(*args):
 
     BSiconsMap = dict()
     pages = set()
-    for page in options.pop('BSicons'):
+    for page in options.pop('redirects'):
         # Must be a file redirect.
         if not (page.isRedirectPage() and
                 isinstance(page, pywikibot.FilePage)):
@@ -280,10 +319,25 @@ def main(*args):
             pywikibot.exception(e, tb=True)
             continue
         # Target must be a BSicon.
-        if not targetFile.title(underscore=True,
-                                withNamespace=False).startswith('BSicon_'):
+        if not page_is_BSicon(targetFile):
             continue
         localFile = pywikibot.FilePage(site, page.title())
+        BSiconName = get_BSicon_name(localFile)
+        targetBSiconName = get_BSicon_name(targetFile)
+        BSiconsMap[BSiconName] = targetBSiconName
+        if BSiconName.find(' ') > -1:
+            BSiconsMap[BSiconName.replace(' ', '_')] = targetBSiconName
+        pages = pages.union(pagegenerators.FileLinksGenerator(localFile))
+    for key, value in options.pop('replacementMap', dict()).items():
+        try:
+            localFile = pywikibot.FilePage(site, key)
+            targetFile = pywikibot.FilePage(site, value)
+        except Exception as e:
+            pywikibot.warning(e)
+            continue
+        # Both must be BSicons.
+        if not (page_is_BSicon(localFile) and page_is_BSicon(targetFile)):
+            continue
         BSiconName = get_BSicon_name(localFile)
         targetBSiconName = get_BSicon_name(targetFile)
         BSiconsMap[BSiconName] = targetBSiconName
