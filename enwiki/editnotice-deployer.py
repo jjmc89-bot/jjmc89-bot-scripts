@@ -94,9 +94,10 @@ def TalkPageGenerator(generator):
 
 
 def EditnoticePageGenerator(generator):
-    """Yield editnotice pages for existing pages from another generator."""
+    """Yield editnotice pages for existing, non-redirect pages from another
+    generator."""
     for page in generator:
-        if page.exists():
+        if page.exists() and not page.isRedirectPage():
             title = page.title(withSection=False)
             editnoticeTitle = 'Template:Editnotices/Page/%s' % title
             editnoticePage = pywikibot.Page(page.site, editnoticeTitle)
