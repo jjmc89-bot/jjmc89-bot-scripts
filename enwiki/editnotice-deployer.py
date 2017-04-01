@@ -148,7 +148,7 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
             'User:%s/shutoff/%s' % (self.site.user(), self.__class__.__name__)
         )
         if page.exists():
-            content = page.get().strip()
+            content = page.get(force=True).strip()
             if content:
                 sys.exit('%s disabled:\n%s' %
                          (self.__class__.__name__, content))

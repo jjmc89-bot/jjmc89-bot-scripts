@@ -176,20 +176,16 @@ class InfoboxCoordinatesParametersMigrator(
 
     def check_enabled(self):
         """Check if the task is enabled."""
-        if self.checkEnabledCount == 7:
-            self.checkEnabledCount = 1
-        else:
-            self.checkEnabledCount += 1
-        if self.checkEnabledCount != 1:
+        self.checkEnabledCount += 1
+        if self.checkEnabledCount % 6 != 1:
             return
-
         page = pywikibot.Page(
             self.site,
             'User:%s/shutoff/%s' % (self.site.user(), self.__class__.__name__)
         )
         if page.exists():
-            content = page.get().strip()
-            if content != '':
+            content = page.get(force=True).strip()
+            if content:
                 sys.exit('%s disabled:\n%s' %
                          (self.__class__.__name__, content))
 
