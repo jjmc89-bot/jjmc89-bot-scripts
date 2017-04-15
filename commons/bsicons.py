@@ -48,6 +48,23 @@ BOTSTARTEND = re.compile(
 )
 
 
+def get_page_from_size(page, size=1e6):
+    """Return a page based on the current page size."""
+    i = 1
+    title = page.title()
+    while True:
+        if not page.exists():
+            break
+        if len(page.text) < size:
+            break
+        i += 1
+        page = pywikibot.Page(
+            page.site,
+            '{} ({:02d})'.format(title, i)
+        )
+    return page
+
+
 def validate_options(options, site):
     """
     Validate the options and return bool.
@@ -107,6 +124,7 @@ def validate_options(options, site):
                 site,
                 '%s/%s' % (value, options['changesDate'].strftime('%Y-%m'))
             )
+            fileChangesPage = get_page_from_size(fileChangesPage)
         elif key == 'enabled':
             if not isinstance(value, bool):
                 return False
@@ -228,6 +246,7 @@ def output_log(logtype=None, start=None, end=None, site=None, options=dict(),
         '%s/%s/%s' % (options['logsPagePrefix'], logtype,
                       options['changesDate'].strftime('%Y-%m'))
     )
+    logPage = get_page_from_size(logPage)
     for logevent in site.logevents(logtype=logtype,
                                    namespace=site.namespaces.FILE.id,
                                    start=start, end=end, reverse=True):
@@ -279,6 +298,7 @@ def output_move_log(start=None, end=None, site=None, options=dict()):
         '%s/%s/%s' % (options['logsPagePrefix'], 'move',
                       options['changesDate'].strftime('%Y-%m'))
     )
+    logPage = get_page_from_size(logPage)
     for logevent in site.logevents(logtype='move',
                                    namespace=site.namespaces.FILE.id,
                                    start=start, end=end, reverse=True):
