@@ -11,11 +11,13 @@ The following parameters are required:
                     The config must contain:
                       - coordinatesSets (object)
                         - initialReplacementTemplate (string)
+                        - parametersDefaults (optional; object of string)
                         - parametersMap (object of string/array)
                         - replacementParameterNames (string/array)
                       - template (string)
                     The config may optionally contain:
                       - editSummary (string)
+                      - keepParameters (string/array)
 
 
 The following parameters are supported:
@@ -108,6 +110,11 @@ def validate_config(config):
                         return False
                 if sorted(hasKeys2) != sorted(requiredKeys2):
                     return False
+        elif key == 'keepParameters':
+            if isinstance(value, str):
+                config[key] = [value]
+            elif not isinstance(value, list):
+                return False
         elif key == 'template':
             template = pywikibot.Page(pywikibot.Site(),
                                       'Template:%s' % value)
@@ -143,7 +150,7 @@ class InfoboxCoordinatesParametersMigrator(
         self.availableOptions.update({
             'coordinatesSets': None,
             'editSummary': None,
-            'initialReplacementTemplate': None,
+            'keepParameters': [],
             'template': None
         })
 
@@ -153,6 +160,7 @@ class InfoboxCoordinatesParametersMigrator(
 
         self.coordinatesSets = self.getOption('coordinatesSets')
         self.template = self.getOption('template')
+        self.keepParameters = self.getOption('keepParameters')
         self.templateTitles = [self.template.title(withNamespace=False),
                                self.template.title(underscore=True,
                                                    withNamespace=False)]
@@ -242,7 +250,7 @@ class InfoboxCoordinatesParametersMigrator(
             if not tpl.name.matches(self.templateTitles):
                 continue
 
-            keepParameters = []
+            keepParameters = list(self.keepParameters)
             removeParameters = []
 
             # Loop over each set of coordinates.
@@ -263,7 +271,7 @@ class InfoboxCoordinatesParametersMigrator(
                         parameterValue = HTMLCOMMENT.sub(
                             '',
                             str(tpl.get(parameterName).value)).strip()
-                        if parameterValue != '':
+                        if parameterValue:
                             skipCoordinatesSet = True
                             print('* %s has {{para|%s|<nowiki>%s</nowiki>}}'
                                   % (
@@ -284,7 +292,7 @@ class InfoboxCoordinatesParametersMigrator(
                                 paramValue = HTMLCOMMENT.sub(
                                     '',
                                     str(tpl.get(param).value)).strip()
-                                if paramValue != '':
+                                if paramValue:
                                     keepParameters.append(param)
                     continue
 
@@ -299,7 +307,7 @@ class InfoboxCoordinatesParametersMigrator(
                             paramValue = HTMLCOMMENT.sub(
                                 '',
                                 str(tpl.get(param).value)).strip()
-                            if paramValue != '':
+                            if paramValue:
                                 replacementParameterValue.add(key, paramValue)
                                 # Only take the first alias with a value.
                                 break
@@ -334,9 +342,8 @@ class InfoboxCoordinatesParametersMigrator(
                     )
 
             # Remove the mapped parameters.
-            for param in set(removeParameters):
-                if param not in set(keepParameters):
-                    tpl.remove(param)
+            for param in set(removeParameters) - set(keepParameters):
+                tpl.remove(param)
 
         newtext = str(wikicode).strip()
         if not skipPage and newtext != text:
