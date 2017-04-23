@@ -19,8 +19,6 @@ import pywikibot
 from pywikibot import pagegenerators
 from pywikibot.bot import SingleSiteBot, ExistingPageBot, NoRedirectPageBot
 
-__version__ = '$Id$'
-
 HTMLCOMMENT = re.compile(r'<!--.*?-->', flags=re.S)
 ROUTEMAPBSICON = re.compile(r'(?=(\n|! !|!~|\\)(.+?)(\n|!~|~~|!@|__|!_|\\))')
 
@@ -37,10 +35,14 @@ def get_json_from_page(page):
     if not page.exists():
         pywikibot.error('%s does not exist.' % page.title())
         return
+    elif page.isRedirectPage():
+        pywikibot.error('%s is a redirect.' % page.title())
+        return
     text = page.get().strip()
     try:
         return json.loads(text)
-    except:
+    except Exception as e:
+        pywikibot.exception(e, tb=True)
         return
 
 
@@ -70,6 +72,17 @@ def validate_config(config, site):
                 config[key] = [value]
             elif not isinstance(value, list):
                 return False
+        elif key in ('BSTemplates' 'routemapTemplates'):
+            if isinstance(value, str):
+                config[key] = [value]
+            elif not isinstance(value, list):
+                return False
+            templates = set()
+            for tpl in config[key]:
+                page = pywikibot.Page(site, 'Template:%s' % tpl)
+                if page.exists() and not page.isRedirectPage():
+                    templates.add(page)
+            config[key] = templates
         elif key == 'repository':
             if not isinstance(value, bool):
                 return False
@@ -79,6 +92,9 @@ def validate_config(config, site):
                 fileSite = site
         elif key == 'replacementMap':
             pass
+        elif key == 'summaryPrefix':
+            if not isinstance(value, str):
+                return False
         else:
             return False
     if sorted(hasKeys) != sorted(requiredKeys):
@@ -114,7 +130,7 @@ def validate_config(config, site):
 
 def page_is_BSicon(page):
     """
-    Returns whether the page is a BSicon
+    Returns whether the page is a BSicon.
 
     @param page: The page
     @type page: L{pywikibot.Page}
@@ -144,11 +160,7 @@ def get_BSicon_name(file):
     return os.path.splitext(os.path.basename(title))[0][7:]
 
 
-class BSiconsReplacer(
-    SingleSiteBot,
-    ExistingPageBot,
-    NoRedirectPageBot
-):
+class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
 
     def __init__(self, generator, **kwargs):
         """
@@ -159,41 +171,43 @@ class BSiconsReplacer(
         @type generator: generator
         """
         self.availableOptions.update({
-            'BSiconsMap': None
+            'BSiconsMap': dict(),
+            'BSTemplates': set(),
+            'summaryPrefix': 'Replace BSicon(s)',
+            'routemapTemplates': set()
         })
         self.generator = generator
         super(BSiconsReplacer, self).__init__(**kwargs)
         self.BSiconsMap = self.getOption('BSiconsMap')
+        self.BSTemplateTitles = self.get_template_titles(
+            self.getOption('BSTemplates'))
+        self.routemapTitles = self.get_template_titles(
+            self.getOption('routemapTemplates'))
+        self.summaryPrefix = self.getOption('summaryPrefix')
         self.checkEnabledCount = 0
-        # Build a list of titles for Template:Routemap.
-        routemapTitles = set(['Routemap'])
-        for tpl in pywikibot.Page(self.site, 'Template:Routemap').backlinks(
-            filterRedirects=True,
-            namespaces=self.site.namespaces.TEMPLATE
-        ):
-            self.templateTitles.add(tpl.title(withNamespace=False))
-            self.templateTitles.add(
-                tpl.title(underscore=True, withNamespace=False))
-        self.routemapTitles = list(routemapTitles)
-        # Build a list of BS* route diagram template titles.
-        BSTemplateTitles = set()
-        for template in pagegenerators.CategorizedPageGenerator(
-            pywikibot.Category(self.site, 'Route diagram templates'),
-            namespaces=self.site.namespaces.TEMPLATE
-        ):
-            if not template.title(withNamespace=False).startswith('BS'):
-                continue
-            BSTemplateTitles.add(template.title(withNamespace=False))
-            BSTemplateTitles.add(template.title(underscore=True,
-                                                withNamespace=False))
+
+    def get_template_titles(self, templates):
+        """
+        Given an iterable of templates, return a set of titles.
+
+        @param templates: iterable of templates (L{pywikibot.Page})
+        @type templates: iterable
+
+        @rtype: set
+        """
+        templateTitles = set()
+        for template in templates:
+            templateTitles.add(template.title(withNamespace=False))
+            templateTitles.add(template.title(underscore=True,
+                                              withNamespace=False))
             for tpl in template.backlinks(
                 filterRedirects=True,
                 namespaces=self.site.namespaces.TEMPLATE
             ):
-                BSTemplateTitles.add(tpl.title(withNamespace=False))
-                BSTemplateTitles.add(tpl.title(underscore=True,
-                                               withNamespace=False))
-        self.BSTemplateTitles = list(BSTemplateTitles)
+                templateTitles.add(tpl.title(withNamespace=False))
+                templateTitles.add(tpl.title(underscore=True,
+                                             withNamespace=False))
+        return templateTitles
 
     def check_enabled(self):
         """Check if the task is enabled."""
@@ -216,7 +230,7 @@ class BSiconsReplacer(
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         replacements = set()
         # Loop over all templates on the page.
-        for tpl in wikicode.filter_templates():
+        for tpl in wikicode.ifilter_templates():
             if tpl.name.matches(self.routemapTitles):
                 for param in tpl.params:
                     if not re.search(r'^map\d*$', str(param.name).strip()):
@@ -249,9 +263,7 @@ class BSiconsReplacer(
                                                         replacement]))
         newtext = str(wikicode).strip()
         if newtext != text:
-            summary = 'Replace BSicon'
-            if len(replacements) > 1:
-                summary += 's'
+            summary = self.summaryPrefix
             summary += ': ' + ', '.join(replacements)
             self.put_current(newtext, summary=summary)
 
@@ -290,11 +302,11 @@ def main(*args):
         config = pywikibot.Page(site, options.pop('config'))
         config = get_json_from_page(config)
         if isinstance(config, dict):
-            if not validate_config(config, site):
+            if validate_config(config, site):
+                options.update(config)
+            else:
                 pywikibot.error('Invalid config.')
                 return False
-            else:
-                options.update(config)
         else:
             pywikibot.error('Invalid config format.')
             return False
@@ -318,10 +330,10 @@ def main(*args):
         except Exception as e:
             pywikibot.exception(e, tb=True)
             continue
-        # Target must be a BSicon.
-        if not page_is_BSicon(targetFile):
-            continue
         localFile = pywikibot.FilePage(site, page.title())
+        # Both must be BSicons.
+        if not (page_is_BSicon(localFile) and page_is_BSicon(targetFile)):
+            continue
         BSiconName = get_BSicon_name(localFile)
         targetBSiconName = get_BSicon_name(targetFile)
         BSiconsMap[BSiconName] = targetBSiconName
