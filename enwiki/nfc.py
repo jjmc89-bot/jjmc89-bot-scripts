@@ -206,10 +206,13 @@ class FURTitleReplacer(NFCBot):
         text = newtext = self.current_page.get().strip()
         wikicode = mwparserfromhell.parse(newtext, skip_style_tags=True)
         for redirect in self.pageMap[self.current_page]:
+            if not redirect.isRedirectPage():
+                continue
             title = redirect.title(underscore=True)
             titleRegex = re.compile(r'^(?P<leading>\s*)%s(?P<trailing>\s*)$'
                                     % re.escape(title).replace('_', '[ _]+'))
-            targetTitle = redirect.getRedirectTarget().title()
+            targetTitle = redirect.getRedirectTarget().title(
+                withSection=False)
             # Wikilinks
             for wikilink in wikicode.ifilter(forcetype=Wikilink):
                 wikilink.title = titleRegex.sub(
