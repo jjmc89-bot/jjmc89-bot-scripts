@@ -88,16 +88,22 @@ class MagicLinksReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         spaces = r'{space}+'.format(space=space)
         spaceDash = r'(?:-|{space})'.format(space=space)
         self.ISBNRegex = re.compile(
-            r'\b(ISBN)({spaces})((?:97[89]{spaceDash}?)?(?:[0-9]{spaceDash}?)'
-            r'{{9}}[0-9Xx])\b'.format(spaces=spaces, spaceDash=spaceDash)
+            r'(?P<open_bracket>\[)?\bISBN(?P<separator>{spaces})'
+            r'(?P<value>(?:97[89]{spaceDash}?)?(?:[0-9]{spaceDash}?){{9}}'
+            r'[0-9Xx])\b(?P<close_bracket>(?(open_bracket)\]))'.format(
+            spaces=spaces, spaceDash=spaceDash)
         )
         self.ISBNReplacement = self.getOption('ISBN')
         self.PMIDRegex = re.compile(
-            r'\b(PMID)({spaces})([0-9]+)\b'.format(spaces=spaces)
+            r'(?P<open_bracket>\[)?\bPMID(?P<separator>{spaces})(?P<value>'
+            r'[0-9]+)\b(?P<close_bracket>(?(open_bracket)\]))'.format(
+            spaces=spaces)
         )
         self.PMIDReplacement = self.getOption('PMID')
         self.RFCRegex = re.compile(
-            r'\b(RFC)({spaces})([0-9]+)\b'.format(spaces=spaces)
+            r'(?P<open_bracket>\[)?\bRFC(?P<separator>{spaces})(?P<value>'
+            r'[0-9]+)\b(?P<close_bracket>(?(open_bracket)\]))'.format(
+            spaces=spaces)
         )
         self.RFCReplacement = self.getOption('RFC')
         self.exceptions = ['comment', 'header', 'link', 'interwiki'
