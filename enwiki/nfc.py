@@ -215,6 +215,7 @@ class FURTitleReplacer(NFCBot):
                 withSection=False)
             # Wikilinks
             for wikilink in wikicode.ifilter(forcetype=Wikilink):
+                wikilink.text = wikilink.text or wikilink.title
                 wikilink.title = titleRegex.sub(
                     targetTitle,
                     str(wikilink.title)
@@ -273,12 +274,14 @@ def main(*args):
     fileCount = 0
     for file in files:
         if file.namespace() != site.namespaces.FILE:
-            sys.exit('Incorrect namespace. Terminating.')
+            sys.exit('Incorrect namespace. Exiting.')
         if not file.exists() or file.isRedirectPage():
             continue
         fileCount += 1
-        links = file.linkedPages()
+        filePageLinks = file.linkedPages()
         for page in file.usingPages():
+            if page in filePageLinks:
+                continue
             linkedToRedirect = False
             try:
                 pageRedirects = page.backlinks(filterRedirects=True)
@@ -289,15 +292,17 @@ def main(*args):
                 pywikibot.exception(e, tb=True)
                 continue
             for redirect in pageRedirects:
-                if redirect in links:
+                if redirect in filePageLinks:
                     linkedToRedirect = True
                     break
             if linkedToRedirect:
+                # Will update to bypass the redirect.
                 if file in redirectsMap:
                     redirectsMap[file].add(redirect)
                 else:
                     redirectsMap[file] = set([redirect])
-            elif page not in links and file.get().find(page.title()) == -1:
+            elif file.get().find(page.title()) == -1:
+                # WP:NFCC#10c violation.
                 if page in noFURMap:
                     noFURMap[page].add(file)
                 else:
