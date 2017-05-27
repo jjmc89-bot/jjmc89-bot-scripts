@@ -86,26 +86,26 @@ class MagicLinksReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         self.summary = self.getOption('summary')
         space = r'(?:[^\S\n]|&nbsp;|&\#0*160;|&\#[Xx]0*[Aa]0;)'
         spaces = r'{space}+'.format(space=space)
-        spaceDash = r'(?:-|{space})'.format(space=space)
-        self.ISBNRegex = re.compile(
+        space_dash = r'(?:-|{space})'.format(space=space)
+        self.ISBN_regex = re.compile(
             r'(?P<open_bracket>\[)?\bISBN(?P<separator>{spaces})'
-            r'(?P<value>(?:97[89]{spaceDash}?)?(?:[0-9]{spaceDash}?){{9}}'
+            r'(?P<value>(?:97[89]{space_dash}?)?(?:[0-9]{space_dash}?){{9}}'
             r'[0-9Xx])\b(?P<close_bracket>(?(open_bracket)\]))'.format(
-            spaces=spaces, spaceDash=spaceDash)
+                spaces=spaces, space_dash=space_dash)
         )
-        self.ISBNReplacement = self.getOption('ISBN')
-        self.PMIDRegex = re.compile(
+        self.ISBN_replacement = self.getOption('ISBN')
+        self.PMID_regex = re.compile(
             r'(?P<open_bracket>\[)?\bPMID(?P<separator>{spaces})(?P<value>'
             r'[0-9]+)\b(?P<close_bracket>(?(open_bracket)\]))'.format(
-            spaces=spaces)
+                spaces=spaces)
         )
-        self.PMIDReplacement = self.getOption('PMID')
-        self.RFCRegex = re.compile(
+        self.PMID_replacement = self.getOption('PMID')
+        self.RFC_regex = re.compile(
             r'(?P<open_bracket>\[)?\bRFC(?P<separator>{spaces})(?P<value>'
             r'[0-9]+)\b(?P<close_bracket>(?(open_bracket)\]))'.format(
-            spaces=spaces)
+                spaces=spaces)
         )
-        self.RFCReplacement = self.getOption('RFC')
+        self.RFC_replacement = self.getOption('RFC')
         self.exceptions = ['comment', 'header', 'link', 'interwiki'
                            'property', 'invoke', 'category', 'file']
         self.tags = ['gallery', 'math', 'nowiki', 'pre', 'source', 'score',
@@ -148,34 +148,33 @@ class MagicLinksReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         return text
 
     def mask_URLs(self, text, mask):
-        # https://gist.github.com/gruber/249502
+        # Based on pywikibot.textlib.compileLinkR
+        # and https://gist.github.com/gruber/249502
         URL = (
-            r'''(?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|'''
-            r'''[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|'''
-            r'''(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+'''
-            r'''|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’])'''
+            r'''(?:[a-z][\w-]+://[^\]\s<>"]*'''
+            r'''[^\]\s\.:;,<>"\|\)`!{}'?«»“”‘’])'''
         )
-        bracketURLregex = re.compile(r'(\[%s[^\]]*\])' % URL, flags=re.I)
-        text = self.mask_text(text, mask, bracketURLregex)
-        bareURLregex = re.compile(r'\b(%s)' % URL, flags=re.I)
-        text = self.mask_text(text, mask, bareURLregex)
+        bracket_URL_regex = re.compile(r'(\[%s[^\]]*\])' % URL, flags=re.I)
+        text = self.mask_text(text, mask, bracket_URL_regex)
+        bare_URL_regex = re.compile(r'\b(%s)' % URL, flags=re.I)
+        text = self.mask_text(text, mask, bare_URL_regex)
         return text
 
     def mask_HTML_tags_content(self, text, mask):
-        tagsContentRegex = re.compile(
+        tags_content_regex = re.compile(
             r'(<(?P<tag>%s)\b.*?</(?P=tag)>)' % r'|'.join(self.tags),
             flags=re.I
         )
-        text = self.mask_text(text, mask, tagsContentRegex)
+        text = self.mask_text(text, mask, tags_content_regex)
         return text
 
     def mask_HTML_tags(self, text, mask):
-        tagsRegex = re.compile(
+        tags_regex = re.compile(
             r'''(<\/?\w+(?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|'''
             r'''[^>\s]+))?)*\s*\/?>)''',
             flags=re.S
         )
-        text = self.mask_text(text, mask, tagsRegex)
+        text = self.mask_text(text, mask, tags_regex)
         return text
 
     def treat_page(self):
@@ -185,15 +184,15 @@ class MagicLinksReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         newtext = self.mask_HTML_tags_content(newtext, mask)
         newtext = self.mask_HTML_tags(newtext, mask)
         newtext = self.mask_URLs(newtext, mask)
-        if self.ISBNReplacement:
-            newtext = replaceExcept(newtext, self.ISBNRegex,
-                                    self.ISBNReplacement, self.exceptions)
-        if self.PMIDReplacement:
-            newtext = replaceExcept(newtext, self.PMIDRegex,
-                                    self.PMIDReplacement, self.exceptions)
-        if self.RFCReplacement:
-            newtext = replaceExcept(newtext, self.RFCRegex,
-                                    self.RFCReplacement, self.exceptions)
+        if self.ISBN_replacement:
+            newtext = replaceExcept(newtext, self.ISBN_regex,
+                                    self.ISBN_replacement, self.exceptions)
+        if self.PMID_replacement:
+            newtext = replaceExcept(newtext, self.PMID_regex,
+                                    self.PMID_replacement, self.exceptions)
+        if self.RFC_replacement:
+            newtext = replaceExcept(newtext, self.RFC_regex,
+                                    self.RFC_replacement, self.exceptions)
         newtext = self.unmask_text(newtext, mask)
         if newtext != text:
             self.put_current(newtext, summary=self.summary)
