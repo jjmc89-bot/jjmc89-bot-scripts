@@ -104,6 +104,28 @@ def _create_regexes():
     })
 
 
+def split_into_sections(text):
+    """
+    Splits wikitext into sections based on any level wiki heading.
+
+    @param text: Text to split
+    @type text: str
+
+    @rtype: list
+    """
+    headings_regex = re.compile(r'^={1,6}.*?={1,6}(?: *<!--.*?-->)?\s*$',
+                                flags=re.M)
+    sections = list()
+    last_match_start = 0
+    for match in headings_regex.finditer(text):
+        match_start = match.start()
+        if match_start > 0:
+            sections.append(text[last_match_start:match_start])
+            last_match_start = match_start
+    sections.append(text[last_match_start:])
+    return sections
+
+
 class MagicLinksReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
     """Bot to replace magic links."""
 
@@ -148,18 +170,22 @@ class MagicLinksReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
     def treat_page(self):
         """Process one page."""
         self.check_enabled()
-        text = self.current_page.text
-        if self.getOption('ISBN'):
-            text = replaceExcept(text, _REGEXES['ISBN'],
-                                 self.getOption('ISBN'),
-                                 self.replace_exceptions)
-        if self.getOption('PMID'):
-            text = replaceExcept(text, _REGEXES['PMID'],
-                                 self.getOption('PMID'),
-                                 self.replace_exceptions)
-        if self.getOption('RFC'):
-            text = replaceExcept(text, _REGEXES['RFC'], self.getOption('RFC'),
-                                 self.replace_exceptions)
+        text = ''
+        sections = split_into_sections(self.current_page.text)
+        for section in sections:
+            if self.getOption('ISBN'):
+                section = replaceExcept(section, _REGEXES['ISBN'],
+                                        self.getOption('ISBN'),
+                                        self.replace_exceptions)
+            if self.getOption('PMID'):
+                section = replaceExcept(section, _REGEXES['PMID'],
+                                        self.getOption('PMID'),
+                                        self.replace_exceptions)
+            if self.getOption('RFC'):
+                section = replaceExcept(section, _REGEXES['RFC'],
+                                        self.getOption('RFC'),
+                                        self.replace_exceptions)
+            text += section
         self.put_current(text, summary=self.getOption('summary'))
 
 
