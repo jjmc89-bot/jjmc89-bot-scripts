@@ -103,7 +103,7 @@ class MagicLinksReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
                 spaces=spaces)
         )
         self.RFC_replacement = self.getOption('RFC')
-        self.exceptions = ['comment', 'header', 'link', 'interwiki'
+        self.exceptions = ['comment', 'template', 'link', 'interwiki'
                            'property', 'invoke', 'category', 'file']
         self.tags = ['gallery', 'math', 'nowiki', 'pre', 'source', 'score',
                      'syntaxhighlight']
