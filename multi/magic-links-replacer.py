@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Task   : MagicLinksReplacer
-Author : JJMC89
+This script replaces magic links.
 
 The following parameters are required:
 
@@ -12,6 +11,8 @@ The following parameters are supported:
 
 &params;
 """
+# Author : JJMC89
+# License: MIT
 import json
 import re
 import sys
@@ -23,6 +24,9 @@ from pywikibot.textlib import replaceExcept
 docuReplacements = {
     '&params;': pagegenerators.parameterHelp
 }
+
+# For create_regexes().
+_REGEXES = dict()
 
 
 def get_json_from_page(page):
@@ -56,7 +60,7 @@ def validate_config(config):
     pywikibot.log('Config:')
     for key, value in config.items():
         pywikibot.log('-%s = %s' % (key, value))
-        if key in ('ISBN' 'PMID' 'RFC' 'summary'):
+        if key in 'ISBN' 'PMID' 'RFC' 'summary':
             if not isinstance(value, str):
                 return False
             config[key] = value.strip() or None
@@ -65,7 +69,43 @@ def validate_config(config):
     return True
 
 
+def _create_regexes():
+    """Fill (and possibly overwrite) _REGEXES with default regexes."""
+    space = r'(?:[^\S\n]|&nbsp;|&\#0*160;|&\#[Xx]0*[Aa]0;)'
+    spaces = r'{space}+'.format(space=space)
+    space_dash = r'(?:-|{space})'.format(space=space)
+    tags = ['gallery', 'math', 'nowiki', 'pre', 'score', 'source',
+            'syntaxhighlight']
+    # Based on pywikibot.textlib.compileLinkR
+    # and https://gist.github.com/gruber/249502
+    url = r'''(?:[a-z][\w-]+://[^\]\s<>"]*[^\]\s\.:;,<>"\|\)`!{}'?«»“”‘’])'''
+    _REGEXES.update({
+        'bare_url': re.compile(r'\b({})'.format(url), flags=re.I),
+        'bracket_url': re.compile(r'(\[{}[^\]]*\])'.format(url), flags=re.I),
+        'ISBN': re.compile(
+            r'\bISBN(?P<separator>{spaces})(?P<value>(?:97[89]{space_dash}?)?'
+            r'(?:[0-9]{space_dash}?){{9}}[0-9Xx])\b'.format(
+                spaces=spaces, space_dash=space_dash)
+        ),
+        'PMID': re.compile(
+            r'\bPMID(?P<separator>{spaces})(?P<value>[0-9]+)\b'.format(
+                spaces=spaces)
+        ),
+        'RFC': re.compile(
+            r'\bRFC(?P<separator>{spaces})(?P<value>[0-9]+)\b'.format(
+                spaces=spaces)
+        ),
+        'tags': re.compile(
+            r'''(<\/?\w+(?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|'''
+            r'''[^>\s]+))?)*\s*\/?>)'''
+        ),
+        'tags_content': re.compile(r'(<(?P<tag>%s)\b.*?</(?P=tag)>)'
+                                   % r'|'.join(tags), flags=re.I)
+    })
+
+
 class MagicLinksReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
+    """Bot to replace magic links."""
 
     def __init__(self, generator, **kwargs):
         """
@@ -83,36 +123,17 @@ class MagicLinksReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         })
         self.generator = generator
         super().__init__(**kwargs)
-        self.summary = self.getOption('summary')
-        space = r'(?:[^\S\n]|&nbsp;|&\#0*160;|&\#[Xx]0*[Aa]0;)'
-        spaces = r'{space}+'.format(space=space)
-        space_dash = r'(?:-|{space})'.format(space=space)
-        self.ISBN_regex = re.compile(
-            r'\bISBN(?P<separator>{spaces})(?P<value>(?:97[89]{space_dash}?)?'
-            r'(?:[0-9]{space_dash}?){{9}}[0-9Xx])\b'.format(
-                spaces=spaces, space_dash=space_dash)
-        )
-        self.ISBN_replacement = self.getOption('ISBN')
-        self.PMID_regex = re.compile(
-            r'\bPMID(?P<separator>{spaces})(?P<value>[0-9]+)\b'.format(
-                spaces=spaces)
-        )
-        self.PMID_replacement = self.getOption('PMID')
-        self.RFC_regex = re.compile(
-            r'\bRFC(?P<separator>{spaces})(?P<value>[0-9]+)\b'.format(
-                spaces=spaces)
-        )
-        self.RFC_replacement = self.getOption('RFC')
-        self.exceptions = ['comment', 'template', 'link', 'interwiki'
-                           'property', 'invoke', 'category', 'file']
-        self.tags = ['gallery', 'math', 'nowiki', 'pre', 'source', 'score',
-                     'syntaxhighlight']
-        self.checkEnabledCount = 0
+        _create_regexes()
+        self.replace_exceptions = [_REGEXES[key] for key in
+                                   ('bare_url', 'bracket_url', 'tags',
+                                    'tags_content')]
+        self.replace_exceptions += ['category', 'comment', 'file',
+                                    'interwiki', 'invoke', 'link', 'property',
+                                    'template']
 
     def check_enabled(self):
         """Check if the task is enabled."""
-        self.checkEnabledCount += 1
-        if self.checkEnabledCount % 6 != 1:
+        if self._treat_counter % 6 != 0:
             return
         page = pywikibot.Page(
             self.site,
@@ -124,75 +145,22 @@ class MagicLinksReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
                 sys.exit('%s disabled:\n%s' %
                          (self.__class__.__name__, content))
 
-    def mask_text(self, text, mask, regex):
-        try:
-            key = max(mask.keys()) + 1
-        except ValueError:
-            key = 1
-        matches = [match[0] if isinstance(match, tuple) else match
-                   for match in regex.findall(text)]
-        matches = sorted(matches, key=len, reverse=True)
-        for match in matches:
-            mask[key] = match
-            text = text.replace(match, '!@#bot!@#masked!@#%s!@#' % key)
-            key += 1
-        return text
-
-    def unmask_text(self, text, mask):
-        while text.find('!@#bot!@#masked!@#') > -1:
-            for key, value in mask.items():
-                text = text.replace('!@#bot!@#masked!@#%s!@#' % key, value)
-        return text
-
-    def mask_URLs(self, text, mask):
-        # Based on pywikibot.textlib.compileLinkR
-        # and https://gist.github.com/gruber/249502
-        URL = (
-            r'''(?:[a-z][\w-]+://[^\]\s<>"]*'''
-            r'''[^\]\s\.:;,<>"\|\)`!{}'?«»“”‘’])'''
-        )
-        bracket_URL_regex = re.compile(r'(\[%s[^\]]*\])' % URL, flags=re.I)
-        text = self.mask_text(text, mask, bracket_URL_regex)
-        bare_URL_regex = re.compile(r'\b(%s)' % URL, flags=re.I)
-        text = self.mask_text(text, mask, bare_URL_regex)
-        return text
-
-    def mask_HTML_tags_content(self, text, mask):
-        tags_content_regex = re.compile(
-            r'(<(?P<tag>%s)\b.*?</(?P=tag)>)' % r'|'.join(self.tags),
-            flags=re.I
-        )
-        text = self.mask_text(text, mask, tags_content_regex)
-        return text
-
-    def mask_HTML_tags(self, text, mask):
-        tags_regex = re.compile(
-            r'''(<\/?\w+(?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|'''
-            r'''[^>\s]+))?)*\s*\/?>)''',
-            flags=re.S
-        )
-        text = self.mask_text(text, mask, tags_regex)
-        return text
-
     def treat_page(self):
+        """Process one page."""
         self.check_enabled()
-        text = newtext = self.current_page.get().strip()
-        mask = dict()
-        newtext = self.mask_HTML_tags_content(newtext, mask)
-        newtext = self.mask_HTML_tags(newtext, mask)
-        newtext = self.mask_URLs(newtext, mask)
-        if self.ISBN_replacement:
-            newtext = replaceExcept(newtext, self.ISBN_regex,
-                                    self.ISBN_replacement, self.exceptions)
-        if self.PMID_replacement:
-            newtext = replaceExcept(newtext, self.PMID_regex,
-                                    self.PMID_replacement, self.exceptions)
-        if self.RFC_replacement:
-            newtext = replaceExcept(newtext, self.RFC_regex,
-                                    self.RFC_replacement, self.exceptions)
-        newtext = self.unmask_text(newtext, mask)
-        if newtext != text:
-            self.put_current(newtext, summary=self.summary)
+        text = self.current_page.text
+        if self.getOption('ISBN'):
+            text = replaceExcept(text, _REGEXES['ISBN'],
+                                 self.getOption('ISBN'),
+                                 self.replace_exceptions)
+        if self.getOption('PMID'):
+            text = replaceExcept(text, _REGEXES['PMID'],
+                                 self.getOption('PMID'),
+                                 self.replace_exceptions)
+        if self.getOption('RFC'):
+            text = replaceExcept(text, _REGEXES['RFC'], self.getOption('RFC'),
+                                 self.replace_exceptions)
+        self.put_current(text, summary=self.getOption('summary'))
 
 
 def main(*args):
@@ -208,11 +176,11 @@ def main(*args):
     site = pywikibot.Site()
     site.login()
     # Parse command line arguments
-    genFactory = pagegenerators.GeneratorFactory()
+    gen_factory = pagegenerators.GeneratorFactory()
     for arg in local_args:
-        if genFactory.handleArg(arg):
+        if gen_factory.handleArg(arg):
             continue
-        arg, sep, value = arg.partition(':')
+        arg, _, value = arg.partition(':')
         option = arg[1:]
         if option == 'config':
             if not value:
@@ -223,7 +191,7 @@ def main(*args):
             options[option] = value
         else:
             options[option] = True
-    gen = genFactory.getCombinedGenerator()
+    gen = gen_factory.getCombinedGenerator()
     if 'config' not in options:
         pywikibot.bot.suggest_help(missing_parameters=['config'])
         return False
@@ -247,7 +215,7 @@ def main(*args):
 if __name__ == "__main__":
     try:
         main()
-    except Exception:
+    except:
         pywikibot.error("Fatal error!", exc_info=True)
     finally:
         pywikibot.stopme()
