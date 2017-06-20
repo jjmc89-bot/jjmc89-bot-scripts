@@ -88,21 +88,18 @@ class MagicLinksReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         spaces = r'{space}+'.format(space=space)
         space_dash = r'(?:-|{space})'.format(space=space)
         self.ISBN_regex = re.compile(
-            r'(?P<open_bracket>\[)?\bISBN(?P<separator>{spaces})'
-            r'(?P<value>(?:97[89]{space_dash}?)?(?:[0-9]{space_dash}?){{9}}'
-            r'[0-9Xx])\b(?P<close_bracket>(?(open_bracket)\]))'.format(
+            r'\bISBN(?P<separator>{spaces})(?P<value>(?:97[89]{space_dash}?)?'
+            r'(?:[0-9]{space_dash}?){{9}}[0-9Xx])\b'.format(
                 spaces=spaces, space_dash=space_dash)
         )
         self.ISBN_replacement = self.getOption('ISBN')
         self.PMID_regex = re.compile(
-            r'(?P<open_bracket>\[)?\bPMID(?P<separator>{spaces})(?P<value>'
-            r'[0-9]+)\b(?P<close_bracket>(?(open_bracket)\]))'.format(
+            r'\bPMID(?P<separator>{spaces})(?P<value>[0-9]+)\b'.format(
                 spaces=spaces)
         )
         self.PMID_replacement = self.getOption('PMID')
         self.RFC_regex = re.compile(
-            r'(?P<open_bracket>\[)?\bRFC(?P<separator>{spaces})(?P<value>'
-            r'[0-9]+)\b(?P<close_bracket>(?(open_bracket)\]))'.format(
+            r'\bRFC(?P<separator>{spaces})(?P<value>[0-9]+)\b'.format(
                 spaces=spaces)
         )
         self.RFC_replacement = self.getOption('RFC')
