@@ -251,16 +251,29 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
                     param.value = paramValue
             elif tpl.name.matches(self.BSTemplateTitles):
                 for param in tpl.params:
-                    paramValue = HTMLCOMMENT.sub('', str(param.value)).strip()
-                    if paramValue in self.BSiconsMap:
-                        replacement = self.BSiconsMap[paramValue]
-                        param.value = re.sub(
-                            r'\b%s\b' % re.escape(paramValue),
-                            replacement,
-                            str(param.value)
-                        )
-                        replacements.add('\u2192'.join([paramValue,
-                                                        replacement]))
+                    if tpl.name == 'BSe' then
+                        paramValue = 'e' + HTMLCOMMENT.sub('', str(param.value)).strip()
+                        if paramValue in self.BSiconsMap:
+                            replacement = self.BSiconsMap[paramValue]
+                            if replacement[1] = 'e' then
+                                param.value = re.sub(
+                                    r'\b%s\b' % re.escape(paramValue),
+                                    replacement,
+                                    str(param.value)
+                                )[2:]
+                                replacements.add('\u2192'.join([paramValue,
+                                                                replacement]))
+                    else
+                        paramValue = HTMLCOMMENT.sub('', str(param.value)).strip()
+                        if paramValue in self.BSiconsMap:
+                            replacement = self.BSiconsMap[paramValue]
+                            param.value = re.sub(
+                                r'\b%s\b' % re.escape(paramValue),
+                                replacement,
+                                str(param.value)
+                            )
+                            replacements.add('\u2192'.join([paramValue,
+                                                            replacement]))
         newtext = str(wikicode).strip()
         if newtext != text:
             summary = self.summaryPrefix
