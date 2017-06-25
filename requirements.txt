@@ -1,0 +1,2 @@
+-e git+https://github.com/wikimedia/pywikibot-core#egg=pywikibot
+-e git+https://github.com/earwig/mwparserfromhell#egg=mwparserfromhell
