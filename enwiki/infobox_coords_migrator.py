@@ -24,6 +24,7 @@ The following parameters are supported:
 
 &params;
 """
+# pylint: disable=all
 import json
 import re
 import statistics
@@ -33,8 +34,6 @@ import mwparserfromhell
 import pywikibot
 from pywikibot import pagegenerators
 from pywikibot.bot import SingleSiteBot, ExistingPageBot, NoRedirectPageBot
-
-__version__ = '$Id$'
 
 docuReplacements = {
     '&params;': pagegenerators.parameterHelp

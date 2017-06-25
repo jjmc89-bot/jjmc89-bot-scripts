@@ -9,9 +9,8 @@ The following parameters are supported:
 
 &params;
 """
+# pylint: disable=all
 from __future__ import absolute_import, unicode_literals
-
-__version__ = '$Id$'
 
 import datetime
 import re
@@ -19,7 +18,7 @@ import pywikibot
 from pywikibot import pagegenerators
 from pywikibot.bot import (MultipleSitesBot, ExistingPageBot, NoRedirectPageBot)
 
-docuReplacements = {
+docuReplacements = { # pylint: disable=invalid-name
     '&params;': pagegenerators.parameterHelp
 }
 
