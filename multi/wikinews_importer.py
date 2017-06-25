@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 ##########################################################################################
 # Task             : Wikinews Importer
 #                    see https://en.wikipedia.org/wiki/User:Wikinews_Importer_Bot
@@ -10,7 +9,7 @@
 #                    (https://tools.wmflabs.org/?tool=wikinews-importer)
 # Modified by      : JJMC89
 ##########################################################################################
-
+# pylint: disable=all
 import sys
 import re
 import traceback
