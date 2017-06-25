@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Task   : BSiconsReplacer
-Author : JJMC89
+This script replaces BSicons.
 
 The following parameters are required:
 
@@ -10,6 +9,8 @@ The following parameters are required:
                   Options set in the config override those provided when
                   running this script.
 """
+# Author : JJMC89
+# License: MIT
 import json
 import os
 import re
@@ -67,12 +68,12 @@ def validate_config(config, site):
         pywikibot.log('-%s = %s' % (key, value))
         if key in requiredKeys:
             hasKeys.append(key)
-        if key in ('blacklist' 'redirects' 'whitelist'):
+        if key in 'blacklist' 'redirects' 'whitelist':
             if isinstance(value, str):
                 config[key] = [value]
             elif not isinstance(value, list):
                 return False
-        elif key in ('BSTemplates' 'routemapTemplates'):
+        elif key in 'BSTemplates' 'routemapTemplates':
             if isinstance(value, str):
                 config[key] = [value]
             elif not isinstance(value, list):
@@ -161,6 +162,7 @@ def get_BSicon_name(file):
 
 
 class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
+    """Bot to replace BSicons."""
 
     def __init__(self, generator, **kwargs):
         """
@@ -181,10 +183,11 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         self.BSiconsMap = self.getOption('BSiconsMap')
         self.BSTemplateTitles = self.get_template_titles(
             self.getOption('BSTemplates'))
+        self.bse_titles = self.get_template_titles(
+            [pywikibot.Page(self.site, 'Template:BSe')])
         self.routemapTitles = self.get_template_titles(
             self.getOption('routemapTemplates'))
         self.summaryPrefix = self.getOption('summaryPrefix')
-        self.checkEnabledCount = 0
 
     def get_template_titles(self, templates):
         """
@@ -201,8 +204,8 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
             templateTitles.add(template.title(underscore=True,
                                               withNamespace=False))
             for tpl in template.backlinks(
-                filterRedirects=True,
-                namespaces=self.site.namespaces.TEMPLATE
+                    filterRedirects=True,
+                    namespaces=self.site.namespaces.TEMPLATE
             ):
                 templateTitles.add(tpl.title(withNamespace=False))
                 templateTitles.add(tpl.title(underscore=True,
@@ -211,8 +214,7 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
 
     def check_enabled(self):
         """Check if the task is enabled."""
-        self.checkEnabledCount += 1
-        if self.checkEnabledCount % 6 != 1:
+        if self._treat_counter % 6 != 0:
             return
         page = pywikibot.Page(
             self.site,
@@ -225,8 +227,9 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
                          (self.__class__.__name__, content))
 
     def treat_page(self):
+        """Process one page."""
         self.check_enabled()
-        text = self.current_page.get().strip()
+        text = self.current_page.text
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         replacements = set()
         # Loop over all templates on the page.
@@ -252,20 +255,33 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
             elif tpl.name.matches(self.BSTemplateTitles):
                 for param in tpl.params:
                     paramValue = HTMLCOMMENT.sub('', str(param.value)).strip()
-                    if paramValue in self.BSiconsMap:
-                        replacement = self.BSiconsMap[paramValue]
+                    if (tpl.name.matches(self.bse_titles)
+                            and param.name.matches('1')):
+                        current_icon = 'e' + paramValue
+                    else:
+                        current_icon = paramValue
+                    if current_icon in self.BSiconsMap:
+                        new_icon = self.BSiconsMap[current_icon]
+                        if (tpl.name.matches(self.bse_titles)
+                                and param.name.matches('1')):
+                            if new_icon[0] != 'e':
+                                # The replacement must also begin with 'e'.
+                                continue
+                            else:
+                                replacement = new_icon[1:]
+                        else:
+                            replacement = new_icon
                         param.value = re.sub(
                             r'\b%s\b' % re.escape(paramValue),
                             replacement,
                             str(param.value)
                         )
-                        replacements.add('\u2192'.join([paramValue,
-                                                        replacement]))
-        newtext = str(wikicode).strip()
-        if newtext != text:
-            summary = self.summaryPrefix
-            summary += ': ' + ', '.join(replacements)
-            self.put_current(newtext, summary=summary)
+                        replacements.add('\u2192'.join([current_icon,
+                                                        new_icon]))
+        self.put_current(
+            str(wikicode),
+            summary=self.summaryPrefix + ': ' + ', '.join(replacements)
+        )
 
 
 def main(*args):
@@ -285,11 +301,9 @@ def main(*args):
     for arg in local_args:
         if genFactory.handleArg(arg):
             continue
-        arg, sep, value = arg.partition(':')
+        arg, _, value = arg.partition(':')
         option = arg[1:]
-        if option in (
-            'config'
-        ):
+        if option == 'config':
             if not value:
                 value = pywikibot.input(
                     'Please enter a value for %s' % arg,
@@ -367,7 +381,7 @@ def main(*args):
 if __name__ == "__main__":
     try:
         main()
-    except Exception:
+    except:
         pywikibot.error("Fatal error!", exc_info=True)
     finally:
         pywikibot.stopme()
