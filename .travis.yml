@@ -1,0 +1,13 @@
+language: python
+python:
+    - 3.4
+    - 3.5
+    - 3.6
+sudo: false
+os: linux
+install:
+    - pip install -r requirements.txt
+before_script:
+    - pip install -r dev-requirements.txt
+script:
+    - cd ..; pylint --rcfile JJMC89_bot/.pylintrc JJMC89_bot
