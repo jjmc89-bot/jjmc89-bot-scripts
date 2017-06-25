@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Task   : EditnoticeDeployer
-Author : JJMC89
+This script deploys editnotices.
 
 The following parameters are supported:
 
@@ -18,15 +17,15 @@ The following parameters are supported:
 
 &params;
 """
+# Author : JJMC89
+# License: MIT
 import sys
 import mwparserfromhell
 import pywikibot
 from pywikibot import pagegenerators
 from pywikibot.bot import SingleSiteBot, CurrentPageBot
 
-__version__ = '$Id$'
-
-docuReplacements = {
+docuReplacements = { # pylint: disable=invalid-name
     '&params;': pagegenerators.parameterHelp
 }
 
@@ -105,6 +104,7 @@ def EditnoticePageGenerator(generator):
 
 
 class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
+    """Bot to deploy editnotices."""
 
     def __init__(self, generator, **kwargs):
         """
@@ -127,8 +127,8 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
             self.editnoticePage.title(underscore=True, withNamespace=False)
         ]
         for tpl in self.editnoticePage.backlinks(
-            filterRedirects=True,
-            namespaces=self.site.namespaces.TEMPLATE
+                filterRedirects=True,
+                namespaces=self.site.namespaces.TEMPLATE
         ):
             self.editnoticePageTitles.append(tpl.title(withNamespace=False))
             self.editnoticePageTitles.append(tpl.title(underscore=True,
@@ -154,6 +154,7 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
                          (self.__class__.__name__, content))
 
     def treat_page(self):
+        """Process one page."""
         self.check_enabled()
         skipPage = False
         if (not self.current_page.exists() or
@@ -196,11 +197,9 @@ def main(*args):
     for arg in local_args:
         if genFactory.handleArg(arg):
             continue
-        arg, sep, value = arg.partition(':')
+        arg, _, value = arg.partition(':')
         option = arg[1:]
-        if option in (
-            'editnoticeTemplate'
-        ):
+        if option == 'editnoticeTemplate':
             if not value:
                 value = pywikibot.input(
                     'Please enter a value for %s' % arg,
@@ -244,7 +243,7 @@ def main(*args):
 if __name__ == "__main__":
     try:
         main()
-    except Exception:
+    except:
         pywikibot.error("Fatal error!", exc_info=True)
     finally:
         pywikibot.stopme()
