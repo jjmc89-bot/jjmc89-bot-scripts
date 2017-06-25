@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Task   : User groups MassMessage list updater
-Author : JJMC89
-
+This script updates user groups MassMessage lists.
 
 The following parameters are required:
 
@@ -22,6 +20,8 @@ The following parameters are supported:
 -startDate        Logs will be parsed ending on this date. The default is
                   yesterday. Format: YYYY-MM-DD.
 """
+# Author : JJMC89
+# License: MIT
 from collections import OrderedDict
 import datetime
 from datetime import date, time, timedelta
@@ -33,8 +33,6 @@ import sys
 import pywikibot
 from pywikibot import pagegenerators
 from pywikibot.bot import SingleSiteBot, ExistingPageBot, NoRedirectPageBot
-
-__version__ = '$Id$'
 
 
 def validate_config(config, site):
@@ -54,12 +52,8 @@ def validate_config(config, site):
     for title, pageConfig in config.items():
         pywikibot.log('-%s: %s' % (title, pageConfig))
         pageConfig['page'] = pywikibot.Page(site, title)
-        requiredKeys = [
-            'enabled',
-            'group',
-            'page'
-        ]
-        hasKeys = []
+        requiredKeys = ['enabled', 'group', 'page']
+        hasKeys = list()
         for key, value in pageConfig.items():
             if key in requiredKeys:
                 hasKeys.append(key)
@@ -81,24 +75,18 @@ def validate_config(config, site):
     return True
 
 
-def validate_options(options, site):
+def validate_options(options):
     """
     Validate the options and return bool.
 
     @param options: options to validate
     @type options: dict
-    @param site: site used in the validation
-    @type site: L{pywikibot.Site}
 
     @rtype: bool
     """
     pywikibot.log('Options:')
-    requiredKeys = [
-        'config',
-        'endDate',
-        'startDate'
-    ]
-    hasKeys = []
+    requiredKeys = ['config', 'endDate', 'startDate']
+    hasKeys = list()
     for key in ('endDate', 'startDate'):
         if key not in options:
             continue
@@ -130,10 +118,11 @@ def validate_options(options, site):
 
 
 class UserGroupsMassMessageListUpdater(
-    SingleSiteBot,
-    ExistingPageBot,
-    NoRedirectPageBot
+        SingleSiteBot,
+        ExistingPageBot,
+        NoRedirectPageBot
 ):
+    """Bot to update MassMessage lists."""
 
     def __init__(self, generator, **kwargs):
         """
@@ -177,6 +166,7 @@ class UserGroupsMassMessageListUpdater(
                          (self.__class__.__name__, content))
 
     def treat_page(self):
+        """Process one page."""
         self.check_enabled()
 
         pageConfig = self.config[self.current_page.title()]
@@ -211,7 +201,7 @@ class UserGroupsMassMessageListUpdater(
                 newpage = pywikibot.Page(
                     self.site,
                     re.sub(r':%s\b' % re.escape(
-                           user.title(withNamespace=False)),
+                        user.title(withNamespace=False)),
                            ':%s' % newuser.title(withNamespace=False),
                            page.title())
                 )
@@ -235,17 +225,17 @@ class UserGroupsMassMessageListUpdater(
         # Handle group changes.
         for change in self.groupChanges:
             user = change['user']
-            if (pageConfig.get('add', None) and
-                    (pageConfig['group'] & change['added']) and
-                    'bot' not in user.groups() and
-                    user not in pageDict
-                ):
+            if (pageConfig.get('add', None)
+                    and (pageConfig['group'] & change['added'])
+                    and 'bot' not in user.groups()
+                    and user not in pageDict
+               ):
                 pywikibot.log('Added %s' % user.title())
                 pageDict[user] = user.toggleTalkPage()
                 addedCount += 1
-            if (pageConfig.get('remove', None) and
-                    (pageConfig['group'] & change['removed'])
-                ):
+            if (pageConfig.get('remove', None)
+                    and (pageConfig['group'] & change['removed'])
+               ):
                 if pageDict.pop(user, None):
                     pywikibot.log('Removed %s' % user.title())
                     removedCount += 1
@@ -283,13 +273,9 @@ def main(*args):
     site.login()
     # Parse command line arguments
     for arg in local_args:
-        arg, sep, value = arg.partition(':')
+        arg, _, value = arg.partition(':')
         option = arg[1:]
-        if option in (
-            'config',
-            'endDate',
-            'startDate'
-        ):
+        if option in ('config', 'endDate', 'startDate'):
             if not value:
                 value = pywikibot.input(
                     'Please enter a value for %s' % arg,
@@ -298,7 +284,7 @@ def main(*args):
             options[option] = value
         else:
             options[option] = True
-    if not validate_options(options, site):
+    if not validate_options(options):
         pywikibot.bot.suggest_help(
             additional_text='The specified options are invalid.')
         return False
@@ -327,9 +313,9 @@ def main(*args):
             try:
                 renames.append({
                     'olduser':
-                        pywikibot.User(site, rename._params['olduser']),
+                        pywikibot.User(site, rename.data['params']['olduser']),
                     'newuser':
-                        pywikibot.User(site, rename._params['newuser']),
+                        pywikibot.User(site, rename.data['params']['newuser']),
                     'timestamp': rename.timestamp()
                 })
             except KeyError:

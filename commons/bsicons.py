@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Task   : BSicons:
-         - Output changes to BSicons
-         - List BSicon redirects
-         - List large BSicons
-Author : JJMC89
+This script generates BSicon reports.
+
+    - Output changes to BSicons
+    - List BSicon redirects
+    - List large BSicons
 
 The following parameters are required:
 
@@ -31,6 +31,8 @@ The following parameters are supported:
 
 -largePage        Title of the page to save the large files list
 """
+# Author : JJMC89
+# License: MIT
 import datetime
 from datetime import date, time, timedelta
 import json
@@ -110,10 +112,10 @@ def validate_options(options, site):
         if key == 'changesDate':
             pass
         elif key in (
-            'changesSummary',
-            'listSummary',
-            'logsPagePrefix',
-            'logsSummary'
+                'changesSummary',
+                'listSummary',
+                'logsPagePrefix',
+                'logsSummary'
         ):
             if not isinstance(value, str):
                 return False
@@ -130,10 +132,7 @@ def validate_options(options, site):
                 return False
             elif value is not True:
                 sys.exit('Task disabled.')
-        elif key in (
-            'largePage',
-            'redirectsPage'
-        ):
+        elif key in 'largePage' 'redirectsPage':
             if not isinstance(value, str):
                 return False
             options[key] = pywikibot.Page(site, value)
@@ -207,24 +206,24 @@ def save_botstartend(savetext, page, summary):
         pywikibot.error('%s does not exist. Skipping.' % page.title())
 
 
-def save_list(list, page, summary):
+def save_list(page_list, page, summary):
     """
-    Writes the given list to the given page.
+    Writes the given page_list to the given page.
 
-    @param list: List of pages to output
-    @type list: list of L{pywikibot.Page}
+    @param page_list: List of pages to output
+    @type page_list: list of L{pywikibot.Page}
     @param page: Page to save to
     @type page: L{pywikibot.Page}
     @param summary: Edit summary
     @type summary: str
     """
     listtext = ''
-    for item in sorted(list):
+    for item in sorted(page_list):
         listtext += '\n# %s' % item.title(asLink=True, textlink=True)
     save_botstartend(listtext, page, summary)
 
 
-def output_log(logtype=None, start=None, end=None, site=None, options=dict(),
+def output_log(logtype=None, start=None, end=None, site=None, options=None,
                BSiconTemplateTitle='bsq2'):
     """
     Writes logevents to a page.
@@ -281,7 +280,7 @@ def output_log(logtype=None, start=None, end=None, site=None, options=dict(),
     )
 
 
-def output_move_log(start=None, end=None, site=None, options=dict()):
+def output_move_log(start=None, end=None, site=None, options=None):
     """
     Writes move logevents to a page.
 
@@ -368,20 +367,12 @@ def main(*args):
     for arg in local_args:
         if genFactory.handleArg(arg):
             continue
-        arg, sep, value = arg.partition(':')
+        arg, _, value = arg.partition(':')
         option = arg[1:]
-        if option in (
-            'config',
-            'changesDate',
-            'changesSummary',
-            'changesPagePrefix',
-            'redirectsPage',
-            'largeSize',
-            'largePage',
-            'listSummary',
-            'logsPagePrefix',
-            'logsSummary'
-        ):
+        if option in ('config', 'changesDate', 'changesSummary',
+                      'changesPagePrefix', 'redirectsPage', 'largeSize',
+                      'largePage', 'listSummary', 'logsPagePrefix',
+                      'logsSummary'):
             if not value:
                 value = pywikibot.input(
                     'Please enter a value for %s' % arg,
@@ -432,11 +423,7 @@ def main(*args):
     for file in BSicons:
         if not (file.exists() and page_is_BSicon(file)):
             continue
-        for rev in file.revisions(
-            starttime=start,
-            endtime=end,
-            reverse=True
-        ):
+        for rev in file.revisions(starttime=start, endtime=end, reverse=True):
             fileChanges += '\n|-\n| {{bsq2|%s}}' % get_BSicon_name(file)
             fileChanges += (
                 ' || {r.revid} || {r.timestamp} || {r.user} || '
