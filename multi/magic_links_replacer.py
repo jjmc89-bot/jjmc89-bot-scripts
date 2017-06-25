@@ -21,7 +21,7 @@ from pywikibot import pagegenerators
 from pywikibot.bot import SingleSiteBot, ExistingPageBot, NoRedirectPageBot
 from pywikibot.textlib import replaceExcept
 
-docuReplacements = {
+docuReplacements = { #pylint: disable=invalid-name
     '&params;': pagegenerators.parameterHelp
 }
 
