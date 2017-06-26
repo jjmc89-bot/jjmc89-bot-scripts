@@ -228,7 +228,7 @@ def main(*args):
                 return_subject_only=options['subject_only']
             )
         elif options['to_talk']:
-            gen = pagegenerators.PageWithtalk_page_generator(
+            gen = pagegenerators.PageWithTalkPageGenerator(
                 gen,
                 return_talk_only=options['talk_only']
             )
