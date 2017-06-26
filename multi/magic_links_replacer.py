@@ -25,7 +25,7 @@ docuReplacements = { #pylint: disable=invalid-name
     '&params;': pagegenerators.parameterHelp
 }
 
-# For create_regexes().
+# For _create_regexes().
 _REGEXES = dict()
 
 
@@ -41,11 +41,17 @@ def get_json_from_page(page):
     if not page.exists():
         pywikibot.error('%s does not exist.' % page.title())
         return
-    text = page.get().strip()
-    try:
-        return json.loads(text)
-    except:
+    elif page.isRedirectPage():
+        pywikibot.error('%s is a redirect.' % page.title())
         return
+    elif page.isEmpty():
+        pywikibot.log('%s is empty.' % page.title())
+        return
+    try:
+        return json.loads(page.get().strip())
+    except ValueError:
+        pywikibot.error('%s does not contain valid JSON.' % page.title())
+        raise
 
 
 def validate_config(config):
@@ -207,30 +213,26 @@ def main(*args):
         if gen_factory.handleArg(arg):
             continue
         arg, _, value = arg.partition(':')
-        option = arg[1:]
-        if option == 'config':
+        arg = arg[1:]
+        if arg == 'config':
             if not value:
                 value = pywikibot.input(
                     'Please enter a value for %s' % arg,
                     default=None
                 )
-            options[option] = value
+            options[arg] = value
         else:
-            options[option] = True
+            options[arg] = True
     gen = gen_factory.getCombinedGenerator()
     if 'config' not in options:
         pywikibot.bot.suggest_help(missing_parameters=['config'])
         return False
     config = pywikibot.Page(site, options.pop('config'))
     config = get_json_from_page(config)
-    if isinstance(config, dict):
-        if validate_config(config):
-            options.update(config)
-        else:
-            pywikibot.error('Invalid config.')
-            return False
+    if validate_config(config):
+        options.update(config)
     else:
-        pywikibot.error('Invalid config format.')
+        pywikibot.error('Invalid config.')
         return False
     if gen:
         gen = pagegenerators.PreloadingGenerator(gen)
@@ -239,9 +241,4 @@ def main(*args):
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except:
-        pywikibot.error("Fatal error!", exc_info=True)
-    finally:
-        pywikibot.stopme()
+    main()
