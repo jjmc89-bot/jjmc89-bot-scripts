@@ -179,10 +179,16 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         super().__init__(**kwargs)
         self.bs_titles = self.get_template_titles(
             self.getOption('BS_templates'))
-        self.bse_titles = self.get_template_titles(
-            [pywikibot.Page(self.site, 'Template:BSe')])
         self.routemap_titles = self.get_template_titles(
             self.getOption('routemap_templates'))
+        self.prefix_map = {
+            'e': self.get_template_titles([
+                pywikibot.Page(self.site, 'Template:BSe')]),
+            'u': self.get_template_titles([
+                pywikibot.Page(self.site, 'Template:BSu')]),
+            'ue': self.get_template_titles([
+                pywikibot.Page(self.site, 'Template:BSue')]),
+        }
 
     def get_template_titles(self, templates):
         """
@@ -250,28 +256,25 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
                 for param in tpl.params:
                     param_value = HTML_COMMENT.sub('',
                                                    str(param.value)).strip()
-                    if (tpl.name.matches(self.bse_titles)
-                            and param.name.matches('1')):
-                        current_icon = 'e' + param_value
-                    else:
-                        current_icon = param_value
+                    prefix = ''
+                    if param.name.matches('1'):
+                        for key, value in self.prefix_map.items():
+                            if tpl.name.matches(value):
+                                prefix = key
+                                break
+                    current_icon = prefix + param_value
                     if current_icon in self.getOption('bsicons_map'):
                         new_icon = self.getOption('bsicons_map')[current_icon]
-                        if (tpl.name.matches(self.bse_titles)
-                                and param.name.matches('1')):
-                            # The replacement must also begin with 'e'.
-                            if new_icon[0] != 'e':
-                                continue
-                            replacement = new_icon[1:]
-                        else:
-                            replacement = new_icon
-                        param.value = re.sub(
-                            r'\b%s\b' % re.escape(param_value),
-                            replacement,
-                            str(param.value)
-                        )
-                        replacements.add('\u2192'.join([current_icon,
-                                                        new_icon]))
+                        # The replacement must have the same prefix.
+                        if new_icon[:len(prefix)] == prefix:
+                            replacement = new_icon[len(prefix):]
+                            param.value = re.sub(
+                                r'\b%s\b' % re.escape(param_value),
+                                replacement,
+                                str(param.value)
+                            )
+                            replacements.add('\u2192'.join([current_icon,
+                                                            new_icon]))
         self.put_current(
             str(wikicode),
             summary='{}: {}'.format(self.getOption('summary_prefix'),
