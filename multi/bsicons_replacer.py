@@ -3,11 +3,17 @@
 """
 This script replaces BSicons.
 
-The following parameters are required:
+
+The following parameters are supported:
 
 -config           The page title that has the JSON config (object).
-                  Options set in the config override those provided when
-                  running this script.
+                  Any value in the object will overwrite the corresponding
+                  value in the object from -global_config.
+
+-global_config    The page title that has the JSON config (object).
+                  This page must be on Wikimedia Commons. Any value in the
+                  object can be overwritten by a value in the object from
+                  -config.
 """
 # Author : JJMC89
 # License: MIT
@@ -31,22 +37,21 @@ def get_json_from_page(page):
     @param page: Page to read
     @type page: L{pywikibot.Page}
 
-    @rtype: dict or None
+    @rtype: dict
     """
+    if page.isRedirectPage():
+        pywikibot.log('%s is a redirect.' % page.title())
+        page = page.getRedirectTarget()
     if not page.exists():
-        pywikibot.error('%s does not exist.' % page.title())
-        return
-    elif page.isRedirectPage():
-        pywikibot.error('%s is a redirect.' % page.title())
-        return
-    elif page.isEmpty():
-        pywikibot.log('%s is empty.' % page.title())
-        return
+        pywikibot.log('%s does not exist.' % page.title())
+        return dict()
     try:
         return json.loads(page.get().strip())
     except ValueError:
         pywikibot.error('%s does not contain valid JSON.' % page.title())
         raise
+    except pywikibot.PageRelatedError:
+        return dict()
 
 
 def validate_config(config, site):
@@ -269,10 +274,9 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
                         new_icon = self.getOption('bsicons_map')[current_icon]
                         # The replacement must have the same prefix.
                         if new_icon[:len(prefix)] == prefix:
-                            replacement = new_icon[len(prefix):]
                             param.value = re.sub(
                                 r'\b%s\b' % re.escape(param_value),
-                                replacement,
+                                new_icon[len(prefix):],
                                 str(param.value)
                             )
                             replacements.add('\u2192'.join([current_icon,
@@ -303,7 +307,7 @@ def main(*args):
             continue
         arg, _, value = arg.partition(':')
         arg = arg[1:]
-        if arg == 'config':
+        if arg in 'config' 'global_config':
             if not value:
                 value = pywikibot.input(
                     'Please enter a value for %s' % arg,
@@ -312,16 +316,25 @@ def main(*args):
             options[arg] = value
         else:
             options[arg] = True
-    if 'config' in options:
-        config = pywikibot.Page(site, options.pop('config'))
-        config = get_json_from_page(config)
-        if validate_config(config, site):
-            options.update(config)
-        else:
-            pywikibot.error('Invalid config.')
-            return False
+    if 'config' not in options and 'global_config' not in options:
+        pywikibot.bot.suggest_help(
+            additional_text='Missing parameter(s) "config" or "global_config"'
+        )
+        return False
+    if 'global_config' in options:
+        config = get_json_from_page(pywikibot.Page(
+            pywikibot.Site('commons', 'commons'),
+            options.pop('global_config')
+        ))
     else:
-        pywikibot.bot.suggest_help(missing_parameters=['config'])
+        config = dict()
+    if 'config' in options:
+        config.update(get_json_from_page(
+            pywikibot.Page(site, options.pop('config'))))
+    if validate_config(config, site):
+        options.update(config)
+    else:
+        pywikibot.error('Invalid config.')
         return False
 
     bsicons_map = dict()
