@@ -337,7 +337,7 @@ def output_move_log(start=None, end=None, site=None, options=None):
         log_page.text += log_text
     else:
         log_page.text = ('{{%s}}%s' %
-                         (options['log_page_prefix'], log_text))
+                         (options['logs_page_prefix'], log_text))
     log_page.save(
         minor=False,
         summary='/* %s */ BSicons: %s' %
@@ -373,7 +373,7 @@ def main(*args):
         arg = arg[1:]
         if arg in ('config', 'changes_date', 'changes_summary',
                    'changes _page_prefix', 'redirects_page', 'large_size',
-                   'large_page', 'list_summary', 'log_page_prefix',
+                   'large_page', 'list_summary', 'logs_page_prefix',
                    'logs_summary'):
             if not value:
                 value = pywikibot.input(
