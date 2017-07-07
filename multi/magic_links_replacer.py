@@ -106,7 +106,7 @@ def _create_regexes():
             r'''[^>\s]+))?)*\s*\/?>)'''
         ),
         'tags_content': re.compile(r'(<(?P<tag>%s)\b.*?</(?P=tag)>)'
-                                   % r'|'.join(tags), flags=re.I)
+                                   % r'|'.join(tags), flags=re.I | re.M)
     })
 
 
@@ -153,8 +153,8 @@ class MagicLinksReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         super().__init__(**kwargs)
         _create_regexes()
         self.replace_exceptions = [_REGEXES[key] for key in
-                                   ('bare_url', 'bracket_url', 'tags',
-                                    'tags_content')]
+                                   ('bare_url', 'bracket_url', 'tags_content',
+                                    'tags')]
         self.replace_exceptions += ['category', 'comment', 'file',
                                     'interwiki', 'invoke', 'link', 'property',
                                     'template']
