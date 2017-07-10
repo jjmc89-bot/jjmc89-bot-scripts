@@ -190,12 +190,18 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
             'e': self.get_template_titles([
                 pywikibot.Page(self.site, 'Template:BSe'),
                 pywikibot.Page(self.site, 'Template:JBSu'),
-                pywikibot.Page(self.site, 'Template:ZCn')
+                pywikibot.Page(self.site, 'Template:ZCn'),
+                pywikibot.Page(self.site, 'Template:FLe')
             ]),
             'u': self.get_template_titles([
-                pywikibot.Page(self.site, 'Template:BSu')]),
+                pywikibot.Page(self.site, 'Template:BSu'),
+                pywikibot.Page(self.site, 'Template:ZCm'),
+                pywikibot.Page(self.site, 'Template:FLm')
+            ]),
             'ue': self.get_template_titles([
-                pywikibot.Page(self.site, 'Template:BSue')]),
+                pywikibot.Page(self.site, 'Template:BSue'),
+                pywikibot.Page(self.site, 'Template:FLme')
+            ]),
         }
 
     def get_template_titles(self, templates):
