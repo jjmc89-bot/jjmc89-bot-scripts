@@ -189,7 +189,8 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         self.prefix_map = {
             'e': self.get_template_titles([
                 pywikibot.Page(self.site, 'Template:BSe'),
-                pywikibot.Page(self.site, 'Template:JBSu')
+                pywikibot.Page(self.site, 'Template:JBSu'),
+                pywikibot.Page(self.site, 'Template:ZCn')
             ]),
             'u': self.get_template_titles([
                 pywikibot.Page(self.site, 'Template:BSu')]),
