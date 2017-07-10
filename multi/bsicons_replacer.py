@@ -190,8 +190,8 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
             'e': self.get_template_titles([
                 pywikibot.Page(self.site, 'Template:BSe'),
                 pywikibot.Page(self.site, 'Template:BS1e'),
-                pywikibot.Page(self.site, 'Template:JBS1u'),
                 pywikibot.Page(self.site, 'Template:JBSu'),
+                pywikibot.Page(self.site, 'Template:JBS1u'),
                 pywikibot.Page(self.site, 'Template:ZCn'),
                 pywikibot.Page(self.site, 'Template:ZC1n'),
                 pywikibot.Page(self.site, 'Template:FLe'),
@@ -208,8 +208,8 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
             'ue': self.get_template_titles([
                 pywikibot.Page(self.site, 'Template:BSue'),
                 pywikibot.Page(self.site, 'Template:BS1ue'),
-                pywikibot.Page(self.site, 'Template:FL1me'),
-                pywikibot.Page(self.site, 'Template:FLme')
+                pywikibot.Page(self.site, 'Template:FLme'),
+                pywikibot.Page(self.site, 'Template:FL1me')
             ]),
         }
 
