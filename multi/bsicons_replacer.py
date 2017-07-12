@@ -384,7 +384,7 @@ def main(*args):
         if bsicon_name.find(' ') > -1:
             bsicons_map[bsicon_name.replace(' ', '_')] = target_bsicon_name
         pages = pages.union(pagegenerators.FileLinksGenerator(local_file))
-    for key, value in options.pop('replacementMap', dict()).items():
+    for key, value in options.pop('replacement_map', dict()).items():
         try:
             local_file = pywikibot.FilePage(site, key)
             target_file = pywikibot.FilePage(site, value)
