@@ -85,7 +85,7 @@ def validate_config(config, site):
             templates = set()
             for tpl in config[key]:
                 page = pywikibot.Page(site, 'Template:%s' % tpl)
-                if page.exists() and not page.isRedirectPage():
+                if page.exists():
                     templates.add(page)
             config[key] = templates
         elif key == 'repository':
@@ -228,6 +228,10 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         """
         titles = set()
         for template in templates:
+            if template.isRedirectPage():
+                template = template.getRedirectTarget()
+            if not template.exists():
+                continue
             titles.add(template.title(withNamespace=False))
             titles.add(template.title(underscore=True, withNamespace=False))
             for tpl in template.backlinks(
