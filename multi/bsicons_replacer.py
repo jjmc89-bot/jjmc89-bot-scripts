@@ -189,12 +189,32 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         self.prefix_map = {
             'e': self.get_template_titles([
                 pywikibot.Page(self.site, 'Template:BSe'),
-                pywikibot.Page(self.site, 'Template:JBSu')
+                pywikibot.Page(self.site, 'Template:BS1e'),
+                pywikibot.Page(self.site, 'Template:JBSu'),
+                pywikibot.Page(self.site, 'Template:JBS1u'),
+                pywikibot.Page(self.site, 'Template:ZCn'),
+                pywikibot.Page(self.site, 'Template:ZC1n'),
+                pywikibot.Page(self.site, 'Template:ŽČn'),
+                pywikibot.Page(self.site, 'Template:ŽČ1n'),
+                pywikibot.Page(self.site, 'Template:FLe'),
+                pywikibot.Page(self.site, 'Template:FL1e')
             ]),
             'u': self.get_template_titles([
-                pywikibot.Page(self.site, 'Template:BSu')]),
+                pywikibot.Page(self.site, 'Template:BSu'),
+                pywikibot.Page(self.site, 'Template:BS1u'),
+                pywikibot.Page(self.site, 'Template:ZCm'),
+                pywikibot.Page(self.site, 'Template:ZC1m'),
+                pywikibot.Page(self.site, 'Template:ŽČm'),
+                pywikibot.Page(self.site, 'Template:ŽČ1m'),
+                pywikibot.Page(self.site, 'Template:FLm'),
+                pywikibot.Page(self.site, 'Template:FL1m')
+            ]),
             'ue': self.get_template_titles([
-                pywikibot.Page(self.site, 'Template:BSue')]),
+                pywikibot.Page(self.site, 'Template:BSue'),
+                pywikibot.Page(self.site, 'Template:BS1ue'),
+                pywikibot.Page(self.site, 'Template:FLme'),
+                pywikibot.Page(self.site, 'Template:FL1me')
+            ]),
         }
 
     def get_template_titles(self, templates):
