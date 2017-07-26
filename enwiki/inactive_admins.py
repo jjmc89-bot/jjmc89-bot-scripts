@@ -175,7 +175,6 @@ def update_section(text, options, site=None):
     match = re.match(r'.+?on or after \b(?P<date>.+?) \(UTC\)',
                      text, flags=re.S)
     if match:
-        print(match.group('date'))
         section_date = parse(match.group('date')).date()
     else:
         raise ValueError('Could not find a valid date.')
@@ -264,7 +263,6 @@ class User(pywikibot.User):
         @rtype: bool
         """
         if self._is_active is None:
-            print('Setting _is_active for %s' % self.username)
             if self.last_edit and self.last_edit[2].date() >= cutoff:
                 self._is_active = True
             elif (self.last_log_entry
@@ -282,7 +280,6 @@ class User(pywikibot.User):
         @rtype: tuple
         """
         if self._last_edit is None:
-            print('Setting _last_edit for %s' % self.username)
             self._last_edit = next(self.contributions(total=1), None)
         return self._last_edit
 
@@ -294,7 +291,6 @@ class User(pywikibot.User):
         @rtype: L{pywikibot.logentry}
         """
         if self._last_log_entry is None:
-            print('Setting _last_log_entry for %s' % self.username)
             self._last_log_entry = next(iter(self.site.logevents(
                 user=self.username, total=1)), None)
         return self._last_log_entry
