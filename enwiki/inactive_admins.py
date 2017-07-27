@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-This script reports inactive admins.
+This script reports and notifies inactive admins.
 
 
 The following parameters are required:
