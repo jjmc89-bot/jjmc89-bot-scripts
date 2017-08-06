@@ -95,13 +95,9 @@ def validate_config(config, site):
                 file_site = site.image_repository()
             else:
                 file_site = site
-        elif key == 'replacement_map':
-            pass
         elif key == 'summary_prefix':
             if not isinstance(value, str):
                 return False
-        else:
-            return False
     if sorted(has_keys) != sorted(required_keys):
         return False
     file_site.login()
@@ -150,6 +146,45 @@ def page_is_bsicon(page):
     return True
 
 
+def mask_text(text, regex, mask=None):
+    """
+    Mask text using a regex.
+
+    @rtype: str, dict
+    """
+    mask = mask or dict()
+    try:
+        key = max(mask.keys()) + 1
+    except ValueError:
+        key = 1
+    matches = [match[0] if isinstance(match, tuple) else match
+               for match in regex.findall(text)]
+    matches = sorted(matches, key=len, reverse=True)
+    for match in matches:
+        mask[key] = match
+        text = text.replace(match, '***bot***masked***{}***'.format(key))
+        key += 1
+    return text, mask
+
+
+def unmask_text(text, mask):
+    """Unask text."""
+    while text.find('***bot***masked***') > -1:
+        for key, value in mask.items():
+            text = text.replace('***bot***masked***{}***'.format(key), value)
+    return text
+
+
+def mask_html_tags(text, mask=None):
+    """Mask HTML tags."""
+    tags_regex = re.compile(
+        r'''(<\/?\w+(?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|'''
+        r'''[^>\s]+))?)*\s*\/?>)''',
+        flags=re.S
+    )
+    return mask_text(text, tags_regex, mask)
+
+
 def get_bsicon_name(file):
     """
     Return the BSicon name.
@@ -190,24 +225,24 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
             'e': self.get_template_titles([
                 pywikibot.Page(self.site, 'Template:BSe'),
                 pywikibot.Page(self.site, 'Template:BS1e'),
+                pywikibot.Page(self.site, 'Template:FLe'),
+                pywikibot.Page(self.site, 'Template:FL1e'),
                 pywikibot.Page(self.site, 'Template:JBSu'),
                 pywikibot.Page(self.site, 'Template:JBS1u'),
                 pywikibot.Page(self.site, 'Template:ZCn'),
                 pywikibot.Page(self.site, 'Template:ZC1n'),
                 pywikibot.Page(self.site, 'Template:ŽČn'),
-                pywikibot.Page(self.site, 'Template:ŽČ1n'),
-                pywikibot.Page(self.site, 'Template:FLe'),
-                pywikibot.Page(self.site, 'Template:FL1e')
+                pywikibot.Page(self.site, 'Template:ŽČ1n')
             ]),
             'u': self.get_template_titles([
                 pywikibot.Page(self.site, 'Template:BSu'),
                 pywikibot.Page(self.site, 'Template:BS1u'),
+                pywikibot.Page(self.site, 'Template:FLm'),
+                pywikibot.Page(self.site, 'Template:FL1m'),
                 pywikibot.Page(self.site, 'Template:ZCm'),
                 pywikibot.Page(self.site, 'Template:ZC1m'),
                 pywikibot.Page(self.site, 'Template:ŽČm'),
-                pywikibot.Page(self.site, 'Template:ŽČ1m'),
-                pywikibot.Page(self.site, 'Template:FLm'),
-                pywikibot.Page(self.site, 'Template:FL1m')
+                pywikibot.Page(self.site, 'Template:ŽČ1m')
             ]),
             'ue': self.get_template_titles([
                 pywikibot.Page(self.site, 'Template:BSue'),
@@ -259,8 +294,8 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
     def treat_page(self):
         """Process one page."""
         self.check_enabled()
-        wikicode = mwparserfromhell.parse(self.current_page.text,
-                                          skip_style_tags=True)
+        text, mask = mask_html_tags(self.current_page.text)
+        wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         replacements = set()
         # Loop over all templates on the page.
         for tpl in wikicode.ifilter_templates():
@@ -306,7 +341,7 @@ class BSiconsReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
                             replacements.add('\u2192'.join([current_icon,
                                                             new_icon]))
         self.put_current(
-            str(wikicode),
+            unmask_text(str(wikicode), mask),
             summary='{}: {}'.format(self.getOption('summary_prefix'),
                                     ', '.join(replacements))
         )
