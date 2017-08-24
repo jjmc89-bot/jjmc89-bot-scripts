@@ -27,7 +27,10 @@ from pywikibot import pagegenerators
 from pywikibot.bot import SingleSiteBot, ExistingPageBot, NoRedirectPageBot
 
 HTML_COMMENT = re.compile(r'<!--.*?-->', flags=re.S)
-ROUTEMAP_BSICON = re.compile(r'(?=(\n|! !|!~|\\)(.+?)(\n|!~|~~|!@|__|!_|\\))')
+ROUTEMAP_BSICON = re.compile(
+    r'(?=((?:^|! !|!~|\\)[ \t]*)\b(.+?)\b([ \t]*(?:$|!~|~~|!@|__|!_|\\)))',
+    flags=re.M
+)
 
 
 def get_json_from_page(page):
