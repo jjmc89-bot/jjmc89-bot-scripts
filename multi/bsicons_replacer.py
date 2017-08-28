@@ -29,12 +29,6 @@ import pywikibot
 from pywikibot import pagegenerators
 from pywikibot.bot import MultipleSitesBot, ExistingPageBot, NoRedirectPageBot
 
-BS_PREFIX_TEMPLATES = { # Temporary
-    'e': ['BSe', 'BS1e', 'FLe', 'FL1e', 'JBSu', 'JBS1u', 'ZCn', 'ZC1n', 'ŽČn',
-          'ŽČ1n'],
-    'u': ['BSu', 'BS1u', 'FLm', 'FL1m', 'ZCm', 'ZC1m', 'ŽČm', 'ŽČ1m'],
-    'ue': ['BSue', 'BS1ue', 'FLme', 'FL1me']
-}
 HTML_COMMENT = re.compile(r'<!--.*?-->', flags=re.S)
 ROUTEMAP_BSICON = re.compile(
     r'(?=((?:^|! !|!~|\\)[ \t]*)\b(.+?)\b([ \t]*(?:$|!~|~~|!@|__|!_|\\)))',
@@ -174,7 +168,6 @@ def validate_local_config(config, site):
             elif not isinstance(value, dict):
                 pywikibot.log('Invalid type.')
                 return False
-            config[key].update(BS_PREFIX_TEMPLATES) # Temporary
             tpl_map = dict()
             for prefix, templates in config[key].items():
                 if isinstance(templates, str):
@@ -365,7 +358,10 @@ class BSiconsReplacer(MultipleSitesBot, ExistingPageBot, NoRedirectPageBot):
                     if not tpl.name.matches(tpl_titles):
                         continue
                     for param in tpl.params:
-                        prefix = icon_prefix if param.name.matches('1') else ''
+                        if param.name.matches('1'):
+                            prefix = icon_prefix.strip()
+                        else:
+                            prefix = ''
                         param_value = HTML_COMMENT.sub(
                             '', str(param.value)).strip()
                         current_icon = prefix + param_value
