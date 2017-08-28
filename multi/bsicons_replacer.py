@@ -27,7 +27,8 @@ import re
 import mwparserfromhell
 import pywikibot
 from pywikibot import pagegenerators
-from pywikibot.bot import MultipleSitesBot, ExistingPageBot, NoRedirectPageBot
+from pywikibot.bot import (MultipleSitesBot, ExistingPageBot,
+                           FollowRedirectPageBot)
 
 HTML_COMMENT = re.compile(r'<!--.*?-->', flags=re.S)
 ROUTEMAP_BSICON = re.compile(
@@ -274,7 +275,8 @@ def get_bsicon_name(file):
         withNamespace=False)))[0][7:]
 
 
-class BSiconsReplacer(MultipleSitesBot, ExistingPageBot, NoRedirectPageBot):
+class BSiconsReplacer(MultipleSitesBot, ExistingPageBot,
+                      FollowRedirectPageBot):
     """Bot to replace BSicons."""
 
     def __init__(self, generator, **kwargs):
@@ -449,7 +451,8 @@ def main(*args):
         if bsicon_name.find(' ') > -1:
             bsicons_map[bsicon_name.replace(' ', '_')] = target_bsicon_name
         pages = pages.union(page.globalusage())
-    for key, value in options.pop('replacement_map', dict()).items():
+    for key, value in options['config'].pop('replacement_map',
+                                            dict()).items():
         try:
             page = pywikibot.FilePage(site, key)
             replacement = pywikibot.FilePage(site, value)
