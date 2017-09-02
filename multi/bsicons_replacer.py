@@ -402,11 +402,8 @@ class BSiconsReplacer(MultipleSitesBot, FollowRedirectPageBot,
                             continue
                         # The replacement must have the same prefix.
                         if new_icon[:len(prefix)] == prefix:
-                            param.value = re.sub(
-                                r'\b{}\b'.format(re.escape(param_value)),
-                                new_icon[len(prefix):],
-                                str(param.value)
-                            )
+                            param.value = str(param.value).replace(
+                                param_value, new_icon[len(prefix):])
                             replacements.add('\u2192'.join([current_icon,
                                                             new_icon]))
         self.put_current(
