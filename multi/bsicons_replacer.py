@@ -314,10 +314,14 @@ class BSiconsReplacer(MultipleSitesBot, FollowRedirectPageBot,
         self.generator = generator
         super().__init__(**kwargs)
         self._config = dict()
+        self._disabled = set()
 
-    def check_enabled(self):
-        """Check if the task is enabled."""
+    @property
+    def site_disabled(self):
+        """True if the task is disabled on the site."""
         site = self.current_page.site
+        if site in self._disabled:
+            return True
         if not site.logged_in():
             site.login()
         page = pywikibot.Page(
@@ -332,8 +336,9 @@ class BSiconsReplacer(MultipleSitesBot, FollowRedirectPageBot,
             if content:
                 pywikibot.warning('{} disabled on {}:\n{}'.format(
                     self.__class__.__name__, site, content))
-                return False
-        return True
+                self._disabled.add(site)
+                return True
+        return False
 
     @property
     def site_config(self):
@@ -350,7 +355,7 @@ class BSiconsReplacer(MultipleSitesBot, FollowRedirectPageBot,
 
     def treat_page(self):
         """Process one page."""
-        if not (self.site_config and self.check_enabled()):
+        if not self.site_config or self.site_disabled:
             return
         text, mask = mask_html_tags(self.current_page.text)
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
