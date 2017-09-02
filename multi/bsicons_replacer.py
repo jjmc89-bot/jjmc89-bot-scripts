@@ -133,7 +133,7 @@ def validate_config(config, site):
     if isinstance(replacement_map, str):
         page = pywikibot.Page(site, replacement_map)
         replacement_map = get_json_from_page(page)
-    if not isinstance(replacement_map, dict):
+    elif not isinstance(replacement_map, dict):
         replacement_map = dict()
     for value in replacement_map.values():
         if not isinstance(value, str):
@@ -185,14 +185,13 @@ def validate_local_config(config, site):
             elif not isinstance(value, list):
                 pywikibot.log('Invalid type.')
                 return False
-            config[key] = set()
-            for tpl in config[key]:
-                page = pywikibot.Page(site, 'Template:{}'.format(tpl))
-                config[key].union(get_template_titles(page))
+            config[key] = get_template_titles([pywikibot.Page(
+                site, 'Template:{}'.format(tpl)) for tpl in config[key]])
         elif key == 'summary_prefix':
             if not isinstance(value, str):
                 pywikibot.log('Invalid type.')
                 return False
+        pywikibot.log('\u2192{} = {}'.format(key, config[key]))
     if sorted(has_keys) != sorted(required_keys):
         pywikibot.log('Missing one more required keys.')
         return False
@@ -298,18 +297,21 @@ class BSiconsReplacer(MultipleSitesBot, FollowRedirectPageBot,
 
     def check_enabled(self):
         """Check if the task is enabled."""
+        site = self.current_page.site
+        if not site.logged_in():
+            site.login()
         page = pywikibot.Page(
-            self.current_page.site,
-            'User:{username}/shutoff/{class_name}'.format(
-                username=self.current_page.site.user(),
+            site,
+            'User:{username}/shutoff/{class_name}.css'.format(
+                username=site.user(),
                 class_name=self.__class__.__name__
             )
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                pywikibot.warning('{} disabled:\n{}'.format(
-                    self.__class__.__name__, content))
+                pywikibot.warning('{} disabled on {}:\n{}'.format(
+                    self.__class__.__name__, site, content))
                 return False
         return True
 
