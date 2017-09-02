@@ -424,7 +424,7 @@ def main(*args):
                 size = file.site.loadimageinfo(file)['size']
                 if size > options['large_size']:
                     large_files.add(file)
-            except ValueError as e:
+            except (ValueError, pywikibot.PageRelatedError) as e:
                 pywikibot.exception(e, tb=True)
     if file_changes:
         file_changes = (
