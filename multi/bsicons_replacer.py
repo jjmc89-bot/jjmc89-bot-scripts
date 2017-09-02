@@ -24,6 +24,8 @@ import copy
 import json
 import os
 import re
+from html import unescape as html_unescape
+from urllib.parse import unquote as url_unquote
 import mwparserfromhell
 import pywikibot
 from pywikibot import pagegenerators
@@ -274,6 +276,24 @@ def get_bsicon_name(file):
         withNamespace=False)))[0][7:]
 
 
+def standardize_bsicon_name(bsicon_name):
+    """
+    Return the standardized BSicon name.
+
+    @param bsicon_name: BSicon name
+    @type bsicon_name: str
+
+    @rtype: str
+    """
+    if bsicon_name.find('&') > -1:
+        bsicon_name = html_unescape(bsicon_name)
+    if bsicon_name.find('%') > -1:
+        bsicon_name = url_unquote(bsicon_name)
+    if bsicon_name.find('_') > -1:
+        bsicon_name = bsicon_name.replace('_', ' ')
+    return bsicon_name
+
+
 class BSiconsReplacer(MultipleSitesBot, FollowRedirectPageBot,
                       ExistingPageBot):
     """Bot to replace BSicons."""
@@ -345,16 +365,17 @@ class BSiconsReplacer(MultipleSitesBot, FollowRedirectPageBot,
                     if not matches:
                         continue
                     for match in matches:
-                        replacement = self.getOption('bsicons_map').get(
-                            match[1], None)
-                        if not replacement:
+                        current_icon = standardize_bsicon_name(match[1])
+                        new_icon = self.getOption('bsicons_map').get(
+                            current_icon, None)
+                        if not new_icon:
                             continue
                         param_value = param_value.replace(
                             ''.join(match),
-                            match[0] + replacement + match[2]
+                            match[0] + new_icon + match[2]
                         )
-                        replacements.add('\u2192'.join([match[1],
-                                                        replacement]))
+                        replacements.add('\u2192'.join([current_icon,
+                                                        new_icon]))
                     param.value = param_value
             else:
                 for icon_prefix, tpl_titles in self.site_config[
@@ -368,7 +389,8 @@ class BSiconsReplacer(MultipleSitesBot, FollowRedirectPageBot,
                             prefix = ''
                         param_value = HTML_COMMENT.sub(
                             '', str(param.value)).strip()
-                        current_icon = prefix + param_value
+                        current_icon = standardize_bsicon_name(
+                            prefix + param_value)
                         new_icon = self.getOption('bsicons_map').get(
                             current_icon, None)
                         if not new_icon:
@@ -467,8 +489,6 @@ def main(*args):
         bsicon_name = get_bsicon_name(page)
         target_bsicon_name = get_bsicon_name(replacement)
         bsicons_map[bsicon_name] = target_bsicon_name
-        if bsicon_name.find(' ') > -1:
-            bsicons_map[bsicon_name.replace(' ', '_')] = target_bsicon_name
         pages = pages.union(page.globalusage())
     if pages:
         options['bsicons_map'] = bsicons_map
