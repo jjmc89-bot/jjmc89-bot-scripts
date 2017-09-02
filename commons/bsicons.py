@@ -250,7 +250,11 @@ def output_log(logtype=None, start=None, end=None, site=None, options=None,
         '%s/%s/%s' % (options['logs_page_prefix'], logtype,
                       options['changes_date'].strftime('%Y-%m'))
     )
+    if log_page.text.find(options['changes_date'].isoformat()) > -1:
+        return
     log_page = get_page_from_size(log_page)
+    if log_page.text.find(options['changes_date'].isoformat()) > -1:
+        return
     for logevent in site.logevents(logtype=logtype,
                                    namespace=site.namespaces.FILE.id,
                                    start=start, end=end, reverse=True):
@@ -301,7 +305,11 @@ def output_move_log(start=None, end=None, site=None, options=None):
         '%s/%s/%s' % (options['logs_page_prefix'], 'move',
                       options['changes_date'].strftime('%Y-%m'))
     )
+    if log_page.text.find(options['changes_date'].isoformat()) > -1:
+        return
     log_page = get_page_from_size(log_page)
+    if log_page.text.find(options['changes_date'].isoformat()) > -1:
+        return
     for logevent in site.logevents(logtype='move',
                                    namespace=site.namespaces.FILE.id,
                                    start=start, end=end, reverse=True):
