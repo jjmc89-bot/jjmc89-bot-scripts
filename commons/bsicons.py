@@ -189,6 +189,18 @@ def get_bsicon_name(file):
         withNamespace=False)))[0][7:]
 
 
+def get_headers(text):
+    """
+    Return a list of section headers.
+
+    @param text: Text to parse
+    @type text: str
+
+    @rtype: list
+    """
+    return re.findall(r'^=+ *(.+?) *=+ *$', text, flags=re.M)
+
+
 def save_bot_start_end(save_text, page, summary):
     """
     Writes the text to the given page.
@@ -250,10 +262,10 @@ def output_log(logtype=None, start=None, end=None, site=None, options=None,
         '%s/%s/%s' % (options['logs_page_prefix'], logtype,
                       options['changes_date'].strftime('%Y-%m'))
     )
-    if log_page.text.find(options['changes_date'].isoformat()) > -1:
+    if options['changes_date'].isoformat() in get_headers(log_page.text):
         return
     log_page = get_page_from_size(log_page)
-    if log_page.text.find(options['changes_date'].isoformat()) > -1:
+    if options['changes_date'].isoformat() in get_headers(log_page.text):
         return
     for logevent in site.logevents(logtype=logtype,
                                    namespace=site.namespaces.FILE.id,
@@ -305,10 +317,10 @@ def output_move_log(start=None, end=None, site=None, options=None):
         '%s/%s/%s' % (options['logs_page_prefix'], 'move',
                       options['changes_date'].strftime('%Y-%m'))
     )
-    if log_page.text.find(options['changes_date'].isoformat()) > -1:
+    if options['changes_date'].isoformat() in get_headers(log_page.text):
         return
     log_page = get_page_from_size(log_page)
-    if log_page.text.find(options['changes_date'].isoformat()) > -1:
+    if options['changes_date'].isoformat() in get_headers(log_page.text):
         return
     for logevent in site.logevents(logtype='move',
                                    namespace=site.namespaces.FILE.id,
