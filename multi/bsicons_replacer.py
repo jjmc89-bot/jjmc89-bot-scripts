@@ -246,7 +246,7 @@ def mask_text(text, regex, mask=None):
 
 
 def unmask_text(text, mask):
-    """Unask text."""
+    """Unmask text."""
     while text.find('***bot***masked***') > -1:
         for key, value in mask.items():
             text = text.replace('***bot***masked***{}***'.format(key), value)
@@ -363,7 +363,7 @@ class BSiconsReplacer(MultipleSitesBot, FollowRedirectPageBot,
         for tpl in wikicode.ifilter_templates():
             if tpl.name.matches(self.site_config['routemap_templates']):
                 for param in tpl.params:
-                    if not re.search(r'^map\d*$', str(param.name).strip()):
+                    if not re.search(r'^(?:map)?\d*$', str(param.name).strip()):
                         continue
                     param_value = str(param.value)
                     matches = ROUTEMAP_BSICON.findall(param_value)
