@@ -363,7 +363,7 @@ class BSiconsReplacer(MultipleSitesBot, FollowRedirectPageBot,
         for tpl in wikicode.ifilter_templates():
             if tpl.name.matches(self.site_config['routemap_templates']):
                 for param in tpl.params:
-                    if not re.search(r'^(?:map\d*|1)$',
+                    if not re.search(r'^(?:map\d*|\d+)$',
                                      str(param.name).strip()):
                         continue
                     param_value = str(param.value)
