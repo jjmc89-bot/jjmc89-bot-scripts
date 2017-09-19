@@ -181,7 +181,7 @@ def validate_local_config(config, site):
                 tpl_map[prefix] = get_template_titles([pywikibot.Page(
                     site, 'Template:{}'.format(tpl)) for tpl in templates])
             config[key] = tpl_map
-        elif key == 'routemap_templates':
+        elif key in 'railway_track_templates' 'routemap_templates':
             if isinstance(value, str):
                 config[key] = [value]
             elif not isinstance(value, list):
@@ -197,13 +197,16 @@ def validate_local_config(config, site):
     if sorted(has_keys) != sorted(required_keys):
         pywikibot.log('Missing one more required keys.')
         return False
-    if 'BS_templates' not in config and 'routemap_templates' not in config:
+    if 'BS_templates' not in config:
+        config['BS_templates'] = dict()
+    if 'railway_track_templates' not in config:
+        config['railway_track_templates'] = set()
+    if 'routemap_templates' not in config:
+        config['routemap_templates'] = set()
+    if not (config['BS_templates'] or config['railway_track_templates']
+            or config['routemap_templates']):
         pywikibot.log('Missing templates.')
         return False
-    elif 'BS_templates' not in config:
-        config['BS_templates'] = dict()
-    elif 'routemap_templates' not in config:
-        config['routemap_templates'] = set()
     return True
 
 
@@ -383,6 +386,37 @@ class BSiconsReplacer(MultipleSitesBot, FollowRedirectPageBot,
                         replacements.add('\u2192'.join([current_icon,
                                                         new_icon]))
                     param.value = param_value
+            elif tpl.name.matches(self.site_config['railway_track_templates']):
+                # Written for [[:cs:Template:Železniční trať]].
+                for param in tpl.params:
+                    param_value = HTML_COMMENT.sub('',
+                                                   str(param.value)).strip()
+                    if param.name.matches('typ'):
+                        if param_value[:2] == 'ex':
+                            current_icon = 'exl' + param_value[2:]
+                        else:
+                            current_icon = 'l' + param_value
+                    else:
+                        current_icon = param_value
+                    current_icon = standardize_bsicon_name(current_icon)
+                    new_icon = self.getOption('bsicons_map').get(current_icon,
+                                                                 None)
+                    if not new_icon:
+                        continue
+                    if param.name.matches('typ'):
+                        if new_icon[:3] == 'exl':
+                            replacement = 'ex' + new_icon[3:]
+                        elif new_icon[:1] == 'l':
+                            replacement = new_icon[1:]
+                        else:
+                            pywikibot.log('{} cannot be used in |typ=.'
+                                          .format(new_icon))
+                            continue
+                    else:
+                        replacement = new_icon
+                    param.value = str(param.value).replace(param_value,
+                                                           replacement)
+                    replacements.add('\u2192'.join([current_icon, new_icon]))
             else:
                 for icon_prefix, tpl_titles in self.site_config[
                         'BS_templates'].items():
