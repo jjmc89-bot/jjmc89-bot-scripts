@@ -391,7 +391,6 @@ class BSiconsReplacer(MultipleSitesBot, FollowRedirectPageBot,
                 for param in tpl.params:
                     param_value = HTML_COMMENT.sub('',
                                                    str(param.value)).strip()
-                    prefix = ''
                     if param.name.matches('typ'):
                         if param_value[:2] == 'ex':
                             current_icon = 'exl' + param_value[2:]
