@@ -34,8 +34,7 @@ from pywikibot.bot import (MultipleSitesBot, FollowRedirectPageBot,
 
 HTML_COMMENT = re.compile(r'<!--.*?-->', flags=re.S)
 ROUTEMAP_BSICON = re.compile(
-    r'(?=((?:^|! !|!~|\\)[ \t]*)([^\\~\n]+?)([ \t]*(?:$|!~|~~|!@|__|!_|\\)))',
-    flags=re.M
+    r'(?=((?:\n|! !|!~|\\)[ \t]*)([^\\~\n]+?)([ \t]*(?:\n|!~|~~|!@|__|!_|\\)))'
 )
 
 
