@@ -373,14 +373,16 @@ class BSiconsReplacer(MultipleSitesBot, FollowRedirectPageBot,
                     if not matches:
                         continue
                     for match in matches:
-                        current_icon = standardize_bsicon_name(match[1])
+                        current_icon = standardize_bsicon_name(
+                            HTML_COMMENT.sub('', match[1]).strip())
                         new_icon = self.getOption('bsicons_map').get(
                             current_icon, None)
                         if not new_icon:
                             continue
                         param_value = param_value.replace(
                             ''.join(match),
-                            match[0] + new_icon + match[2]
+                            match[0] + match[1].replace(current_icon, new_icon)
+                            + match[2]
                         )
                         replacements.add('\u2192'.join([current_icon,
                                                         new_icon]))
