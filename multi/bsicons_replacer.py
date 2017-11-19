@@ -249,6 +249,7 @@ def mask_text(text, regex, mask=None):
 
 def unmask_text(text, mask):
     """Unmask text."""
+    text = text.replace('|***bot***=***param***|', '{{!}}')
     while text.find('***bot***masked***') > -1:
         for key, value in mask.items():
             text = text.replace('***bot***masked***{}***'.format(key), value)
@@ -263,6 +264,11 @@ def mask_html_tags(text, mask=None):
         flags=re.S
     )
     return mask_text(text, tags_regex, mask)
+
+
+def mask_pipe_mw(text):
+    """Mask the pipe magic word ({{!}})."""
+    return text.replace('{{!}}', '|***bot***=***param***|')
 
 
 def get_bsicon_name(file):
@@ -360,6 +366,7 @@ class BSiconsReplacer(MultipleSitesBot, FollowRedirectPageBot,
         if not self.site_config or self.site_disabled:
             return
         text, mask = mask_html_tags(self.current_page.text)
+        text = mask_pipe_mw(text)
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         replacements = set()
         for tpl in wikicode.ifilter_templates():
