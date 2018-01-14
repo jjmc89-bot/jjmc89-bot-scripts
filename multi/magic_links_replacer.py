@@ -40,13 +40,13 @@ def get_json_from_page(page):
     """
     if not page.exists():
         pywikibot.error('%s does not exist.' % page.title())
-        return
+        return None
     elif page.isRedirectPage():
         pywikibot.error('%s is a redirect.' % page.title())
-        return
+        return None
     elif page.isEmpty():
         pywikibot.log('%s is empty.' % page.title())
-        return
+        return None
     try:
         return json.loads(page.get().strip())
     except ValueError:
@@ -238,6 +238,7 @@ def main(*args):
         gen = pagegenerators.PreloadingGenerator(gen)
         bot = MagicLinksReplacer(gen, **options)
         bot.run()
+    return True
 
 
 if __name__ == "__main__":

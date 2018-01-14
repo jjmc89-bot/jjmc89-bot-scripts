@@ -256,6 +256,7 @@ def main(*args):
         start=datetime.datetime.combine(options['start'], datetime.time.min),
         end=datetime.datetime.combine(options['end'], datetime.time.max)
     )
+    return True
 
 
 if __name__ == "__main__":
