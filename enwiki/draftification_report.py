@@ -122,7 +122,6 @@ def save_bot_start_end(save_text, page, summary):
     @param summary: Edit summary
     @type summary: str
     """
-    #print(save_text)
     save_text = save_text.strip()
     if page.exists():
         if BOT_START_END.match(page.text):
@@ -131,7 +130,6 @@ def save_bot_start_end(save_text, page, summary):
         else:
             page.text = save_text
         page.save(summary=summary, minor=False, botflag=False)
-        #print(page.text)
     else:
         pywikibot.error('{} does not exist. Skipping.'.format(page.title()))
 
@@ -157,14 +155,20 @@ def output_move_log(page=None, start=None, end=None):
         creator = creation = last_edit = num_editors = '(Unknown)'
         if logevent.target_page.exists():
             current_page = logevent.target_page
-            if (current_page.isRedirectPage()
-                    and current_page.getRedirectTarget().exists()
-                    and (current_page.getRedirectTarget().namespace()
-                         in (page.site.namespaces.DRAFT,
-                             page.site.namespaces.USER,
-                             page.site.namespaces.MAIN))
-               ):
-                current_page = current_page.getRedirectTarget()
+            if current_page.isRedirectPage():
+                try:
+                    redirect_target = current_page.getRedirectTarget()
+                except pywikibot.CircularRedirect:
+                    pywikibot.log('{} is a circular redirect.'.format(
+                        current_page.title(asLink=True)))
+                else:
+                    if (redirect_target.exists()
+                            and (redirect_target.namespace()
+                                 in (page.site.namespaces.DRAFT,
+                                     page.site.namespaces.USER,
+                                     page.site.namespaces.MAIN))
+                       ):
+                        current_page = redirect_target
         elif logevent.page().exists():
             current_page = logevent.page()
         if current_page:
