@@ -347,9 +347,9 @@ def main(*args):
                               if log_event.page().title().endswith(suffix))
         rights_events = chain(rights_events, meta_rights_events)
     for log_event in rights_events:
-        new_groups = set(log_event.newgroups)
-        old_groups = set(log_event.oldgroups)
         try:
+            new_groups = set(log_event.newgroups)
+            old_groups = set(log_event.oldgroups)
             group_changes.append({
                 'user': pywikibot.User(site, re.sub(r'%s$' % suffix, '',
                                                     log_event.page().title())),
