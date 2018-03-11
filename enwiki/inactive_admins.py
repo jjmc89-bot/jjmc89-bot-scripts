@@ -357,7 +357,8 @@ class User(pywikibot.User):
                 attempts += 1
                 success = self.send_email(
                     options['email_subject' + param_suffix],
-                    options['email_text' + param_suffix]
+                    options['email_text' + param_suffix],
+                    ccme=True
                 )
                 if not success:
                     pywikibot.log(
