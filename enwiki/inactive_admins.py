@@ -29,13 +29,18 @@ def get_json_from_page(page):
     @rtype: dict
     """
     if page.isRedirectPage():
-        pywikibot.log('%s is a redirect.' % page.title())
+        pywikibot.log('{} is a redirect.'.format(page.title()))
         page = page.getRedirectTarget()
+    if not page.exists():
+        pywikibot.log('{} does not exist.'.format(page.title()))
+        return dict()
     try:
         return json.loads(page.get().strip())
     except ValueError:
         pywikibot.error('{} does not contain valid JSON.'.format(page.title()))
         raise
+    except pywikibot.PageRelatedError:
+        return dict()
 
 
 def validate_options(options):
@@ -78,6 +83,7 @@ def validate_options(options):
                 result = False
         else:
             result = False
+        pywikibot.log('\u2192{} = {}'.format(key, options[key]))
     if sorted(has_keys) != sorted(required_keys):
         result = False
     return result
@@ -186,7 +192,10 @@ def update_section(text, options, site=None):
             wikicode.remove(tpl)
             continue
         user = User(site, tpl.get('1'))
-        if user.is_active(cutoff=section_date + relativedelta(years=-1)):
+        if 'sysop' not in user.groups():
+            pywikibot.log('{user} is not a sysop.'.format(user=user.username))
+            wikicode.remove(tpl)
+        elif user.is_active(cutoff=section_date + relativedelta(years=-1)):
             pywikibot.log('{user} is now active.'.format(user=user.username))
             wikicode.remove(tpl)
         else:
@@ -291,8 +300,16 @@ class User(pywikibot.User):
         @rtype: L{pywikibot.logentry}
         """
         if self._last_log_entry is None:
-            self._last_log_entry = next(iter(self.site.logevents(
-                user=self.username, total=1)), None)
+            for logevent in self.site.logevents(user=self.username):
+                try:
+                    le_action = logevent.action()
+                except KeyError:
+                    # The logentry's action is hidden.
+                    continue
+                else:
+                    if le_action != 'autopatrol':
+                        self._last_log_entry = logevent
+                        break
         return self._last_log_entry
 
     def notify(self, options, notice_number=1):
@@ -439,6 +456,7 @@ def main(*args):
             botflag=False,
             force=True
         )
+    return True
 
 
 if __name__ == "__main__":
