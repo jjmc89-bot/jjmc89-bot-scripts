@@ -250,6 +250,9 @@ class User(pywikibot.User):
         All parameters are the same as for L{pywikibot.User}.
         """
         super().__init__(source, title)
+        self._is_active = None
+        self._last_edit = None
+        self._last_log_entry = None
         self.notifications = {
             'email': None,
             'email2': None,
@@ -258,9 +261,6 @@ class User(pywikibot.User):
             'note2': None,
             'diff2': None
         }
-        self._last_edit = None
-        self._is_active = None
-        self._last_log_entry = None
 
     def is_active(self, cutoff=date.today() + relativedelta(years=-1)):
         """
@@ -322,10 +322,12 @@ class User(pywikibot.User):
         @type notice_number: int
         """
         param_suffix = '' if notice_number == 1 else str(notice_number)
-        talk_page = self.getUserTalkPage()
         if (self.notifications['note' + param_suffix]
                 or self.notifications['email' + param_suffix]):
+            pywikibot.log('{username} has already been notified.'.format(
+                username=self.username))
             return
+        talk_page = self.getUserTalkPage()
         success = False
         attempts = 0
         while not success and attempts < options.get('max_attempts', 3):
@@ -435,12 +437,7 @@ def main(*args):
             str(section),
             update_section(str(section), options, site=site)
         )
-        page.save(
-            summary='Updating {date:%B %Y} inavtive admins'.format(**options),
-            minor=False,
-            botflag=False,
-            force=True
-        )
+        summary = 'Updating'
     else:
         options['exclusions'] += [
             user.username for user in
@@ -451,12 +448,9 @@ def main(*args):
         else:
             sections.append(section)
         page.text = ''.join(str(i) for i in sections)
-        page.save(
-            summary='Reporting {date:%B %Y} inavtive admins'.format(**options),
-            minor=False,
-            botflag=False,
-            force=True
-        )
+        summary = 'Reporting'
+    summary += ' {date:%B %Y} inavtive admins'.format(**options)
+    page.save(summary=summary, minor=False, botflag=False, force=True)
     return True
 
 
