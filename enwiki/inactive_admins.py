@@ -432,12 +432,13 @@ def main(*args):
         if heading.title.matches('{date:%B %Y}'.format(**options)):
             section = sect
             break
+    summary = '/* {date:%B %Y} */ '.format(**options)
     if section:
         page.text = page.text.replace(
             str(section),
             update_section(str(section), options, site=site)
         )
-        summary = 'Updating'
+        summary += 'Updating'
     else:
         options['exclusions'] += [
             user.username for user in
@@ -448,8 +449,8 @@ def main(*args):
         else:
             sections.append(section)
         page.text = ''.join(str(i) for i in sections)
-        summary = 'Reporting'
-    summary += ' {date:%B %Y} inavtive admins'.format(**options)
+        summary += 'Reporting'
+    summary += ' inavtive admins'
     page.save(summary=summary, minor=False, botflag=False, force=True)
     return True
 
