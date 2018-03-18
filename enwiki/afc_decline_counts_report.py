@@ -10,6 +10,7 @@ The following arguments are required:
 # Author : JJMC89
 # License: MIT
 import re
+from collections import OrderedDict
 import mwparserfromhell
 import pywikibot
 from pywikibot.pagegenerators import CategorizedPageGenerator
@@ -109,8 +110,11 @@ def output_afc_decline_counts(page=None):
     afc_tpl = pywikibot.Page(page.site, 'Template:AFC submission')
     afc_tpl_titles = get_template_titles([afc_tpl])
     afc_cat = pywikibot.Category(page.site, 'Declined AfC submissions')
+    storage = dict()
     for afc_page in CategorizedPageGenerator(afc_cat, recurse=True,
                                              content=True):
+        if afc_page in storage:
+            continue
         declines = 0
         wikicode = mwparserfromhell.parse(afc_page.get(get_redirect=True),
                                           skip_style_tags=True)
@@ -122,6 +126,11 @@ def output_afc_decline_counts(page=None):
                         and param.value.strip().upper() == 'D'):
                     declines += 1
                     break
+        storage[afc_page] = declines
+    # Sort by declines then page
+    storage = OrderedDict(sorted(storage.items(),
+                                 key=lambda kv: (-kv[1], kv[0])))
+    for afc_page, declines in storage.items():
         text += (
             '\n|-\n| {page} || {declines}'
             .format(
@@ -171,8 +180,9 @@ def main(*args):
             options[arg] = True
     if not validate_options(options, site):
         pywikibot.error('Invalid options.')
-    else:
-        output_afc_decline_counts(page=options['page'])
+        return False
+    output_afc_decline_counts(page=options['page'])
+    return True
 
 
 if __name__ == "__main__":
