@@ -450,7 +450,7 @@ def main(*args):
             sections.append(section)
         page.text = ''.join(str(i) for i in sections)
         summary += 'Reporting'
-    summary += ' inavtive admins'
+    summary += ' inactive admins'
     page.save(summary=summary, minor=False, botflag=False, force=True)
     return True
 
