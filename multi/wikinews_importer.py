@@ -75,6 +75,11 @@ def doOnePage(tpl, page, site_src):
         pywikibot.output(u'No target page specified!')
 
     newsPage = pywikibot.Page(site_src, config['page'][0])
+    if newsPage.isRedirectPage():
+        try:
+            newsPage = newsPage.getRedirectTarget()
+        except pywikibot.CircularRedirect:
+            pass
 
     text = u'\n'.join(
             [u'%(indent)s %(prefix)s[[wikinews:%(lang)s:%(article_page)s|%(article_title)s]]' % {
