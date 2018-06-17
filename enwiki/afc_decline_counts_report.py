@@ -106,7 +106,6 @@ def output_afc_decline_counts(page=None):
     @param page: The page to output to
     @type page: L{pywikibot.Page}
     """
-    text = ''
     afc_tpl = pywikibot.Page(page.site, 'Template:AFC submission')
     afc_tpl_titles = get_template_titles([afc_tpl])
     afc_cat = pywikibot.Category(page.site, 'Declined AfC submissions')
@@ -116,32 +115,46 @@ def output_afc_decline_counts(page=None):
         if afc_page in storage:
             continue
         declines = 0
+        status = None
         wikicode = mwparserfromhell.parse(afc_page.get(get_redirect=True),
                                           skip_style_tags=True)
         for tpl in wikicode.ifilter_templates():
             if not tpl.name.matches(afc_tpl_titles):
                 continue
             for param in tpl.params:
-                if (param.name.matches('1')
-                        and param.value.strip().upper() == 'D'):
-                    declines += 1
+                if param.name.matches('1'):
+                    tpl_status = param.value.strip().upper()
+                    if tpl_status == 'R':
+                        status = 'Under review'
+                    elif tpl_status == 'T':
+                        pass
+                    elif tpl_status == 'D':
+                        declines += 1
+                        status = status or 'Declined'
+                    else:
+                        status = 'Pending'
                     break
-        storage[afc_page] = declines
-    # Sort by declines then page
-    storage = OrderedDict(sorted(storage.items(),
-                                 key=lambda kv: (-kv[1], kv[0])))
-    for afc_page, declines in storage.items():
-        text += (
-            '\n|-\n| {page} || {declines}'
-            .format(
-                page=afc_page.title(asLink=True, textlink=True),
-                declines=declines if declines > 0 else 'Unknown',
+        if declines >= 4:
+            storage[afc_page] = dict(declines=declines, status=status)
+    if storage:
+        text = ''
+        # Sort by declines then page
+        storage = OrderedDict(sorted(
+            storage.items(),
+            key=lambda kv: (-kv[1]['declines'], kv[0])
+        ))
+        for afc_page, page_dict in storage.items():
+            text += (
+                '\n|-\n| {page} || {declines} || {status}'
+                .format(
+                    page=afc_page.title(asLink=True, textlink=True),
+                    declines=page_dict['declines'],
+                    status=page_dict['status'] or ''
+                )
             )
-        )
-    if text:
         text = (
             '\n{{| class="wikitable sortable"\n|+ Last updated: ~~~~~'
-            '\n! Page !! Declines{body}\n|}}'
+            '\n! Page !! Declines !! Status{body}\n|}}'
             .format(body=text)
         )
     else:
