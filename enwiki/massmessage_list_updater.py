@@ -215,8 +215,8 @@ class UserGroupsMassMessageListUpdater(
                 newpage = pywikibot.Page(
                     self.site,
                     re.sub(r':%s\b' % re.escape(
-                        user.title(withNamespace=False)),
-                           ':%s' % newuser.title(withNamespace=False),
+                        user.title(with_ns=False)),
+                           ':%s' % newuser.title(with_ns=False),
                            page.title())
                 )
                 pywikibot.log('%s renamed to %s (%s to %s)' % (
