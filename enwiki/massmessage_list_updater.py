@@ -47,10 +47,10 @@ def get_json_from_page(page):
     if not page.exists():
         pywikibot.error('%s does not exist.' % page.title())
         return None
-    elif page.isRedirectPage():
+    if page.isRedirectPage():
         pywikibot.error('%s is a redirect.' % page.title())
         return None
-    elif page.isEmpty():
+    if page.isEmpty():
         pywikibot.log('%s is empty.' % page.title())
         return None
     try:
