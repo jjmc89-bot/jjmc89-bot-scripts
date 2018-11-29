@@ -5,6 +5,7 @@ This script reports inactive interface admins.
 """
 # Author : JJMC89
 # License: MIT
+from itertools import chain
 from dateutil.relativedelta import relativedelta
 import pywikibot
 
@@ -112,7 +113,14 @@ class User(pywikibot.User):
                     return self._has_cssjs_edit
             pywikibot.log('{}: No CSS/JS edit'.format(self.username))
             got_group = kwa['end']
-            for logevent in self.site.logevents(logtype='rights', page=self):
+            rights_events = sorted(chain(
+                self.site.logevents(logtype='rights', page=self),
+                pywikibot.Site('meta', 'meta').logevents(
+                    logtype='rights',
+                    page='{}@{}'.format(self.title(), self.site.dbName())
+                )
+            ), key=lambda logevent: logevent.timestamp(), reverse=True)
+            for logevent in rights_events:
                 added_groups = set(logevent.newgroups)-set(logevent.oldgroups)
                 if 'interface-admin' in added_groups:
                     got_group = logevent.timestamp()
