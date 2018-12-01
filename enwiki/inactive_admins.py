@@ -446,9 +446,14 @@ def main(*args):
         )
         summary += 'Updating'
     else:
+        current_page = pywikibot.Page(
+            site,
+            'Wikipedia:Inactive administrators/{date:%Y}'.format(
+                date=date.today())
+        )
         options['exclusions'] += [
             user.username for user in
-            page.linkedPages(namespaces=site.namespaces.USER.id)]
+            current_page.linkedPages(namespaces=site.namespaces.USER.id)]
         section = create_section(options, site=site)
         if log_section:
             sections.insert(log_section + 1, section)
