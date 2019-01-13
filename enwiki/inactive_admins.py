@@ -313,7 +313,7 @@ class User(pywikibot.User):
                     pywikibot.log(e)
                     continue
                 else:
-                    if le_action != 'autopatrol':
+                    if le_action != 'create':
                         self._last_event = logevent
                         break
         return self._last_event
