@@ -243,9 +243,8 @@ def main(*args):
         bot = EditnoticeDeployer(gen, **options)
         bot.run()
         return True
-    else:
-        pywikibot.bot.suggest_help(missing_generator=True)
-        return False
+    pywikibot.bot.suggest_help(missing_generator=True)
+    return False
 
 
 if __name__ == "__main__":
