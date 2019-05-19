@@ -64,37 +64,39 @@ def parse_page(page):
     for section in wikicode.get_sections(flat=True, include_lead=False):
         heading = section.filter(forcetype=Heading)[0]
         section_title = str(heading.title).lower()
-        print(section_title)
         if 'move' in section_title:
             mode = 'move'
-            edit_summary = 'Moving {old_cat} to {new_cats} per {cfd}'
         elif 'empty' in section_title:
             mode = 'empty'
-            edit_summary = 'Removing {old_cat} per {cfd}'
         else:
             continue
-        parse_section(section, page.site, mode, edit_summary)
+        parse_section(section, page.site, mode)
 
 
-def parse_section(section, site, mode, edit_summary_format):
+def parse_section(section, site, mode):
     """Parse a section of a CFD working page and invoke a bot."""
     cfd_page = None
     for line in str(section).splitlines():
         cfd_page, old_cat, new_cats = parse_line(line, site, cfd_page)
-        if not cfd_page or not old_cat:
-            continue
-        if ((mode == 'empty' and new_cats)
-                or (mode != 'empty' and not new_cats)):
-            continue
-        if len(new_cats) > 1:
+        if not cfd_page or not old_cat or len(new_cats) > 1:
             continue
         new_cat = new_cats[0] if new_cats else None
         discussion = cfd_page.find_discussion(old_cat)
-        edit_summary = edit_summary_format.format(
-            old_cat=old_cat.title(as_link=True, textlink=True),
-            new_cats=new_cat.title(as_link=True, textlink=True),
-            cfd=discussion
-        )
+        if mode == 'empty':
+            if new_cats:
+                continue
+            edit_summary = 'Removing {old_cat} per {cfd}'.format(
+                old_cat=old_cat.title(as_link=True, textlink=True),
+                cfd=discussion
+            )
+        else: # mode == 'move':
+            if not new_cats:
+                continue
+            edit_summary = 'Moving {old_cat} to {new_cats} per {cfd}'.format(
+                old_cat=old_cat.title(as_link=True, textlink=True),
+                new_cats=new_cat.title(as_link=True, textlink=True),
+                cfd=discussion
+            )
         CategoryMoveRobot(oldcat=old_cat, newcat=new_cat, batch=True,
                           comment=edit_summary, inplace=True, move_oldcat=True,
                           deletion_comment=discussion, move_comment=discussion,
