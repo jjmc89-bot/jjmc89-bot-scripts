@@ -42,11 +42,11 @@ class CfdPage(pywikibot.Page):
             discussion = '[[{}#{}]]'.format(self.title(), section_title)
             if category.title() == section_title:
                 return discussion
-            # Split approximately into close, nom, and others
+            # Split approximately into close, nom, and others.
             parts = str(section).split('(UTC)')
             if len(parts) < 3:
                 continue
-            # Parse the nom for links
+            # Parse the nom for links.
             for wikilink in pywikibot.link_regex.finditer(parts[1]):
                 title = wikilink.group('title').strip().split('#')[0]
                 if not title:
@@ -79,28 +79,39 @@ def parse_section(section, site, mode):
     for line in str(section).splitlines():
         cfd_page, old_cat, new_cats = parse_line(line, site, cfd_page)
         if not cfd_page or not old_cat or len(new_cats) > 1:
+            # Must have a CFD, an old category, and 0-1 new categories.
             continue
-        new_cat = new_cats[0] if new_cats else None
+        move_oldcat = True
         discussion = cfd_page.find_discussion(old_cat)
         if mode == 'empty':
             if new_cats:
+                # Must only be one category.
                 continue
+            new_cat = None
             edit_summary = 'Removing {old_cat} per {cfd}'.format(
                 old_cat=old_cat.title(as_link=True, textlink=True),
                 cfd=discussion
             )
         else: # mode == 'move':
             if not new_cats:
+                # Must have a move target.
                 continue
-            edit_summary = 'Moving {old_cat} to {new_cats} per {cfd}'.format(
+            new_cat = new_cats[0]
+            if old_cat.isCategoryRedirect() or old_cat.isRedirectPage():
+                # Don't move redirects.
+                move_oldcat = False
+                if not new_cat.exists():
+                    # The target must exist since it is not being moved.
+                    continue
+            edit_summary = 'Moving {old_cat} to {new_cat} per {cfd}'.format(
                 old_cat=old_cat.title(as_link=True, textlink=True),
-                new_cats=new_cat.title(as_link=True, textlink=True),
+                new_cat=new_cat.title(as_link=True, textlink=True),
                 cfd=discussion
             )
-        CategoryMoveRobot(oldcat=old_cat, newcat=new_cat, batch=True,
-                          comment=edit_summary, inplace=True, move_oldcat=True,
-                          deletion_comment=discussion, move_comment=discussion,
-                          delete_oldcat=True).run()
+        CategoryMoveRobot(oldcat=old_cat, newcat=new_cat, inplace=True,
+                          move_oldcat=move_oldcat, delete_oldcat=True,
+                          move_comment=discussion, deletion_comment=discussion,
+                          comment=edit_summary, batch=True).run()
 
 
 def parse_line(line, site, cfd_page):
