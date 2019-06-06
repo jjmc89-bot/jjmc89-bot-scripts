@@ -121,7 +121,7 @@ def parse_line(line, site, cfd_page):
     if 'NO BOT' in line:
         return cfd_page, old_cat, new_cats
     for wikilink in pywikibot.link_regex.finditer(line):
-        title = wikilink.group('title').strip().split('#')[0]
+        title = wikilink.group('title').strip()
         if not title:
             continue
         link = pywikibot.Page(site, title)
