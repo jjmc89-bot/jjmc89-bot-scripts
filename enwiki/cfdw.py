@@ -81,7 +81,7 @@ def parse_section(section, site, mode):
         if not cfd_page or not old_cat or len(new_cats) > 1:
             # Must have a CFD, an old category, and 0-1 new categories.
             continue
-        move_oldcat = True
+        move_oldcat = delete_oldcat = True
         discussion = cfd_page.find_discussion(old_cat)
         if mode == 'empty':
             if new_cats:
@@ -103,13 +103,14 @@ def parse_section(section, site, mode):
                 if not new_cat.exists():
                     # The target must exist since it is not being moved.
                     continue
+            delete_oldcat = 'REDIRECT' not in line
             edit_summary = 'Moving {old_cat} to {new_cat} per {cfd}'.format(
                 old_cat=old_cat.title(as_link=True, textlink=True),
                 new_cat=new_cat.title(as_link=True, textlink=True),
                 cfd=discussion
             )
         CategoryMoveRobot(oldcat=old_cat, newcat=new_cat, inplace=True,
-                          move_oldcat=move_oldcat, delete_oldcat=True,
+                          move_oldcat=move_oldcat, delete_oldcat=delete_oldcat,
                           move_comment=discussion, deletion_comment=discussion,
                           comment=edit_summary, batch=True).run()
 
