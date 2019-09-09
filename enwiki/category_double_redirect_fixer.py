@@ -11,11 +11,11 @@ The following parameters are supported:
 """
 # Author : JJMC89
 # License: MIT
+import mwparserfromhell
 import pywikibot
 from pywikibot import pagegenerators
 from pywikibot.bot import SingleSiteBot, ExistingPageBot
 from pywikibot.textlib import removeDisabledParts
-import mwparserfromhell
 
 
 docuReplacements = { #pylint: disable=invalid-name
