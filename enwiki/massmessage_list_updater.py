@@ -203,7 +203,7 @@ class UserGroupsMassMessageListUpdater(
                 self.site,
                 re.sub(r'^([^/]+).*', r'\1', page.title())
             )
-            if base_page.isTalkPage:
+            if base_page.isTalkPage():
                 user = pywikibot.User(base_page.toggleTalkPage())
             else:
                 user = pywikibot.User(base_page)
