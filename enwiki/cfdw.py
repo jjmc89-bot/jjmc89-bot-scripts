@@ -51,7 +51,10 @@ class CfdPage(pywikibot.Page):
                 title = wikilink.group('title').strip().split('#')[0]
                 if not title:
                     continue
-                title = pywikibot.Page(self.site, title).title()
+                try:
+                    title = pywikibot.Page(self.site, title).title()
+                except pywikibot.SiteDefinitionError: # T237888
+                    continue
                 if category.title() == title:
                     return discussion
         return self.title(as_link=True)
