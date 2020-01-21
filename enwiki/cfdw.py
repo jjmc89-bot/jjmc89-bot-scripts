@@ -14,7 +14,8 @@ from mwparserfromhell.nodes import Heading, Template, Text, Wikilink
 import pywikibot
 from pywikibot import pagegenerators
 from pywikibot.bot import CurrentPageBot, SingleSiteBot
-from pywikibot.textlib import removeDisabledParts
+from pywikibot.textlib import (getCategoryLinks, removeDisabledParts,
+                               replaceCategoryInPlace, replaceCategoryLinks)
 
 
 docuReplacements = { #pylint: disable=invalid-name
@@ -45,28 +46,40 @@ class CfdBot(SingleSiteBot, CurrentPageBot):
         """
         self.availableOptions.update({
             'always': True,
-            'new_cats': None,
+            'new_cats': list(),
             'old_cat': None,
             'summary': None
         })
         self.generator = generator
         super().__init__(**kwargs)
+        self.options['new_cats'] = sorted(self.getOption('new_cats'),
+                                          reverse=True)
 
     def treat_page(self):
         """Process one page."""
-        self.current_page.change_category(
-            self.getOption('old_cat'),
-            self.getOption('new_cats'),
-            summary=self.getOption('summary')
-        )
-
-
-class CfdMergeBot(CfdBot):
-    """Bot to merge categories."""
-
-    def treat_page(self):
-        """Process one page."""
-        raise NotImplementedError
+        cats = getCategoryLinks(self.current_page.text, self.site)
+        try:
+            index = cats.index(self.getOption('old_cat'))
+        except ValueError:
+            pywikibot.log('Did not find {} in {}.'.format(
+                self.getOption('old_cat'), self.current_page))
+            return
+        new_cats = self.getOption('new_cats')
+        if len(new_cats) <= 1:
+            new_cat = new_cats[0] if new_cats else None
+            if new_cat in cats:
+                new_cat = None
+            text = replaceCategoryInPlace(self.current_page.text,
+                                          self.getOption('old_cat'),
+                                          new_cat, site=self.site)
+        else:
+            cats.remove(self.getOption('old_cat'))
+            for new_cat in new_cats:
+                if new_cat not in cats:
+                    cats.insert(index, new_cat)
+            text = replaceCategoryLinks(self.current_page.text, cats,
+                                        site=self.site)
+        self.put_current(text, summary=self.getOption('summary'))
 
 
 class CfdPage(pywikibot.Page):
@@ -317,7 +330,6 @@ def do_action(mode, **kwargs):
     gen = doc_page_add_generator(old_cat.members())
     gen = pagegenerators.PreloadingGenerator(gen)
     if mode == 'empty':
-        kwargs['new_cats'] = None
         kwargs['summary'] = 'Removing {old_cat} per {cfd}'.format(
             old_cat=old_cat.title(as_link=True, textlink=True),
             cfd=cfd_link
@@ -338,23 +350,22 @@ def do_action(mode, **kwargs):
             old_cat=old_cat.title(as_link=True, textlink=True),
             new_cats=new_cats, cfd=cfd_link
         )
-        CfdMergeBot(gen, **kwargs).run()
+        CfdBot(gen, **kwargs).run()
         sleep(1) # Wait for the category to be registered as empty.
         if old_cat.isEmptyCategory():
             delete_page(old_cat, cfd_link)
     elif mode == 'move':
-        kwargs['new_cats'] = kwargs['new_cats'][0]
         noredirect = kwargs.pop('noredirect')
         if (old_cat.exists() and not old_cat.isCategoryRedirect()
                 and not old_cat.isRedirectPage()
-                and not kwargs['new_cats'].exists()):
+                and not kwargs['new_cats'][0].exists()):
             # Remove the last condition once merging is supported.
-            old_cat.move(kwargs['new_cats'].title(), reason=cfd_link,
+            old_cat.move(kwargs['new_cats'][0].title(), reason=cfd_link,
                          noredirect=noredirect)
-            remove_cfd_tpl(kwargs['new_cats'], 'Action complete')
+            remove_cfd_tpl(kwargs['new_cats'][0], 'Action complete')
         kwargs['summary'] = 'Moving {old_cat} to {new_cat} per {cfd}'.format(
             old_cat=old_cat.title(as_link=True, textlink=True),
-            new_cat=kwargs['new_cats'].title(as_link=True, textlink=True),
+            new_cat=kwargs['new_cats'][0].title(as_link=True, textlink=True),
             cfd=cfd_link
         )
         CfdBot(gen, **kwargs).run()
@@ -450,6 +461,8 @@ def parse_page(page):
         section_title = str(heading.title).lower()
         if 'move' in section_title:
             mode = 'move'
+        elif 'merge' in section_title:
+            mode = 'merge'
         elif 'empty' in section_title:
             mode = 'empty'
         elif 'retain' in section_title:
