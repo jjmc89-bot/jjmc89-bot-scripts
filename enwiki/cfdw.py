@@ -459,14 +459,9 @@ def parse_page(page):
     for section in wikicode.get_sections(flat=True, include_lead=False):
         heading = section.filter(forcetype=Heading)[0]
         section_title = str(heading.title).lower()
-        if 'move' in section_title:
-            mode = 'move'
-        elif 'merge' in section_title:
-            mode = 'merge'
-        elif 'empty' in section_title:
-            mode = 'empty'
-        elif 'retain' in section_title:
-            mode = 'retain'
+        for mode in ['move', 'merge', 'empty', 'retain']:
+            if mode in section_title:
+                break
         else:
             continue
         try:
@@ -497,24 +492,21 @@ def parse_section(section, site, mode):
         if mode == 'move':
             options['noredirect'] = 'REDIRECT' not in prefix
         elif mode == 'retain':
-            action = result = None
-            matches = re.findall(
-                r'\b(?:(keep)|(no consensus|not)(?: to)? ([\w\s]+))\b',
-                suffix,
-                flags=re.I
-            )
-            if matches:
-                match = matches[0]
-                if match[0]:
-                    result = match[0]
-                else:
-                    if match[1].lower() == 'not':
-                        result = match[1] + match[2]
-                    else:
-                        result = match[1]
-                    action = re.sub(r'ed$', 'e', match[2])
-            action = action or options['cfd'].get_action(options['old_cat'])
-            result = result or options['cfd'].get_result()
+            nc_matches = re.findall(r'\b(no consensus) (?:for|to) (\w+)\b',
+                                    suffix, flags=re.I)
+            not_matches = re.findall(r'\b(not )(\w+)\b', suffix, flags=re.I)
+            if nc_matches:
+                result = nc_matches[0][0]
+                action = nc_matches[0][1]
+            elif not_matches:
+                result = not_matches[0][0] + not_matches[0][1]
+                action = re.sub(r'ed$', 'e', not_matches[0][1])
+            elif 'keep' in suffix.lower():
+                result = 'keep'
+                action = 'delete'
+            else:
+                action = options['cfd'].get_action(options['old_cat'])
+                result = options['cfd'].get_result()
             options.update(action=action, result=result)
         if check_action(mode, **options):
             do_action(mode, **options)
