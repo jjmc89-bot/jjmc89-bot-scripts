@@ -352,7 +352,7 @@ def do_action(mode, **kwargs):
         )
         CfdBot(gen, **kwargs).run()
         sleep(1) # Wait for the category to be registered as empty.
-        if old_cat.isEmptyCategory():
+        if old_cat.exists() and old_cat.isEmptyCategory():
             delete_page(old_cat, cfd_link)
     elif mode == 'move':
         noredirect = kwargs.pop('noredirect')
