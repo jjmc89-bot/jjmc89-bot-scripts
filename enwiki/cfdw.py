@@ -13,7 +13,7 @@ import mwparserfromhell
 from mwparserfromhell.nodes import Heading, Template, Text, Wikilink
 import pywikibot
 from pywikibot import pagegenerators
-from pywikibot.bot import CurrentPageBot, SingleSiteBot
+from pywikibot.bot import ExistingPageBot, SingleSiteBot
 from pywikibot.textlib import (getCategoryLinks, removeDisabledParts,
                                replaceCategoryInPlace, replaceCategoryLinks)
 
@@ -33,7 +33,7 @@ TPL = {
 }
 
 
-class CfdBot(SingleSiteBot, CurrentPageBot):
+class CfdBot(SingleSiteBot, ExistingPageBot):
     """Bot to update categories."""
 
     def __init__(self, generator, **kwargs):
@@ -80,7 +80,8 @@ class CfdBot(SingleSiteBot, CurrentPageBot):
                     cats.insert(index, new_cat)
             text = replaceCategoryLinks(self.current_page.text, cats,
                                         site=self.site)
-        self.put_current(text, summary=self.getOption('summary'))
+        self.put_current(text, summary=self.getOption('summary'),
+                         nocreate=True)
 
 
 class CfdPage(pywikibot.Page):
