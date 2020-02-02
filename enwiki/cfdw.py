@@ -57,7 +57,8 @@ class CfdBot(SingleSiteBot, CurrentPageBot):
 
     def treat_page(self):
         """Process one page."""
-        cats = getCategoryLinks(self.current_page.text, self.site)
+        cats = getCategoryLinks(self.current_page.text, self.site,
+                                include=['includeonly'])
         try:
             index = cats.index(self.getOption('old_cat'))
         except ValueError:
@@ -161,13 +162,12 @@ class CfdPage(pywikibot.Page):
             return None
         text = removeDisabledParts(self.text, site=self.site)
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
-        section = None
         for section in wikicode.get_sections(levels=[4]):
             heading = section.filter(forcetype=Heading)[0]
             if str(heading.title).strip() == self.section():
                 break
-            section = None
-        if not section:
+        else:
+            section = None # Trick pylint.
             return None
         # Parse the discussion for category links and action.
         for line in str(section).splitlines():
@@ -193,16 +193,15 @@ class CfdPage(pywikibot.Page):
             return None
         text = removeDisabledParts(self.text, site=self.site)
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
-        section = None
         for section in wikicode.get_sections(levels=[4]):
             heading = section.filter(forcetype=Heading)[0]
             if str(heading.title).strip() == self.section():
                 break
-            section = None
-        if not section:
+        else:
+            section = None # Trick pylint.
             return None
         for line in str(section).splitlines():
-            matches = re.findall(r"''The result of the discussion was:''.*?"
+            matches = re.findall(r"''The result of the discussion was:''\s+"
                                  r"'''(.+?)'''", line)
             if matches:
                 return matches[0]
@@ -270,7 +269,7 @@ def check_action(mode, **kwargs):
              or kwargs['old_cat'].isRedirectPage())
                 and not kwargs['new_cats'][0].exists()):
             pywikibot.error('No target for move to {}.'.format(
-                kwargs['old_cat']))
+                kwargs['new_cats'][0]))
             return False
         if (kwargs['new_cats'][0].isCategoryRedirect()
                 or kwargs['new_cats'][0].isRedirectPage()):
