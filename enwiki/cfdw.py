@@ -8,7 +8,6 @@ This script processes Categories for discussion working pages.
 # Author : JJMC89
 # License: MIT
 import re
-from time import sleep
 import mwparserfromhell
 from mwparserfromhell.nodes import Heading, Template, Text, Wikilink
 import pywikibot
@@ -335,7 +334,8 @@ def do_action(mode, **kwargs):
             cfd=cfd_link
         )
         CfdBot(gen, **kwargs).run()
-        sleep(1) # Wait for the category to be registered as empty.
+        # Wait for the category to be registered as empty.
+        pywikibot.sleep(pywikibot.config2.put_throttle)
         if old_cat.exists() and old_cat.isEmptyCategory():
             delete_page(old_cat, cfd_link)
     elif mode == 'merge':
@@ -351,7 +351,8 @@ def do_action(mode, **kwargs):
             new_cats=new_cats, cfd=cfd_link
         )
         CfdBot(gen, **kwargs).run()
-        sleep(1) # Wait for the category to be registered as empty.
+        # Wait for the category to be registered as empty.
+        pywikibot.sleep(pywikibot.config2.put_throttle)
         if old_cat.exists() and old_cat.isEmptyCategory():
             delete_page(old_cat, cfd_link)
     elif mode == 'move':
