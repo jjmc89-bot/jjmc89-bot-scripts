@@ -13,8 +13,7 @@ from mwparserfromhell.nodes import Heading, Template, Text, Wikilink
 import pywikibot
 from pywikibot import pagegenerators
 from pywikibot.bot import ExistingPageBot, SingleSiteBot
-from pywikibot.textlib import (getCategoryLinks, removeDisabledParts,
-                               replaceCategoryInPlace, replaceCategoryLinks)
+from pywikibot.textlib import removeDisabledParts, replaceExcept
 
 
 docuReplacements = { #pylint: disable=invalid-name
@@ -34,6 +33,8 @@ TPL = {
 
 class CfdBot(SingleSiteBot, ExistingPageBot):
     """Bot to update categories."""
+
+    EXCEPTIONS = ['comment', 'math', 'nowiki', 'pre', 'source']
 
     def __init__(self, generator, **kwargs):
         """
@@ -56,31 +57,40 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
 
     def treat_page(self):
         """Process one page."""
-        cats = getCategoryLinks(self.current_page.text, self.site,
-                                include=['includeonly'])
-        try:
-            index = cats.index(self.getOption('old_cat'))
-        except ValueError:
+        cats = list()
+        old_cat_link = None
+        wikicode = mwparserfromhell.parse(self.current_page.text,
+                                          skip_style_tags=True)
+        for link in wikicode.ifilter(forcetype=Wikilink):
+            if link.title.strip().startswith(':'):
+                continue
+            try:
+                cat = pywikibot.Category(self.site, str(link.title),
+                                         sort_key=str(link.text))
+            except ValueError:
+                continue
+            cats.append(cat)
+            if cat == self.getOption('old_cat'):
+                old_cat_link = link
+        if not old_cat_link:
             pywikibot.log('Did not find {} in {}.'.format(
                 self.getOption('old_cat'), self.current_page))
             return
         new_cats = self.getOption('new_cats')
-        if len(new_cats) <= 1:
-            new_cat = new_cats[0] if new_cats else None
-            if new_cat in cats:
-                new_cat = None
-            text = replaceCategoryInPlace(self.current_page.text,
-                                          self.getOption('old_cat'),
-                                          new_cat, site=self.site)
+        if len(new_cats) == 1 and new_cats[0] not in cats:
+            # Update the title to keep the sort key.
+            old_cat_link.title = new_cats[0].title()
+            text = str(wikicode)
         else:
-            cats.remove(self.getOption('old_cat'))
-            for new_cat in new_cats:
-                if new_cat not in cats:
-                    cats.insert(index, new_cat)
-            text = replaceCategoryLinks(self.current_page.text, cats,
-                                        site=self.site)
+            for cat in new_cats:
+                if cat not in cats:
+                    wikicode.insert_after(old_cat_link, '\n' + cat.aslink())
+            old_cat_regex = re.compile(r'\n?' + re.escape(str(old_cat_link)),
+                                       re.M)
+            text = replaceExcept(str(wikicode), old_cat_regex, '',
+                                 self.EXCEPTIONS, site=self.site)
         self.put_current(text, summary=self.getOption('summary'),
-                         nocreate=True)
+                         asynchronous=False, nocreate=True)
 
 
 class CfdPage(pywikibot.Page):
@@ -327,7 +337,6 @@ def do_action(mode, **kwargs):
     cfd = kwargs.pop('cfd')
     cfd_link = cfd.title(as_link=True)
     gen = doc_page_add_generator(old_cat.members())
-    gen = pagegenerators.PreloadingGenerator(gen)
     if mode == 'empty':
         kwargs['summary'] = 'Removing {old_cat} per {cfd}'.format(
             old_cat=old_cat.title(as_link=True, textlink=True),
