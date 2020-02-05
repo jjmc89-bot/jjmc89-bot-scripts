@@ -64,13 +64,12 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
         for link in wikicode.ifilter(forcetype=Wikilink):
             if link.title.strip().startswith(':'):
                 continue
-            try:
-                cat = pywikibot.Category(self.site, str(link.title),
-                                         sort_key=str(link.text))
-            except ValueError:
+            link_page = pywikibot.Page(self.site, str(link.title))
+            if not link_page.is_categorypage():
                 continue
-            cats.append(cat)
-            if cat == self.getOption('old_cat'):
+            link_cat = pywikibot.Category(link_page, sort_key=str(link.text))
+            cats.append(link_cat)
+            if link_cat == self.getOption('old_cat'):
                 old_cat_link = link
         if not old_cat_link:
             pywikibot.log('Did not find {} in {}.'.format(
