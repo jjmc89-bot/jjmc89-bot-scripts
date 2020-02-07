@@ -256,11 +256,13 @@ def check_action(mode, **kwargs):
     """
     if mode == 'empty':
         if kwargs['new_cats']:
-            pywikibot.error('empty mode has new categories.')
+            pywikibot.error('empty mode has new categories for {}.'.format(
+                kwargs['old_cat']))
             return False
     elif mode == 'merge':
         if not kwargs['new_cats']:
-            pywikibot.error('merge mode has no new categories.')
+            pywikibot.error('merge mode has no new categories for {}.'.format(
+                kwargs['old_cat']))
             return False
         for new_cat in kwargs['new_cats']:
             if not new_cat.exists():
@@ -289,10 +291,12 @@ def check_action(mode, **kwargs):
             pywikibot.error('{} does not exist.'.format(kwargs['old_cat']))
             return False
         if kwargs['new_cats']:
-            pywikibot.error('retain mode has new categories.')
+            pywikibot.error('retain mode has new categories for {}.'.format(
+                kwargs['old_cat']))
             return False
         if not kwargs['action'] or not kwargs['result']:
-            pywikibot.error('Missing action or result.')
+            pywikibot.error('Missing action or result for {}.'.format(
+                kwargs['old_cat']))
             return False
     else:
         pywikibot.error('Unknown mode: {}.'.format(mode))
@@ -476,7 +480,7 @@ def parse_page(page):
         try:
             parse_section(section, page.site, mode)
         except (ValueError, pywikibot.Error):
-            pywikibot.exception()
+            pywikibot.exception(tb=True)
 
 
 def parse_section(section, site, mode):
