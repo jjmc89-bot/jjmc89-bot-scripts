@@ -64,10 +64,11 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
         for link in wikicode.ifilter(forcetype=Wikilink):
             if link.title.strip().startswith(':'):
                 continue
-            link_page = pywikibot.Page(self.site, str(link.title))
-            if not link_page.is_categorypage():
+            try:
+                link_page = pywikibot.Page(self.site, str(link.title))
+                link_cat = pywikibot.Category(link_page)
+            except (ValueError, pywikibot.Error):
                 continue
-            link_cat = pywikibot.Category(link_page, sort_key=str(link.text))
             cats.append(link_cat)
             if link_cat == self.getOption('old_cat'):
                 old_cat_link = link
