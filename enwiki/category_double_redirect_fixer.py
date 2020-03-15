@@ -83,8 +83,6 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
             return True
         target = page.getCategoryRedirectTarget()
         if not target.isCategoryRedirect():
-            pywikibot.log("{}'s target, {}, is not a category redirect."
-                          .format(page, target))
             return True
         return False
 
