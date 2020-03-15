@@ -235,7 +235,7 @@ def add_old_cfd(cfd, **kwargs):
     old_cfd = (
         '{{{{Old CfD|action={action}|date={date}|section={section}'
         '|result={result}}}}}\n'.format(
-            action=kwargs['action'], date=date, section=cfd.section(),
+            action=kwargs['action'], date=date, section=cfd.section() or '',
             result=kwargs['result']
         )
     )
