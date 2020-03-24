@@ -232,14 +232,12 @@ def add_old_cfd(cfd, **kwargs):
             if str(tpl.get('date').value) == date:
                 # Template already present.
                 return
-    old_cfd = (
-        '{{{{Old CfD|action={action}|date={date}|section={section}'
-        '|result={result}}}}}\n'.format(
-            action=kwargs['action'], date=date, section=cfd.section() or '',
-            result=kwargs['result']
-        )
-    )
-    talk.text = old_cfd + talk.text
+    old_cfd = Template('Old CfD')
+    old_cfd.add('action', kwargs['action'])
+    old_cfd.add('date', date)
+    old_cfd.add('section', cfd.section())
+    old_cfd.add('result', kwargs['result'])
+    talk.text = str(old_cfd) + '\n' + talk.text
     talk.save(summary=kwargs['summary'])
 
 
