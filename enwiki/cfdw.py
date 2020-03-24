@@ -352,13 +352,16 @@ def do_action(mode, **kwargs):
         if old_cat.exists() and old_cat.isEmptyCategory():
             delete_page(old_cat, cfd_link)
     elif mode == 'merge':
+        redirect = False
         if len(kwargs['new_cats']) == 1:
             new_cats = kwargs['new_cats'][0].title(as_link=True, textlink=True)
+            redirect = kwargs['redirect']
         elif len(kwargs['new_cats']) == 2:
             new_cats = ' and '.join(cat.title(as_link=True, textlink=True)
                                     for cat in kwargs['new_cats'])
         else:
             new_cats = '{} categories'.format(len(kwargs['new_cats']))
+        del kwargs['redirect']
         kwargs['summary'] = 'Merging {old_cat} to {new_cats} per {cfd}'.format(
             old_cat=old_cat.title(as_link=True, textlink=True),
             new_cats=new_cats, cfd=cfd_link
@@ -366,8 +369,14 @@ def do_action(mode, **kwargs):
         CfdBot(gen, **kwargs).run()
         # Wait for the category to be registered as empty.
         pywikibot.sleep(pywikibot.config2.put_throttle)
-        if old_cat.exists() and old_cat.isEmptyCategory():
-            delete_page(old_cat, cfd_link)
+        if (old_cat.exists() and old_cat.isEmptyCategory()
+                and not old_cat.isCategoryRedirect()):
+            if redirect:
+                redirect_cat(old_cat, kwargs['new_cats'][0],
+                             'Merged to {new_cats} per {cfd}'.format(
+                                 new_cats=new_cats, cfd=cfd_link))
+            else:
+                delete_page(old_cat, cfd_link)
     elif mode == 'move':
         noredirect = kwargs.pop('noredirect')
         if (old_cat.exists() and not old_cat.isCategoryRedirect()
@@ -503,7 +512,9 @@ def parse_section(section, site, mode):
             pywikibot.log('Bot disabled for: {}'.format(options))
             continue
         options['cfd'] = cfd_page.find_discussion(options['old_cat'])
-        if mode == 'move':
+        if mode == 'merge':
+            options['redirect'] = 'REDIRECT' in prefix
+        elif mode == 'move':
             options['noredirect'] = 'REDIRECT' not in prefix
         elif mode == 'retain':
             nc_matches = re.findall(r'\b(no consensus) (?:for|to) (\w+)\b',
@@ -524,6 +535,23 @@ def parse_section(section, site, mode):
             options.update(action=action, result=result)
         if check_action(mode, **options):
             do_action(mode, **options)
+
+
+def redirect_cat(cat, target, summary):
+    """
+    Redirect a category to another category.
+
+    @param cat: Category to redirect
+    @type cat: L{pywikibot.Category}
+    @param target: Category redirect target
+    @type target: L{pywikibot.Category}
+    @param summary: Edit summary
+    @type summary: str
+    """
+    tpl = Template('Category redirect')
+    tpl.add('1', target.title(with_ns=False))
+    cat.text = str(tpl)
+    cat.save(summary=summary)
 
 
 def remove_cfd_tpl(page, summary):
