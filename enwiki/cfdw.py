@@ -230,11 +230,11 @@ def add_old_cfd(cfd, **kwargs):
                 if (template not in TPL['old cfd']
                         or not tpl.has('date', ignore_empty=True)):
                     continue
-                if str(tpl.get('date').value) == date:
-                    # Template already present.
-                    return
             except pywikibot.InvalidTitle:
                 continue
+            if tpl.get('date').value.strip() == date:
+                # Template already present.
+                return
     old_cfd = Template('Old CfD')
     old_cfd.add('action', kwargs['action'])
     old_cfd.add('date', date)
