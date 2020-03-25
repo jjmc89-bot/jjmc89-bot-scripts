@@ -225,13 +225,16 @@ def add_old_cfd(cfd, **kwargs):
     if talk.exists():
         wikicode = mwparserfromhell.parse(talk.text, skip_style_tags=True)
         for tpl in wikicode.ifilter_templates():
-            template = pywikibot.Page(talk.site, str(tpl.name), ns=10)
-            if (template not in TPL['old cfd']
-                    or not tpl.has('date', ignore_empty=True)):
+            try:
+                template = pywikibot.Page(talk.site, str(tpl.name), ns=10)
+                if (template not in TPL['old cfd']
+                        or not tpl.has('date', ignore_empty=True)):
+                    continue
+                if str(tpl.get('date').value) == date:
+                    # Template already present.
+                    return
+            except pywikibot.InvalidTitle:
                 continue
-            if str(tpl.get('date').value) == date:
-                # Template already present.
-                return
     old_cfd = Template('Old CfD')
     old_cfd.add('action', kwargs['action'])
     old_cfd.add('date', date)
@@ -566,9 +569,12 @@ def remove_cfd_tpl(page, summary):
                   '', page.get(force=True), flags=re.I | re.M | re.S)
     wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
     for tpl in wikicode.ifilter_templates():
-        template = pywikibot.Page(page.site, str(tpl.name), ns=10)
-        if template in TPL['cfd']:
-            wikicode.remove(tpl)
+        try:
+            template = pywikibot.Page(page.site, str(tpl.name), ns=10)
+            if template in TPL['cfd']:
+                wikicode.remove(tpl)
+        except pywikibot.InvalidTitle:
+            continue
     page.text = str(wikicode).strip()
     page.save(summary=summary)
 
