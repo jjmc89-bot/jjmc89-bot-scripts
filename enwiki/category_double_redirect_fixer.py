@@ -5,6 +5,8 @@ This script fixes double (or more) category redirects.
 
 The following parameters are supported:
 
+-always           Don't prompt to save changes.
+
 -summary          Specify an edit aummary for the bot.
 
 &params;

@@ -5,6 +5,8 @@ This script deploys editnotices.
 
 The following parameters are supported:
 
+-always           Don't prompt to save changes.
+
 -editnoticeTemplate Title of the editnotice template
 
 -subject_Only     Restrict to subject pages

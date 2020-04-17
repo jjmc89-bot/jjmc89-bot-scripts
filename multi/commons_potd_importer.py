@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Task   : Update page with Wikimedia Commons picture of the day
-Author : JJMC89
-
+Update page with Wikimedia Commons picture of the day
 
 The following parameters are supported:
 
+-always           Don't prompt to save changes.
+
 &params;
 """
+# Author : JJMC89
+# License: MIT
 # pylint: disable=all
 from __future__ import absolute_import, unicode_literals
 

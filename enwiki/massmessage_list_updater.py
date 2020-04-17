@@ -9,6 +9,8 @@ The following parameters are required:
 
 The following parameters are supported:
 
+-always           Don't prompt to save changes.
+
 -end_date         Logs will be parsed starting on this date. The default is
                   yesterday. Format: YYYY-MM-DD.
 

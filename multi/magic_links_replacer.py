@@ -9,6 +9,8 @@ The following parameters are required:
 
 The following parameters are supported:
 
+-always           Don't prompt to save changes.
+
 &params;
 """
 # Author : JJMC89
