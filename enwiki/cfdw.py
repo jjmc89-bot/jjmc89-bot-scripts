@@ -118,13 +118,14 @@ class CfdPage(pywikibot.Page):
                 return pywikibot.Category(self.site, title)
         elif isinstance(node, Wikilink):
             title = str(node.title).split('#')[0]
-            try:
+            if title:
                 page = pywikibot.Page(self.site, title)
-                if page.namespace() == 14:
-                    return pywikibot.Category(page)
-            except pywikibot.SiteDefinitionError:
-                # Ignore unknown sites.
-                pass
+                try:
+                    if page.namespace() == 14:
+                        return pywikibot.Category(page)
+                except pywikibot.SiteDefinitionError:
+                    # Ignore unknown sites.
+                    pass
         return None
 
     def find_discussion(self, category):
