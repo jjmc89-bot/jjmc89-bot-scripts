@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Update page with Wikimedia Commons picture of the day
@@ -11,85 +11,115 @@ The following parameters are supported:
 """
 # Author : JJMC89
 # License: MIT
-# pylint: disable=all
-from __future__ import absolute_import, unicode_literals
 
-import datetime
-import re
+import mwparserfromhell
+from mwparserfromhell.nodes import Wikilink
 import pywikibot
 from pywikibot import pagegenerators
-from pywikibot.bot import (MultipleSitesBot, ExistingPageBot, NoRedirectPageBot)
+from pywikibot.bot import MultipleSitesBot, ExistingPageBot
 
 docuReplacements = { # pylint: disable=invalid-name
     '&params;': pagegenerators.parameterHelp
 }
 
 
-def get_template_parameter_value(page, template, parameter):
+def get_template_titles(templates):
     """
-    Return the value of the template parameter from the page
-    @param page: the page to parse
-    @type page: page
-    @param template: title of the template
-    @type template: unicode
-    @param parameter: parameter name
-    @type parameter: unicode
+    Given an iterable of templates, return a set of pages.
+
+    @param templates: iterable of templates (L{pywikibot.Page})
+    @type templates: iterable
+
+    @rtype: set
     """
-    # TODO: Search for redirects to the specified template
-    parameterValue = u''
-    if page.exists():
-        for (foundTemplate, foundParameters) in pywikibot.textlib.extract_templates_and_params(page.get(), remove_disabled_parts=True, strip=True):
-            if foundTemplate == template and foundParameters.has_key(parameter):
-                parameterValue = foundParameters.get(parameter)
-    else:
-        pywikibot.warning(u'%s does not exist' % page.title(asLink=True))
-    return parameterValue
+    titles = set()
+    for template in templates:
+        if template.isRedirectPage():
+            template = template.getRedirectTarget()
+        if not template.exists():
+            continue
+        titles.add(template.title(with_ns=template.namespace() != 10))
+        for tpl in template.backlinks(filter_redirects=True):
+            titles.add(tpl.title(with_ns=tpl.namespace() != 10))
+    return titles
 
 
-class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot, NoRedirectPageBot):
+class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
+    """Bot to import the Commons POTD with caption."""
+
     def __init__(self, generator, **kwargs):
         """
-        Constructor.
+        Iniitializer.
+
         @param generator: the page generator that determines on which pages
             to work
         @type generator: generator
         """
         self.generator = generator
-        super(CommonsPotdImporter, self).__init__(**kwargs)
+        super().__init__(**kwargs)
+        self.commons = pywikibot.Site('commons', 'commons')
+        date = self.commons.server_time().date().isoformat()
+        self.potd_title = 'Template:Potd/{}'.format(date)
+        potd_tpl = pywikibot.Page(self.commons, self.potd_title)
+        potd_fn_titles = get_template_titles([
+            pywikibot.Page(self.commons, 'Template:Potd filename')])
+        wikicode = mwparserfromhell.parse(potd_tpl.text, skip_style_tags=True)
+        for tpl in wikicode.ifilter_templates():
+            if (tpl.name.matches(potd_fn_titles)
+                    and tpl.has('1', ignore_empty=True)):
+                self.potd = tpl.get('1').value.strip()
+                break
+        else:
+            raise ValueError('Failed to find the POTD.')
+        self.potd_desc_titles = get_template_titles([
+            pywikibot.Page(self.commons, 'Template:Potd description')])
+        # T242081, T243701
+        # repo = self.commons.data_repository
+        # self.DOC_ITEM = pywikibot.ItemPage(repo, 'Q4608595')
 
     def treat_page(self):
-        commons = pywikibot.Site(code = u'commons', fam = u'commons')
-        today = datetime.date.today()
-        # fileTemplate = pywikibot.Page(commons, u'Template:Potd filename')
-        # captionTemplate = pywikibot.Page(commons, u'Template:Potd description') # (Potd page, POTD description)
-        filePage = pywikibot.Page(commons, u'Template:Potd/%s' % today.isoformat())
-        file = get_template_parameter_value(filePage, u'Potd filename', u'1')
-        # TODO: use languages instead of lang
-        captionPage = pywikibot.Page(commons, u'Template:Potd/%s (%s)'
-            % (today.isoformat(), self.current_page.site.lang))
-        if self.current_page.site.lang != u'en' and not captionPage.exists():
-            pywikibot.warning(u'%s does not exist' % captionPage.title(asLink=True))
-            # try en instead
-            captionPage = pywikibot.Page(commons, u'Template:Potd/%s (en)' % today.isoformat())
-        caption = get_template_parameter_value(captionPage, u'Potd description', u'1')
-        # TODO: Complete caption parsing to fix links (if not an interwiki then make it an interwiki to Commons)
-        caption = re.sub(r"\[\[([^:])", r"[[:\1", caption, flags=re.UNICODE) # Force links to start with ':'
-        caption = re.sub(r"\[\[(:Category:)", r"[[:c\1", caption, flags=re.UNICODE | re.IGNORECASE) # Make category links interwiki links
-        # TODO: Use [[d:Q4608595]] to get the local {{Documentation}}
-        doc = u'Documentation'
-        if file != u'':
-            summary = u'Updating Commons picture of the day'
-            if caption != u'':
-                summary = summary + u', [[:c:%s|caption attribution]]' % captionPage.title()
-            else:
-                summary = summary + u', failed to parse caption'
-                pywikibot.error(u'Failed to parse parameter 1 from {{Potd description}} on %s'
-                    % captionPage.title(asLink=True))
-            self.put_current(u'<includeonly>{{#switch:{{{1|}}}|caption=%s|#default=%s}}</includeonly><noinclude>\n{{%s}}</noinclude>'
-                % (caption, file, doc), summary=summary, minor=False)
-        else:
-            pywikibot.error(u'Failed to parse parameter 1 from {{Potd filename}} on %s'
-                % filePage.title(asLink=True))
+        """Process one page."""
+        site = self.current_page.site
+        # doc_tpl = self.DOC_ITEM.getSitelink(site)
+        doc_tpl = pywikibot.Page(site, 'Documentation', ns=10)
+        summary = 'Updating Commons picture of the day, '
+        caption = ''
+        for lang in {site.lang, 'en'}:
+            caption_title = '{} ({})'.format(self.potd_title, lang)
+            caption_page = pywikibot.Page(self.commons, caption_title)
+            if not caption_page.exists():
+                continue
+            wikicode = mwparserfromhell.parse(caption_page.text,
+                                              skip_style_tags=True)
+            for tpl in wikicode.ifilter_templates():
+                if (tpl.name.matches(self.potd_desc_titles)
+                        and tpl.has('1', ignore_empty=True)):
+                    caption = tpl.get('1').value.strip()
+            if caption:
+                # Remove templates, etc.
+                caption = self.commons.expand_text(caption)
+                # Make all interwikilinks go through Commons.
+                caption = mwparserfromhell.parse(caption, skip_style_tags=True)
+                for wikilink in caption.ifilter(forcetype=Wikilink):
+                    title = wikilink.title.strip()
+                    prefix = ':c' + ('' if title.startswith(':') else ':')
+                    wikilink.title = prefix + title
+                summary += '[[:c:{}|caption attribution]]'.format(
+                    caption_title)
+                break
+        if not caption:
+            summary += 'failed to get a caption'
+        text = (
+            '<includeonly>{{{{#switch:{{{{{{1|}}}}}}\n'
+            '|caption={caption}\n'
+            '|#default={file}\n'
+            '}}}}</includeonly><noinclude>{{{{{doc}}}}}</noinclude>'.format(
+                caption=str(caption),
+                file=self.potd,
+                doc=doc_tpl.title(with_ns=False)
+            )
+        )
+        self.put_current(text, summary=summary, minor=False)
 
 
 def main(*args):
@@ -102,29 +132,17 @@ def main(*args):
     options = {}
     # Process global arguments
     local_args = pywikibot.handle_args(args)
-    genFactory = pagegenerators.GeneratorFactory()
+    site = pywikibot.Site()
+    site.login()
     # Parse command line arguments
+    gen_factory = pagegenerators.GeneratorFactory()
     for arg in local_args:
-        if genFactory.handleArg(arg):
+        if gen_factory.handleArg(arg):
             continue
-        arg, sep, value = arg.partition(':')
-        option = arg[1:]
-        options[option] = True
-    gen = genFactory.getCombinedGenerator()
-    if gen:
-        gen = pagegenerators.PreloadingGenerator(gen)
-        bot = CommonsPotdImporter(gen, **options)
-        bot.run()
-        return True
-    else:
-        pywikibot.bot.suggest_help(missing_generator=True)
-        return False
+        if arg == '-always':
+            options['always'] = True
+    CommonsPotdImporter(gen_factory.getCombinedGenerator(), **options).run()
 
 
-if __name__ == "__main__":
-    try:
-        main()
-    except Exception:
-        pywikibot.error("Fatal error!", exc_info=True)
-    finally:
-        pywikibot.stopme()
+if __name__ == '__main__':
+    main()
