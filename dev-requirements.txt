@@ -1,1 +1,1 @@
-pylint
+pylint!=2.5.0
