@@ -387,7 +387,7 @@ def do_action(mode, **kwargs):
             # Remove the last condition once merging is supported.
             old_cat.move(kwargs['new_cats'][0].title(), reason=cfd_link,
                          noredirect=noredirect)
-            remove_cfd_tpl(kwargs['new_cats'][0], 'Action complete')
+            remove_cfd_tpl(kwargs['new_cats'][0], 'Category moved')
         kwargs['summary'] = 'Moving {old_cat} to {new_cat} per {cfd}'.format(
             old_cat=old_cat.title(as_link=True, textlink=True),
             new_cat=kwargs['new_cats'][0].title(as_link=True, textlink=True),
