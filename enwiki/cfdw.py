@@ -387,16 +387,13 @@ def do_action(mode, **kwargs):
             # Remove the last condition once merging is supported.
             old_cat.move(kwargs['new_cats'][0].title(), reason=cfd_link,
                          noredirect=noredirect)
+            remove_cfd_tpl(kwargs['new_cats'][0], 'Action complete')
         kwargs['summary'] = 'Moving {old_cat} to {new_cat} per {cfd}'.format(
             old_cat=old_cat.title(as_link=True, textlink=True),
             new_cat=kwargs['new_cats'][0].title(as_link=True, textlink=True),
             cfd=cfd_link
         )
         CfdBot(gen, **kwargs).run()
-        # Wait for the category to be registered as empty.
-        pywikibot.sleep(pywikibot.config2.put_throttle)
-        if old_cat.isEmptyCategory():
-            remove_cfd_tpl(kwargs['new_cats'][0], 'Move complete')
     elif mode == 'retain':
         kwargs['summary'] = '{cfd} closed as {result}'.format(
             cfd=cfd_link,
