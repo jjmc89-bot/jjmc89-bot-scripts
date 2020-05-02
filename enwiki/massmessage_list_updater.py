@@ -347,10 +347,14 @@ def main(*args):
     rights_events = site.logevents(logtype='rights', start=start, end=end,
                                    reverse=True)
     if options.pop('meta', None):
-        meta_rights_events = meta.logevents(logtype='rights', start=start,
-                                            end=end, reverse=True)
-        meta_rights_events = (log_event for log_event in meta_rights_events
-                              if log_event.page().title().endswith(suffix))
+        meta_rights_events = set()
+        for log_event in meta.logevents(logtype='rights', start=start, end=end,
+                                        reverse=True):
+            try:
+                if log_event.page().title().endswith(suffix):
+                    meta_rights_events.add(log_event)
+            except KeyError:
+                continue
         rights_events = chain(rights_events, meta_rights_events)
     for log_event in rights_events:
         try:
