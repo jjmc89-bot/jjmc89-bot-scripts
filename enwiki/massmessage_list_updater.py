@@ -31,7 +31,6 @@ from itertools import chain
 import json
 from operator import itemgetter
 import re
-import sys
 import pywikibot
 from pywikibot import pagegenerators
 from pywikibot.bot import SingleSiteBot, ExistingPageBot, NoRedirectPageBot
@@ -47,18 +46,18 @@ def get_json_from_page(page):
     @rtype: dict or None
     """
     if not page.exists():
-        pywikibot.error('%s does not exist.' % page.title())
+        pywikibot.error('{} does not exist.'.format(page.title()))
         return None
     if page.isRedirectPage():
-        pywikibot.error('%s is a redirect.' % page.title())
+        pywikibot.error('{} is a redirect.'.format(page.title()))
         return None
     if page.isEmpty():
-        pywikibot.log('%s is empty.' % page.title())
+        pywikibot.log('{} is empty.'.format(page.title()))
         return None
     try:
         return json.loads(page.get().strip())
     except ValueError:
-        pywikibot.error('%s does not contain valid JSON.' % page.title())
+        pywikibot.error('{} does not contain valid JSON.'.format(page.title()))
         raise
 
 
@@ -77,14 +76,14 @@ def validate_config(config, site):
     if not isinstance(config, dict):
         return False
     for title, page_config in config.items():
-        pywikibot.log('-%s: %s' % (title, page_config))
+        pywikibot.log('-{} = {}'.format(title, page_config))
         page_config['page'] = pywikibot.Page(site, title)
         required_keys = ['enabled', 'group', 'page']
         has_keys = list()
         for key, value in page_config.items():
             if key in required_keys:
                 has_keys.append(key)
-            if key in 'add' 'enabled' 'remove' 'required':
+            if key in ('add', 'enabled', 'remove', 'required'):
                 if not isinstance(value, bool):
                     return False
             elif key == 'group':
@@ -130,7 +129,7 @@ def validate_options(options):
             return False
         options[key] = value
     for key, value in options.items():
-        pywikibot.log('-%s = %s' % (key, value))
+        pywikibot.log('-{} = {}'.format(key, value))
         if key in required_keys:
             has_keys.append(key)
         if key == 'config':
@@ -171,23 +170,27 @@ class UserGroupsMassMessageListUpdater(
         self.generator = generator
         super().__init__(**kwargs)
 
-    def check_enabled(self):
-        """Check if the task is enabled."""
-        if self._treat_counter % 6 != 0:
-            return
+    def check_disabled(self):
+        """Check if the task is disabled. If so, quit."""
+        if not self.site.logged_in():
+            self.site.login()
         page = pywikibot.Page(
             self.site,
-            'User:%s/shutoff/%s' % (self.site.user(), self.__class__.__name__)
+            'User:{username}/shutoff/{class_name}.json'.format(
+                username=self.site.user(),
+                class_name=self.__class__.__name__
+            )
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                sys.exit('%s disabled:\n%s' %
-                         (self.__class__.__name__, content))
+                e = '{} disabled:\n{}'.format(self.__class__.__name__, content)
+                pywikibot.error(e)
+                self.quit()
 
     def treat_page(self):
         """Process one page."""
-        self.check_enabled()
+        self.check_disabled()
 
         page_config = self.getOption('config')[self.current_page.title()]
         added_count = removed_count = renamed_count = 0
@@ -216,12 +219,13 @@ class UserGroupsMassMessageListUpdater(
                 newuser = rename['newuser']
                 newpage = pywikibot.Page(
                     self.site,
-                    re.sub(r':%s\b' % re.escape(
-                        user.title(with_ns=False)),
-                           ':%s' % newuser.title(with_ns=False),
-                           page.title())
+                    re.sub(
+                        r':{}\b'.format(re.escape(user.title(with_ns=False))),
+                        ':{}'.format(newuser.title(with_ns=False)),
+                        page.title()
+                    )
                 )
-                pywikibot.log('%s renamed to %s (%s to %s)' % (
+                pywikibot.log('{} renamed to {} ({} to {})'.format(
                     user.title(),
                     newuser.title(),
                     page.title(),
@@ -232,8 +236,8 @@ class UserGroupsMassMessageListUpdater(
                 renamed_count += 1
             if page_config.get('required', None):
                 if not page_config['group'] & set(user.groups()):
-                    pywikibot.log(
-                        'Removed %s, not in required group' % user.title())
+                    pywikibot.log('Removed {}, not in required group'.format(
+                        user.title()))
                     removed_count += 1
                     continue
             page_dict[user] = page
@@ -246,14 +250,14 @@ class UserGroupsMassMessageListUpdater(
                     and 'bot' not in user.groups()
                     and user not in page_dict
                ):
-                pywikibot.log('Added %s' % user.title())
+                pywikibot.log('Added {}'.format(user.title()))
                 page_dict[user] = user.toggleTalkPage()
                 added_count += 1
             if (page_config.get('remove', None)
                     and (page_config['group'] & change['removed'])
                ):
                 if page_dict.pop(user, None):
-                    pywikibot.log('Removed %s' % user.title())
+                    pywikibot.log('Removed {}'.format(user.title()))
                     removed_count += 1
 
         # Build JSON and save.
@@ -265,10 +269,10 @@ class UserGroupsMassMessageListUpdater(
                                set(page_dict.values())):
                 new_pge_json['targets'].append({'title': page.title()})
             text = json.dumps(new_pge_json, ensure_ascii=False, indent=4)
-            summary = ('Update MassMessage list: %s added, %s removed' %
-                       (added_count, removed_count))
+            summary = ('Update MassMessage list: {} added, {} removed'.format(
+                added_count, removed_count))
             if renamed_count > 0:
-                summary += ', %s renamed' % renamed_count
+                summary += ', {} renamed'.format(renamed_count)
             self.put_current(text, summary=summary, minor=False)
 
 
@@ -294,7 +298,7 @@ def main(*args):
         if arg in 'config' 'end_date' 'start_date':
             if not value:
                 value = pywikibot.input(
-                    'Please enter a value for %s' % arg,
+                    'Please enter a value for {}'.format(arg),
                     default=None
                 )
             options[arg] = value
@@ -313,7 +317,7 @@ def main(*args):
     options['config'] = config
 
     meta = pywikibot.Site('meta', 'meta')
-    suffix = '@%s' % site.dbName()
+    suffix = '@{}'.format(site.dbName())
     start = datetime.datetime.combine(options.pop('start_date'), time.min)
     end = datetime.datetime.combine(options.pop('end_date'), time.max)
     # Parse rename logs into a list of dict.
@@ -353,7 +357,7 @@ def main(*args):
             new_groups = set(log_event.newgroups)
             old_groups = set(log_event.oldgroups)
             group_changes.append({
-                'user': pywikibot.User(site, re.sub(r'%s$' % suffix, '',
+                'user': pywikibot.User(site, re.sub(r'{}$'.format(suffix), '',
                                                     log_event.page().title())),
                 'added': new_groups - old_groups,
                 'removed': old_groups - new_groups,
@@ -368,8 +372,7 @@ def main(*args):
     gen = (config[key]['page'] for key in config.keys()
            if config[key]['enabled'])
     gen = pagegenerators.PreloadingGenerator(gen)
-    bot = UserGroupsMassMessageListUpdater(gen, **options)
-    bot.run()
+    UserGroupsMassMessageListUpdater(gen, **options).run()
     return True
 
 
