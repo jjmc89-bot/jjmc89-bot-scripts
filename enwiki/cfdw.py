@@ -9,7 +9,7 @@ This script processes Categories for discussion working pages.
 # License: MIT
 import re
 import mwparserfromhell
-from mwparserfromhell.nodes import Heading, Template, Text, Wikilink
+from mwparserfromhell.nodes import Template, Text, Wikilink
 import pywikibot
 from pywikibot import pagegenerators
 from pywikibot.bot import ExistingPageBot, SingleSiteBot
@@ -61,7 +61,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
         old_cat_link = None
         wikicode = mwparserfromhell.parse(self.current_page.text,
                                           skip_style_tags=True)
-        for link in wikicode.ifilter(forcetype=Wikilink):
+        for link in wikicode.ifilter_wikilinks():
             if link.title.strip().startswith(':'):
                 continue
             try:
@@ -121,10 +121,9 @@ class CfdPage(pywikibot.Page):
             if title:
                 page = pywikibot.Page(self.site, title)
                 try:
-                    if page.namespace() == 14:
-                        return pywikibot.Category(page)
-                except pywikibot.SiteDefinitionError:
-                    # Ignore unknown sites.
+                    return pywikibot.Category(page)
+                except (ValueError, pywikibot.InvalidTitle,
+                        pywikibot.SiteDefinitionError):
                     pass
         return None
 
@@ -141,7 +140,7 @@ class CfdPage(pywikibot.Page):
         text = removeDisabledParts(self.text, site=self.site)
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         for section in wikicode.get_sections(levels=[4]):
-            heading = section.filter(forcetype=Heading)[0]
+            heading = section.filter_headings()[0]
             section_title = str(heading.title).strip()
             discussion = self.__class__(
                 self.site,
@@ -174,7 +173,7 @@ class CfdPage(pywikibot.Page):
         text = removeDisabledParts(self.text, site=self.site)
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         for section in wikicode.get_sections(levels=[4]):
-            heading = section.filter(forcetype=Heading)[0]
+            heading = section.filter_headings()[0]
             if str(heading.title).strip() == self.section():
                 break
         else:
@@ -205,7 +204,7 @@ class CfdPage(pywikibot.Page):
         text = removeDisabledParts(self.text, site=self.site)
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         for section in wikicode.get_sections(levels=[4]):
-            heading = section.filter(forcetype=Heading)[0]
+            heading = section.filter_headings()[0]
             if str(heading.title).strip() == self.section():
                 break
         else:
@@ -482,9 +481,9 @@ def parse_page(page):
     text = removeDisabledParts(page.text, site=page.site)
     wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
     for section in wikicode.get_sections(flat=True, include_lead=False):
-        heading = section.filter(forcetype=Heading)[0]
+        heading = section.filter_headings()[0]
         section_title = str(heading.title).lower()
-        for mode in ['move', 'merge', 'empty', 'retain']:
+        for mode in ('move', 'merge', 'empty', 'retain'):
             if mode in section_title:
                 break
         else:
@@ -596,7 +595,7 @@ def main(*args):
     for key, value in TPL.items():
         TPL[key] = get_template_pages([pywikibot.Page(site, tpl, ns=10)
                                        for tpl in value])
-    for page in gen_factory.getCombinedGenerator(preload=False):
+    for page in gen_factory.getCombinedGenerator():
         if page.protection().get('edit', ('', ''))[0] == 'sysop':
             parse_page(page)
 
