@@ -32,7 +32,6 @@ import json
 from operator import itemgetter
 import re
 import pywikibot
-from pywikibot import pagegenerators
 from pywikibot.bot import SingleSiteBot, ExistingPageBot, NoRedirectPageBot
 
 
@@ -145,8 +144,8 @@ def validate_options(options):
 
 class UserGroupsMassMessageListUpdater(
         SingleSiteBot,
-        ExistingPageBot,
-        NoRedirectPageBot
+        NoRedirectPageBot,
+        ExistingPageBot
 ):
     """Bot to update MassMessage lists."""
 
@@ -295,7 +294,7 @@ def main(*args):
     for arg in local_args:
         arg, _, value = arg.partition(':')
         arg = arg[1:]
-        if arg in 'config' 'end_date' 'start_date':
+        if arg in ('config', 'end_date', 'start_date'):
             if not value:
                 value = pywikibot.input(
                     'Please enter a value for {}'.format(arg),
@@ -375,8 +374,8 @@ def main(*args):
     # Generate pages and invoke the bot.
     gen = (config[key]['page'] for key in config.keys()
            if config[key]['enabled'])
-    gen = pagegenerators.PreloadingGenerator(gen)
-    UserGroupsMassMessageListUpdater(gen, **options).run()
+    gen = pywikibot.pagegenerators.PreloadingGenerator(gen)
+    UserGroupsMassMessageListUpdater(gen, site=site, **options).run()
     return True
 
 

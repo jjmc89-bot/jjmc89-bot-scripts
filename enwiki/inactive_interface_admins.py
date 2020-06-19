@@ -145,7 +145,7 @@ def main(*args):
     site.login()
     users = get_inactive_users(site=site)
     if not users:
-        return True
+        return
     heading = 'Inactive interface administrators {}'.format(
         site.getcurrenttime().date())
     text = 'The following interface administrator(s) are inactive:'
@@ -156,7 +156,6 @@ def main(*args):
         site,
         "Wikipedia:Interface administrators' noticeboard"
     ).save(text=text, section='new', summary=heading, botflag=False)
-    return True
 
 
 if __name__ == "__main__":

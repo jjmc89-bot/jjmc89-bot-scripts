@@ -406,7 +406,7 @@ def main(*args):
         if arg in ('config', 'max_attempts'):
             if not value:
                 value = pywikibot.input(
-                    'Please enter a value for %s' % arg,
+                    'Please enter a value for {}'.format(arg),
                     default=None
                 )
             options[arg] = value

@@ -23,7 +23,6 @@ from datetime import date, timedelta
 import re
 from dateutil.parser import parse as parse_date
 import pywikibot
-from pywikibot import pagegenerators
 
 BOT_START_END = re.compile(
     r'^(.*?<!--\s*bot start\s*-->).*?(<!--\s*bot end\s*-->.*)$',
@@ -88,7 +87,7 @@ def get_xfds(pages):
         else:
             prefix = 'Miscellany for deletion/'
         prefix += page.title()
-        gen = pagegenerators.PrefixingPageGenerator(
+        gen = pywikibot.pagegenerators.PrefixingPageGenerator(
             prefix, namespace=page.site.namespaces.PROJECT, site=page.site)
         xfds = xfds.union([xfd_page.title(asLink=True) for xfd_page in gen])
     return xfds

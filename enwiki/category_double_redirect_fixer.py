@@ -15,13 +15,12 @@ The following parameters are supported:
 # License: MIT
 import mwparserfromhell
 import pywikibot
-from pywikibot import pagegenerators
 from pywikibot.bot import SingleSiteBot, ExistingPageBot
 from pywikibot.textlib import removeDisabledParts
 
 
 docuReplacements = { #pylint: disable=invalid-name
-    '&params;': pagegenerators.parameterHelp
+    '&params;': pywikibot.pagegenerators.parameterHelp
 }
 
 
@@ -147,7 +146,7 @@ def main(*args):
     local_args = pywikibot.handle_args(args)
     site = pywikibot.Site()
     site.login()
-    gen_factory = pagegenerators.GeneratorFactory()
+    gen_factory = pywikibot.pagegenerators.GeneratorFactory(site)
     for arg in local_args:
         if gen_factory.handleArg(arg):
             continue
@@ -163,7 +162,7 @@ def main(*args):
         else:
             options[arg] = True
     gen = gen_factory.getCombinedGenerator(preload=True)
-    CategoryDoubleRedirectFixerBot(gen, **options).run()
+    CategoryDoubleRedirectFixerBot(gen, site=site, **options).run()
 
 
 if __name__ == '__main__':

@@ -11,13 +11,12 @@ import re
 import mwparserfromhell
 from mwparserfromhell.nodes import Template, Text, Wikilink
 import pywikibot
-from pywikibot import pagegenerators
 from pywikibot.bot import ExistingPageBot, SingleSiteBot
 from pywikibot.textlib import removeDisabledParts, replaceExcept
 
 
 docuReplacements = { #pylint: disable=invalid-name
-    '&params;': pagegenerators.parameterHelp
+    '&params;': pywikibot.pagegenerators.parameterHelp
 }
 SUMMARIES = {
     'redirect': '[[WP:G8|G8]]: Redirect to deleted page {}',
@@ -347,7 +346,7 @@ def do_action(mode, **kwargs):
             old_cat=old_cat.title(as_link=True, textlink=True),
             cfd=cfd_link
         )
-        CfdBot(gen, **kwargs).run()
+        CfdBot(gen, site=cfd.site, **kwargs).run()
         # Wait for the category to be registered as empty.
         pywikibot.sleep(pywikibot.config2.put_throttle)
         if old_cat.exists() and old_cat.isEmptyCategory():
@@ -362,12 +361,12 @@ def do_action(mode, **kwargs):
                                     for cat in kwargs['new_cats'])
         else:
             new_cats = '{} categories'.format(len(kwargs['new_cats']))
-        del kwargs['redirect']
+        kwargs.pop('redirect')
         kwargs['summary'] = 'Merging {old_cat} to {new_cats} per {cfd}'.format(
             old_cat=old_cat.title(as_link=True, textlink=True),
             new_cats=new_cats, cfd=cfd_link
         )
-        CfdBot(gen, **kwargs).run()
+        CfdBot(gen, site=cfd.site, **kwargs).run()
         # Wait for the category to be registered as empty.
         pywikibot.sleep(pywikibot.config2.put_throttle)
         if (old_cat.exists() and old_cat.isEmptyCategory()
@@ -392,7 +391,7 @@ def do_action(mode, **kwargs):
             new_cat=kwargs['new_cats'][0].title(as_link=True, textlink=True),
             cfd=cfd_link
         )
-        CfdBot(gen, **kwargs).run()
+        CfdBot(gen, site=cfd.site, **kwargs).run()
     elif mode == 'retain':
         kwargs['summary'] = '{cfd} closed as {result}'.format(
             cfd=cfd_link,
@@ -589,7 +588,7 @@ def main(*args):
     local_args = pywikibot.handle_args(args)
     site = pywikibot.Site()
     site.login()
-    gen_factory = pagegenerators.GeneratorFactory()
+    gen_factory = pywikibot.pagegenerators.GeneratorFactory(site)
     for arg in local_args:
         gen_factory.handleArg(arg)
     for key, value in TPL.items():

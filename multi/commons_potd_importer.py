@@ -15,11 +15,10 @@ The following parameters are supported:
 import mwparserfromhell
 from mwparserfromhell.nodes import Wikilink
 import pywikibot
-from pywikibot import pagegenerators
 from pywikibot.bot import MultipleSitesBot, ExistingPageBot
 
 docuReplacements = { # pylint: disable=invalid-name
-    '&params;': pagegenerators.parameterHelp
+    '&params;': pywikibot.pagegenerators.parameterHelp
 }
 
 
@@ -135,13 +134,14 @@ def main(*args):
     site = pywikibot.Site()
     site.login()
     # Parse command line arguments
-    gen_factory = pagegenerators.GeneratorFactory()
+    gen_factory = pywikibot.pagegenerators.GeneratorFactory(site)
     for arg in local_args:
         if gen_factory.handleArg(arg):
             continue
         if arg == '-always':
             options['always'] = True
-    CommonsPotdImporter(gen_factory.getCombinedGenerator(), **options).run()
+    gen = gen_factory.getCombinedGenerator()
+    CommonsPotdImporter(gen, site=site, **options).run()
 
 
 if __name__ == '__main__':

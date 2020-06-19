@@ -17,14 +17,12 @@ The following parameters are supported:
 # License: MIT
 import json
 import re
-import sys
 import pywikibot
-from pywikibot import pagegenerators
 from pywikibot.bot import SingleSiteBot, ExistingPageBot, NoRedirectPageBot
 from pywikibot.textlib import replaceExcept
 
 docuReplacements = { #pylint: disable=invalid-name
-    '&params;': pagegenerators.parameterHelp
+    '&params;': pywikibot.pagegenerators.parameterHelp
 }
 
 # For _create_regexes().
@@ -41,18 +39,18 @@ def get_json_from_page(page):
     @rtype: dict or None
     """
     if not page.exists():
-        pywikibot.error('%s does not exist.' % page.title())
+        pywikibot.error('{} does not exist.'.format(page.title()))
         return None
     if page.isRedirectPage():
-        pywikibot.error('%s is a redirect.' % page.title())
+        pywikibot.error('{} is a redirect.'.format(page.title()))
         return None
     if page.isEmpty():
-        pywikibot.log('%s is empty.' % page.title())
+        pywikibot.log('{} is empty.'.format(page.title()))
         return None
     try:
         return json.loads(page.get().strip())
     except ValueError:
-        pywikibot.error('%s does not contain valid JSON.' % page.title())
+        pywikibot.error('{} does not contain valid JSON.'.format(page.title()))
         raise
 
 
@@ -67,8 +65,8 @@ def validate_config(config):
     """
     pywikibot.log('Config:')
     for key, value in config.items():
-        pywikibot.log('-%s = %s' % (key, value))
-        if key in 'ISBN' 'PMID' 'RFC' 'summary':
+        pywikibot.log('-{} = {}'.format(key, value))
+        if key in ('ISBN', 'PMID', 'RFC', 'summary'):
             if not isinstance(value, str):
                 return False
             config[key] = value.strip() or None
@@ -107,8 +105,8 @@ def _create_regexes():
             r'''(<\/?\w+(?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|'''
             r'''[^>\s]+))?)*\s*\/?>)'''
         ),
-        'tags_content': re.compile(r'(<(?P<tag>%s)\b.*?</(?P=tag)>)'
-                                   % r'|'.join(tags), flags=re.I | re.M)
+        'tags_content': re.compile(r'(<(?P<tag>{})\b.*?</(?P=tag)>)'.format(
+            r'|'.join(tags)), flags=re.I | re.M)
     })
 
 
@@ -134,7 +132,7 @@ def split_into_sections(text):
     return sections
 
 
-class MagicLinksReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
+class MagicLinksReplacer(SingleSiteBot, NoRedirectPageBot, ExistingPageBot):
     """Bot to replace magic links."""
 
     def __init__(self, generator, **kwargs):
@@ -161,23 +159,29 @@ class MagicLinksReplacer(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
                                     'interwiki', 'invoke', 'link', 'property',
                                     'template']
 
-    def check_enabled(self):
-        """Check if the task is enabled."""
+    def check_disabled(self):
+        """Check if the task is disabled. If so, quit."""
         if self._treat_counter % 6 != 0:
             return
+        if not self.site.logged_in():
+            self.site.login()
         page = pywikibot.Page(
             self.site,
-            'User:%s/shutoff/%s' % (self.site.user(), self.__class__.__name__)
+            'User:{username}/shutoff/{class_name}'.format(
+                username=self.site.user(),
+                class_name=self.__class__.__name__
+            )
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                sys.exit('%s disabled:\n%s' %
-                         (self.__class__.__name__, content))
+                e = '{} disabled:\n{}'.format(self.__class__.__name__, content)
+                pywikibot.error(e)
+                self.quit()
 
     def treat_page(self):
         """Process one page."""
-        self.check_enabled()
+        self.check_disabled()
         text = ''
         sections = split_into_sections(self.current_page.text)
         for section in sections:
@@ -210,7 +214,7 @@ def main(*args):
     site = pywikibot.Site()
     site.login()
     # Parse command line arguments
-    gen_factory = pagegenerators.GeneratorFactory()
+    gen_factory = pywikibot.pagegenerators.GeneratorFactory(site)
     for arg in local_args:
         if gen_factory.handleArg(arg):
             continue
@@ -219,13 +223,13 @@ def main(*args):
         if arg == 'config':
             if not value:
                 value = pywikibot.input(
-                    'Please enter a value for %s' % arg,
+                    'Please enter a value for {}'.format(arg),
                     default=None
                 )
             options[arg] = value
         else:
             options[arg] = True
-    gen = gen_factory.getCombinedGenerator()
+    gen = gen_factory.getCombinedGenerator(preload=True)
     if 'config' not in options:
         pywikibot.bot.suggest_help(missing_parameters=['config'])
         return False
@@ -236,10 +240,7 @@ def main(*args):
     else:
         pywikibot.error('Invalid config.')
         return False
-    if gen:
-        gen = pagegenerators.PreloadingGenerator(gen)
-        bot = MagicLinksReplacer(gen, **options)
-        bot.run()
+    MagicLinksReplacer(gen, site=site, **options).run()
     return True
 
 
