@@ -25,10 +25,12 @@ The following parameters are supported:
 # License: MIT
 import mwparserfromhell
 import pywikibot
-from pywikibot.bot import SingleSiteBot, CurrentPageBot
+from pywikibot import pagegenerators
+from pywikibot.bot import CurrentPageBot, SingleSiteBot
 
-docuReplacements = { # pylint: disable=invalid-name
-    '&params;': pywikibot.pagegenerators.parameterHelp
+
+docuReplacements = {  # pylint: disable=invalid-name
+    '&params;': pagegenerators.parameterHelp
 }
 
 
@@ -131,14 +133,14 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
             pages to work
         @type generator: generator
         """
-        self.availableOptions.update({
-            'editnotice_page': None,
-            'editnotice_template': None
-        })
+        self.availableOptions.update(
+            {'editnotice_page': None, 'editnotice_template': None}
+        )
         self.generator = generator
         super().__init__(**kwargs)
         self.editnotice_page_titles = get_template_titles(
-            [self.getOption('editnotice_page')])
+            [self.getOption('editnotice_page')]
+        )
         self.editnotice_template = self.getOption('editnotice_template')
 
     def check_disabled(self):
@@ -150,9 +152,8 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
         page = pywikibot.Page(
             self.site,
             'User:{username}/shutoff/{class_name}.json'.format(
-                username=self.site.user(),
-                class_name=self.__class__.__name__
-            )
+                username=self.site.user(), class_name=self.__class__.__name__
+            ),
         )
         if page.exists():
             content = page.get(force=True).strip()
@@ -176,7 +177,7 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
         self.put_current(
             '\n'.join((self.editnotice_template, text)),
             summary='Deploying editnotice: ' + self.editnotice_template,
-            minor=False
+            minor=False,
         )
 
 
@@ -191,14 +192,14 @@ def main(*args):
         'subject_only': False,
         'talk_only': False,
         'to_subject': False,
-        'to_talk': False
+        'to_talk': False,
     }
     # Process global arguments
     local_args = pywikibot.handle_args(args)
     site = pywikibot.Site()
     site.login()
     # Parse command line arguments
-    gen_factory = pywikibot.pagegenerators.GeneratorFactory(site)
+    gen_factory = pagegenerators.GeneratorFactory(site)
     for arg in local_args:
         if gen_factory.handleArg(arg):
             continue
@@ -207,8 +208,7 @@ def main(*args):
         if arg == 'editnotice_template':
             if not value:
                 value = pywikibot.input(
-                    'Please enter a value for {}'.format(arg),
-                    default=None
+                    'Please enter a value for {}'.format(arg), default=None
                 )
             options[arg] = value
         else:
@@ -219,13 +219,11 @@ def main(*args):
     gen = gen_factory.getCombinedGenerator()
     if options['to_subject']:
         gen = page_with_subject_page_generator(
-            gen,
-            return_subject_only=options['subject_only']
+            gen, return_subject_only=options['subject_only']
         )
     elif options['to_talk']:
-        gen = pywikibot.pagegenerators.PageWithTalkPageGenerator(
-            gen,
-            return_talk_only=options['talk_only']
+        gen = pagegenerators.PageWithTalkPageGenerator(
+            gen, return_talk_only=options['talk_only']
         )
     elif options['subject_only']:
         gen = subject_page_generator(gen)
@@ -234,7 +232,7 @@ def main(*args):
     gen = editnotice_page_generator(gen)
     for key in ('subject_only', 'talk_only', 'to_subject', 'to_talk'):
         options.pop(key, None)
-    gen = pywikibot.pagegenerators.PreloadingGenerator(gen)
+    gen = pagegenerators.PreloadingGenerator(gen)
     EditnoticeDeployer(gen, site=site, **options).run()
     return True
 

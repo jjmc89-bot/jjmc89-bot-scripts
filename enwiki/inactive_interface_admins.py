@@ -6,8 +6,9 @@ This script reports inactive interface admins.
 # Author : JJMC89
 # License: MIT
 from itertools import chain
-from dateutil.relativedelta import relativedelta
+
 import pywikibot
+from dateutil.relativedelta import relativedelta
 
 
 def get_inactive_users(site=None):
@@ -61,8 +62,7 @@ class User(pywikibot.User):
                 self._is_active = False
             elif self.last_edit and self.last_edit[2] >= cutoff:
                 self._is_active = True
-            elif (self.last_event
-                  and self.last_event.timestamp() >= cutoff):
+            elif self.last_event and self.last_event.timestamp() >= cutoff:
                 self._is_active = True
             else:
                 self._is_active = False
@@ -103,23 +103,29 @@ class User(pywikibot.User):
         if self._has_cssjs_edit is None:
             kwa = dict(
                 namespaces=(2, 8),
-                end=self.site.getcurrenttime() + relativedelta(months=-6)
+                end=self.site.getcurrenttime() + relativedelta(months=-6),
             )
             for page, _, _, summary in self.contributions(total=None, **kwa):
-                if not (page.content_model not in ('css', 'javascript')
-                        or page.title().startswith('{}/'.format(self.title()))
-                        or 'while renaming the user' in summary):
+                if not (
+                    page.content_model not in ('css', 'javascript')
+                    or page.title().startswith('{}/'.format(self.title()))
+                    or 'while renaming the user' in summary
+                ):
                     self._has_cssjs_edit = True
                     return self._has_cssjs_edit
             pywikibot.log('{}: No CSS/JS edit'.format(self.username))
             got_group = kwa['end']
-            rights_events = sorted(chain(
-                self.site.logevents(logtype='rights', page=self),
-                pywikibot.Site('meta', 'meta').logevents(
-                    logtype='rights',
-                    page='{}@{}'.format(self.title(), self.site.dbName())
-                )
-            ), key=lambda logevent: logevent.timestamp(), reverse=True)
+            rights_events = sorted(
+                chain(
+                    self.site.logevents(logtype='rights', page=self),
+                    pywikibot.Site('meta', 'meta').logevents(
+                        logtype='rights',
+                        page='{}@{}'.format(self.title(), self.site.dbName()),
+                    ),
+                ),
+                key=lambda logevent: logevent.timestamp(),
+                reverse=True,
+            )
             for logevent in rights_events:
                 added_groups = set(logevent.newgroups)-set(logevent.oldgroups)
                 if 'interface-admin' in added_groups:
@@ -147,14 +153,14 @@ def main(*args):
     if not users:
         return
     heading = 'Inactive interface administrators {}'.format(
-        site.getcurrenttime().date())
+        site.getcurrenttime().date()
+    )
     text = 'The following interface administrator(s) are inactive:'
     for user in sorted(users):
         text += '\n* {{{{admin|1={}}}}}'.format(user.username)
     text += '\n~~~~'
     pywikibot.Page(
-        site,
-        "Wikipedia:Interface administrators' noticeboard"
+        site, "Wikipedia:Interface administrators' noticeboard"
     ).save(text=text, section='new', summary=heading, botflag=False)
 
 

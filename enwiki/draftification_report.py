@@ -19,14 +19,17 @@ The following arguments are supported:
 # Author : JJMC89
 # License: MIT
 import datetime
-from datetime import date, timedelta
 import re
-from dateutil.parser import parse as parse_date
+from datetime import date, timedelta
+
 import pywikibot
+from dateutil.parser import parse as parse_date
+from pywikibot.pagegenerators import PrefixingPageGenerator
+
 
 BOT_START_END = re.compile(
     r'^(.*?<!--\s*bot start\s*-->).*?(<!--\s*bot end\s*-->.*)$',
-    flags=re.S | re.I
+    flags=re.S | re.I,
 )
 
 
@@ -87,8 +90,7 @@ def get_xfds(pages):
         else:
             prefix = 'Miscellany for deletion/'
         prefix += page.title()
-        gen = pywikibot.pagegenerators.PrefixingPageGenerator(
-            prefix, namespace=page.site.namespaces.PROJECT, site=page.site)
+        gen = PrefixingPageGenerator(prefix, namespace=4, site=page.site)
         xfds = xfds.union([xfd_page.title(asLink=True) for xfd_page in gen])
     return xfds
 
@@ -124,8 +126,9 @@ def save_bot_start_end(save_text, page, summary):
     save_text = save_text.strip()
     if page.exists():
         if BOT_START_END.match(page.text):
-            page.text = BOT_START_END.sub(r'\1\n{}\2'.format(save_text),
-                                          page.text)
+            page.text = BOT_START_END.sub(
+                r'\1\n{}\2'.format(save_text), page.text
+            )
         else:
             page.text = save_text
         page.save(summary=summary, minor=False, botflag=False)
@@ -141,12 +144,17 @@ def output_move_log(page=None, start=None, end=None):
     @type page: L{pywikibot.Page}
     """
     text = ''
-    for logevent in page.site.logevents(logtype='move',
-                                        namespace=page.site.namespaces.MAIN.id,
-                                        start=start, end=end, reverse=True):
-        if (logevent.target_ns not in (page.site.namespaces.DRAFT,
-                                       page.site.namespaces.USER)
-                or logevent.target_title.startswith('Draft:Move/')):
+    for logevent in page.site.logevents(
+        logtype='move',
+        namespace=page.site.namespaces.MAIN.id,
+        start=start,
+        end=end,
+        reverse=True,
+    ):
+        if logevent.target_ns not in (
+            2,
+            118,
+        ) or logevent.target_title.startswith('Draft:Move/'):
             # Only want moves to Draft or User.
             # Skip page swaps.
             continue
@@ -158,26 +166,28 @@ def output_move_log(page=None, start=None, end=None):
                 try:
                     redirect_target = current_page.getRedirectTarget()
                 except pywikibot.CircularRedirect:
-                    pywikibot.log('{} is a circular redirect.'.format(
-                        current_page.title(asLink=True)))
+                    pywikibot.log(
+                        '{} is a circular redirect.'.format(
+                            current_page.title(asLink=True)
+                        )
+                    )
                 else:
-                    if (redirect_target.exists()
-                            and (redirect_target.namespace()
-                                 in (page.site.namespaces.DRAFT,
-                                     page.site.namespaces.USER,
-                                     page.site.namespaces.MAIN))
-                       ):
+                    if redirect_target.exists() and (
+                        redirect_target.namespace() in (0, 2, 118)
+                    ):
                         current_page = redirect_target
         elif logevent.page().exists():
             current_page = logevent.page()
         if current_page:
             if current_page.oldest_revision.user:
                 creator = '[[User:{}]]'.format(
-                    current_page.oldest_revision.user)
+                    current_page.oldest_revision.user
+                )
             creation = ('[[Special:PermaLink/{rev.revid}|{rev.timestamp}]]'
                         .format(rev=current_page.oldest_revision))
             last_edit = '[[Special:Diff/{rev.revid}|{rev.timestamp}]]'.format(
-                rev=current_page.latest_revision)
+                rev=current_page.latest_revision
+            )
             editors = set()
             for rev in current_page.revisions():
                 if rev.user:
@@ -197,15 +207,16 @@ def output_move_log(page=None, start=None, end=None):
                 last_edit=last_edit,
                 notes=iterable_to_wikitext(
                     get_xfds([logevent.page(), logevent.target_page])
-                )
+                ),
             )
         )
     if text:
         if start.date() == end.date():
             caption = 'Report for {}'.format(start.date().isoformat())
         else:
-            caption = 'Report for {} to {}'.format(start.date().isoformat(),
-                                                   end.date().isoformat())
+            caption = 'Report for {} to {}'.format(
+                start.date().isoformat(), end.date().isoformat()
+            )
         caption += '; Last updated: ~~~~~'
         text = (
             '\n{{| class="wikitable sortable plainlinks"\n|+ {caption}'
@@ -225,9 +236,7 @@ def main(*args):
     @param args: command line arguments
     @type args: list of unicode
     """
-    options = {
-        'end': date.today() - timedelta(days=1)
-    }
+    options = {'end': date.today() - timedelta(days=1)}
     # Process global arguments
     local_args = pywikibot.handle_args(args)
     site = pywikibot.Site()
@@ -239,8 +248,7 @@ def main(*args):
         if arg in 'end' 'page' 'start':
             if not value:
                 value = pywikibot.input(
-                    'Please enter a value for {}'.format(arg),
-                    default=None
+                    'Please enter a value for {}'.format(arg), default=None
                 )
             options[arg] = value
         else:
@@ -253,7 +261,7 @@ def main(*args):
     output_move_log(
         page=options['page'],
         start=datetime.datetime.combine(options['start'], datetime.time.min),
-        end=datetime.datetime.combine(options['end'], datetime.time.max)
+        end=datetime.datetime.combine(options['end'], datetime.time.max),
     )
     return True
 

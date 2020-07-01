@@ -17,10 +17,11 @@ The following parameters are supported:
 import json
 import re
 from datetime import date
-from dateutil.parser import parse
-from dateutil.relativedelta import relativedelta
+
 import mwparserfromhell
 import pywikibot
+from dateutil.parser import parse
+from dateutil.relativedelta import relativedelta
 
 
 def get_json_from_page(page):
@@ -57,9 +58,16 @@ def validate_options(options):
     @rtype: bool
     """
     pywikibot.log('Options:')
-    notice_keys = ['email_subject', 'email_subject2', 'email_text',
-                   'email_text2', 'note_summary', 'note_summary2', 'note_text',
-                   'note_text2']
+    notice_keys = [
+        'email_subject',
+        'email_subject2',
+        'email_text',
+        'email_text2',
+        'note_summary',
+        'note_summary2',
+        'note_text',
+        'note_text2',
+    ]
     required_keys = notice_keys + ['date', 'exclusions']
     has_keys = list()
     result = True
@@ -133,25 +141,34 @@ def create_section(options, site=None):
         options['date'] + relativedelta(years=-1),
         options['exclusions'],
         site=site,
-        group='sysop'
+        group='sysop',
     )
     text = '=== {date:%B %Y} ===\n'.format(**options)
     if inactive_sysops:
         text += (
             '{{{{hatnote|Administrators listed below may have their '
             'permissions removed on or after {date.day} {date:%B %Y} (UTC)'
-            ' after being duly notified.}}}}\n{{{{iarow/t}}}}\n'
-            .format(**options)
+            ' after being duly notified.}}}}\n{{{{iarow/t}}}}\n'.format(
+                **options
+            )
         )
         for user in inactive_sysops:
             tpl = mwparserfromhell.nodes.Template('iarow')
             tpl.add('1', user.username)
             if user.last_edit:
-                tpl.add('lastedit', '{date.day} {date:%B %Y}'
-                        .format(date=user.last_edit[2].date()))
+                tpl.add(
+                    'lastedit',
+                    '{date.day} {date:%B %Y}'.format(
+                        date=user.last_edit[2].date()
+                    ),
+                )
             if user.last_event:
-                tpl.add('lastlog', '{date.day} {date:%B %Y}'
-                        .format(date=user.last_event.timestamp().date()))
+                tpl.add(
+                    'lastlog',
+                    '{date.day} {date:%B %Y}'.format(
+                        date=user.last_event.timestamp().date()
+                    ),
+                )
             user.notify(options)
             for param, value in user.notifications.items():
                 if value:
@@ -184,8 +201,9 @@ def update_section(text, options, site=None):
         pywikibot.log('No inactive admins.')
         return text
     inactive_sysops = 0
-    match = re.match(r'.+?on or after \b(?P<date>.+?) \(UTC\)',
-                     text, flags=re.S)
+    match = re.match(
+        r'.+?on or after \b(?P<date>.+?) \(UTC\)', text, flags=re.S
+    )
     if match:
         section_date = parse(match.group('date')).date()
     else:
@@ -215,8 +233,9 @@ def update_section(text, options, site=None):
                     if value and not tpl.has(param, ignore_empty=True):
                         tpl.add(param, value)
     if inactive_sysops == 0:
-        for tpl in wikicode.ifilter_templates(recursive=False,
-                                              matches='iarow'):
+        for tpl in wikicode.ifilter_templates(
+            recursive=False, matches='iarow'
+        ):
             wikicode.remove(tpl)
         text = str(wikicode) + '\n: None\n'
     else:
@@ -233,8 +252,9 @@ def split_into_sections(text):
 
     @rtype: list
     """
-    headings_regex = re.compile(r'^={1,6}.*?={1,6}(?: *<!--.*?-->)?\s*$',
-                                flags=re.M)
+    headings_regex = re.compile(
+        r'^={1,6}.*?={1,6}(?: *<!--.*?-->)?\s*$', flags=re.M
+    )
     sections = list()
     last_match_start = 0
     for match in headings_regex.finditer(text):
@@ -265,7 +285,7 @@ class User(pywikibot.User):
             'note': None,
             'diff': None,
             'note2': None,
-            'diff2': None
+            'diff2': None,
         }
 
     def is_active(self, cutoff=date.today() + relativedelta(years=-1)):
@@ -280,8 +300,10 @@ class User(pywikibot.User):
         if self._is_active is None:
             if self.last_edit and self.last_edit[2].date() >= cutoff:
                 self._is_active = True
-            elif (self.last_event
-                  and self.last_event.timestamp().date() >= cutoff):
+            elif (
+                self.last_event
+                and self.last_event.timestamp().date() >= cutoff
+            ):
                 self._is_active = True
             else:
                 self._is_active = False
@@ -328,10 +350,15 @@ class User(pywikibot.User):
         @type notice_number: int
         """
         param_suffix = '' if notice_number == 1 else str(notice_number)
-        if (self.notifications['note' + param_suffix]
-                or self.notifications['email' + param_suffix]):
-            pywikibot.log('{username} has already been notified.'.format(
-                username=self.username))
+        if (
+            self.notifications['note' + param_suffix]
+            or self.notifications['email' + param_suffix]
+        ):
+            pywikibot.log(
+                '{username} has already been notified.'.format(
+                    username=self.username
+                )
+            )
             return
         talk_page = self.getUserTalkPage()
         success = False
@@ -344,20 +371,24 @@ class User(pywikibot.User):
                 minor=False,
                 bot=False,
                 section='new',
-                text=options['note_text' + param_suffix]
+                text=options['note_text' + param_suffix],
             )
             if not success:
                 pywikibot.log(
                     'Failed to send {note} to {username}. Attempt: '
-                    '{attempts}.'.format(note='note' + param_suffix,
-                                         username=self.username,
-                                         attempts=attempts)
+                    '{attempts}.'.format(
+                        note='note' + param_suffix,
+                        username=self.username,
+                        attempts=attempts,
+                    )
                 )
         if success:
-            self.notifications['note' + param_suffix] = (
-                '{date.day} {date:%B %Y}'.format(date=date.today()))
-            self.notifications['diff' + param_suffix] = (
-                str(talk_page.latest_revision_id))
+            self.notifications[
+                'note' + param_suffix
+            ] = '{date.day} {date:%B %Y}'.format(date=date.today())
+            self.notifications['diff' + param_suffix] = str(
+                talk_page.latest_revision_id
+            )
         if self.isEmailable():
             success = False
             attempts = 0
@@ -365,21 +396,25 @@ class User(pywikibot.User):
                 attempts += 1
                 success = self.send_email(
                     options['email_subject' + param_suffix],
-                    options['email_text' + param_suffix]
+                    options['email_text' + param_suffix],
                 )
                 if not success:
                     pywikibot.log(
                         'Failed to send {email} to {username}. Attempt: '
-                        '{attempts}.'.format(email='email' + param_suffix,
-                                             username=self.username,
-                                             attempts=attempts)
+                        '{attempts}.'.format(
+                            email='email' + param_suffix,
+                            username=self.username,
+                            attempts=attempts,
+                        )
                     )
             if success:
-                self.notifications['email' + param_suffix] = (
-                    '{date.day} {date:%B %Y}'.format(date=date.today()))
+                self.notifications[
+                    'email' + param_suffix
+                ] = '{date.day} {date:%B %Y}'.format(date=date.today())
         else:
-            pywikibot.log('{username} has email disabled.'
-                          .format(username=self.username))
+            pywikibot.log(
+                '{username} has email disabled.'.format(username=self.username)
+            )
             self.notifications['email' + param_suffix] = 'no'
 
 
@@ -393,7 +428,7 @@ def main(*args):
     options = {
         'date': date.today() + relativedelta(months=1),
         'exclusions': list(),
-        'max_attempts': 3
+        'max_attempts': 3,
     }
     # Process global arguments
     local_args = pywikibot.handle_args(args)
@@ -406,8 +441,7 @@ def main(*args):
         if arg in ('config', 'max_attempts'):
             if not value:
                 value = pywikibot.input(
-                    'Please enter a value for {}'.format(arg),
-                    default=None
+                    'Please enter a value for {}'.format(arg), default=None
                 )
             options[arg] = value
         else:
@@ -415,14 +449,14 @@ def main(*args):
     if 'config' not in options:
         pywikibot.bot.suggest_help(missing_parameters=['config'])
         return False
-    options.update(get_json_from_page(pywikibot.Page(site,
-                                                     options.pop('config'))))
+    options.update(
+        get_json_from_page(pywikibot.Page(site, options.pop('config')))
+    )
     if not validate_options(options):
         pywikibot.error('Invalid options.')
         return False
     page = pywikibot.Page(
-        site,
-        'Wikipedia:Inactive administrators/{date:%Y}'.format(**options)
+        site, 'Wikipedia:Inactive administrators/{date:%Y}'.format(**options)
     )
     sections = split_into_sections(page.text)
     section = None
@@ -441,19 +475,19 @@ def main(*args):
     summary = '/* {date:%B %Y} */ '.format(**options)
     if section:
         page.text = page.text.replace(
-            str(section),
-            update_section(str(section), options, site=site)
+            str(section), update_section(str(section), options, site=site)
         )
         summary += 'Updating'
     else:
         current_page = pywikibot.Page(
             site,
             'Wikipedia:Inactive administrators/{date:%Y}'.format(
-                date=date.today())
+                date=date.today()
+            ),
         )
         options['exclusions'] += [
-            user.username for user in
-            current_page.linkedPages(namespaces=site.namespaces.USER.id)]
+            user.username for user in current_page.linkedPages(namespaces=2)
+        ]
         section = create_section(options, site=site)
         if log_section:
             sections.insert(log_section + 1, section)

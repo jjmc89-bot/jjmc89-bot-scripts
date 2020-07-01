@@ -13,13 +13,13 @@ The following parameters are supported:
 # License: MIT
 
 import mwparserfromhell
-from mwparserfromhell.nodes import Wikilink
 import pywikibot
-from pywikibot.bot import MultipleSitesBot, ExistingPageBot
+from mwparserfromhell.nodes import Wikilink
+from pywikibot.bot import ExistingPageBot, MultipleSitesBot
+from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 
-docuReplacements = { # pylint: disable=invalid-name
-    '&params;': pywikibot.pagegenerators.parameterHelp
-}
+
+docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
 
 
 def get_template_titles(templates):
@@ -60,18 +60,21 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
         date = self.commons.server_time().date().isoformat()
         self.potd_title = 'Template:Potd/{}'.format(date)
         potd_tpl = pywikibot.Page(self.commons, self.potd_title)
-        potd_fn_titles = get_template_titles([
-            pywikibot.Page(self.commons, 'Template:Potd filename')])
+        potd_fn_titles = get_template_titles(
+            [pywikibot.Page(self.commons, 'Template:Potd filename')]
+        )
         wikicode = mwparserfromhell.parse(potd_tpl.text, skip_style_tags=True)
         for tpl in wikicode.ifilter_templates():
-            if (tpl.name.matches(potd_fn_titles)
-                    and tpl.has('1', ignore_empty=True)):
+            if tpl.name.matches(potd_fn_titles) and tpl.has(
+                '1', ignore_empty=True
+            ):
                 self.potd = tpl.get('1').value.strip()
                 break
         else:
             raise ValueError('Failed to find the POTD.')
-        self.potd_desc_titles = get_template_titles([
-            pywikibot.Page(self.commons, 'Template:Potd description')])
+        self.potd_desc_titles = get_template_titles(
+            [pywikibot.Page(self.commons, 'Template:Potd description')]
+        )
         # T242081, T243701
         # repo = self.commons.data_repository
         # self.DOC_ITEM = pywikibot.ItemPage(repo, 'Q4608595')
@@ -88,11 +91,13 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
             caption_page = pywikibot.Page(self.commons, caption_title)
             if not caption_page.exists():
                 continue
-            wikicode = mwparserfromhell.parse(caption_page.text,
-                                              skip_style_tags=True)
+            wikicode = mwparserfromhell.parse(
+                caption_page.text, skip_style_tags=True
+            )
             for tpl in wikicode.ifilter_templates():
-                if (tpl.name.matches(self.potd_desc_titles)
-                        and tpl.has('1', ignore_empty=True)):
+                if tpl.name.matches(self.potd_desc_titles) and tpl.has(
+                    '1', ignore_empty=True
+                ):
                     caption = tpl.get('1').value.strip()
             if caption:
                 # Remove templates, etc.
@@ -104,7 +109,8 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
                     prefix = ':c' + ('' if title.startswith(':') else ':')
                     wikilink.title = prefix + title
                 summary += '[[:c:{}|caption attribution]]'.format(
-                    caption_title)
+                    caption_title
+                )
                 break
         if not caption:
             summary += 'failed to get a caption'
@@ -115,7 +121,7 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
             '}}}}</includeonly><noinclude>{{{{{doc}}}}}</noinclude>'.format(
                 caption=str(caption),
                 file=self.potd,
-                doc=doc_tpl.title(with_ns=False)
+                doc=doc_tpl.title(with_ns=False),
             )
         )
         self.put_current(text, summary=summary, minor=False)
@@ -134,7 +140,7 @@ def main(*args):
     site = pywikibot.Site()
     site.login()
     # Parse command line arguments
-    gen_factory = pywikibot.pagegenerators.GeneratorFactory(site)
+    gen_factory = GeneratorFactory(site)
     for arg in local_args:
         if gen_factory.handleArg(arg):
             continue

@@ -17,13 +17,14 @@ The following parameters are supported:
 # License: MIT
 import json
 import re
+
 import pywikibot
-from pywikibot.bot import SingleSiteBot, ExistingPageBot, NoRedirectPageBot
+from pywikibot.bot import ExistingPageBot, NoRedirectPageBot, SingleSiteBot
+from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import replaceExcept
 
-docuReplacements = { #pylint: disable=invalid-name
-    '&params;': pywikibot.pagegenerators.parameterHelp
-}
+
+docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
 
 # For _create_regexes().
 _REGEXES = dict()
@@ -80,34 +81,50 @@ def _create_regexes():
     space = r'(?:[^\S\n]|&nbsp;|&\#0*160;|&\#[Xx]0*[Aa]0;)'
     spaces = r'{space}+'.format(space=space)
     space_dash = r'(?:-|{space})'.format(space=space)
-    tags = ['gallery', 'math', 'nowiki', 'pre', 'score', 'source',
-            'syntaxhighlight']
+    tags = [
+        'gallery',
+        'math',
+        'nowiki',
+        'pre',
+        'score',
+        'source',
+        'syntaxhighlight',
+    ]
     # Based on pywikibot.textlib.compileLinkR
     # and https://gist.github.com/gruber/249502
     url = r'''(?:[a-z][\w-]+://[^\]\s<>"]*[^\]\s\.:;,<>"\|\)`!{}'?«»“”‘’])'''
-    _REGEXES.update({
-        'bare_url': re.compile(r'\b({})'.format(url), flags=re.I),
-        'bracket_url': re.compile(r'(\[{}[^\]]*\])'.format(url), flags=re.I),
-        'ISBN': re.compile(
-            r'\bISBN(?P<separator>{spaces})(?P<value>(?:97[89]{space_dash}?)?'
-            r'(?:[0-9]{space_dash}?){{9}}[0-9Xx])\b'.format(
-                spaces=spaces, space_dash=space_dash)
-        ),
-        'PMID': re.compile(
-            r'\bPMID(?P<separator>{spaces})(?P<value>[0-9]+)\b'.format(
-                spaces=spaces)
-        ),
-        'RFC': re.compile(
-            r'\bRFC(?P<separator>{spaces})(?P<value>[0-9]+)\b'.format(
-                spaces=spaces)
-        ),
-        'tags': re.compile(
-            r'''(<\/?\w+(?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|'''
-            r'''[^>\s]+))?)*\s*\/?>)'''
-        ),
-        'tags_content': re.compile(r'(<(?P<tag>{})\b.*?</(?P=tag)>)'.format(
-            r'|'.join(tags)), flags=re.I | re.M)
-    })
+    _REGEXES.update(
+        {
+            'bare_url': re.compile(r'\b({})'.format(url), flags=re.I),
+            'bracket_url': re.compile(
+                r'(\[{}[^\]]*\])'.format(url), flags=re.I
+            ),
+            'ISBN': re.compile(
+                r'\bISBN(?P<separator>{spaces})(?P<value>(?:97[89]{space_dash}'
+                r'?)?(?:[0-9]{space_dash}?){{9}}[0-9Xx])\b'.format(
+                    spaces=spaces, space_dash=space_dash
+                )
+            ),
+            'PMID': re.compile(
+                r'\bPMID(?P<separator>{spaces})(?P<value>[0-9]+)\b'.format(
+                    spaces=spaces
+                )
+            ),
+            'RFC': re.compile(
+                r'\bRFC(?P<separator>{spaces})(?P<value>[0-9]+)\b'.format(
+                    spaces=spaces
+                )
+            ),
+            'tags': re.compile(
+                r'''(<\/?\w+(?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|'''
+                r'''[^>\s]+))?)*\s*\/?>)'''
+            ),
+            'tags_content': re.compile(
+                r'(<(?P<tag>{})\b.*?</(?P=tag)>)'.format(r'|'.join(tags)),
+                flags=re.I | re.M,
+            ),
+        }
+    )
 
 
 def split_into_sections(text):
@@ -119,8 +136,9 @@ def split_into_sections(text):
 
     @rtype: list
     """
-    headings_regex = re.compile(r'^={1,6}.*?={1,6}(?: *<!--.*?-->)?\s*$',
-                                flags=re.M)
+    headings_regex = re.compile(
+        r'^={1,6}.*?={1,6}(?: *<!--.*?-->)?\s*$', flags=re.M
+    )
     sections = list()
     last_match_start = 0
     for match in headings_regex.finditer(text):
@@ -143,21 +161,26 @@ class MagicLinksReplacer(SingleSiteBot, NoRedirectPageBot, ExistingPageBot):
             pages to work
         @type generator: generator
         """
-        self.availableOptions.update({
-            'summary': None,
-            'ISBN': None,
-            'PMID': None,
-            'RFC': None
-        })
+        self.availableOptions.update(
+            {'summary': None, 'ISBN': None, 'PMID': None, 'RFC': None}
+        )
         self.generator = generator
         super().__init__(**kwargs)
         _create_regexes()
-        self.replace_exceptions = [_REGEXES[key] for key in
-                                   ('bare_url', 'bracket_url', 'tags_content',
-                                    'tags')]
-        self.replace_exceptions += ['category', 'comment', 'file',
-                                    'interwiki', 'invoke', 'link', 'property',
-                                    'template']
+        self.replace_exceptions = [
+            _REGEXES[key]
+            for key in ('bare_url', 'bracket_url', 'tags_content', 'tags')
+        ]
+        self.replace_exceptions += [
+            'category',
+            'comment',
+            'file',
+            'interwiki',
+            'invoke',
+            'link',
+            'property',
+            'template',
+        ]
 
     def check_disabled(self):
         """Check if the task is disabled. If so, quit."""
@@ -168,9 +191,8 @@ class MagicLinksReplacer(SingleSiteBot, NoRedirectPageBot, ExistingPageBot):
         page = pywikibot.Page(
             self.site,
             'User:{username}/shutoff/{class_name}'.format(
-                username=self.site.user(),
-                class_name=self.__class__.__name__
-            )
+                username=self.site.user(), class_name=self.__class__.__name__
+            ),
         )
         if page.exists():
             content = page.get(force=True).strip()
@@ -186,17 +208,29 @@ class MagicLinksReplacer(SingleSiteBot, NoRedirectPageBot, ExistingPageBot):
         sections = split_into_sections(self.current_page.text)
         for section in sections:
             if self.getOption('ISBN'):
-                section = replaceExcept(section, _REGEXES['ISBN'],
-                                        self.getOption('ISBN'),
-                                        self.replace_exceptions)
+                section = replaceExcept(
+                    section,
+                    _REGEXES['ISBN'],
+                    self.getOption('ISBN'),
+                    self.replace_exceptions,
+                    site=self.site,
+                )
             if self.getOption('PMID'):
-                section = replaceExcept(section, _REGEXES['PMID'],
-                                        self.getOption('PMID'),
-                                        self.replace_exceptions)
+                section = replaceExcept(
+                    section,
+                    _REGEXES['PMID'],
+                    self.getOption('PMID'),
+                    self.replace_exceptions,
+                    site=self.site,
+                )
             if self.getOption('RFC'):
-                section = replaceExcept(section, _REGEXES['RFC'],
-                                        self.getOption('RFC'),
-                                        self.replace_exceptions)
+                section = replaceExcept(
+                    section,
+                    _REGEXES['RFC'],
+                    self.getOption('RFC'),
+                    self.replace_exceptions,
+                    site=self.site,
+                )
             text += section
         self.put_current(text, summary=self.getOption('summary'))
 
@@ -214,7 +248,7 @@ def main(*args):
     site = pywikibot.Site()
     site.login()
     # Parse command line arguments
-    gen_factory = pywikibot.pagegenerators.GeneratorFactory(site)
+    gen_factory = GeneratorFactory(site)
     for arg in local_args:
         if gen_factory.handleArg(arg):
             continue
@@ -223,8 +257,7 @@ def main(*args):
         if arg == 'config':
             if not value:
                 value = pywikibot.input(
-                    'Please enter a value for {}'.format(arg),
-                    default=None
+                    'Please enter a value for {}'.format(arg), default=None
                 )
             options[arg] = value
         else:

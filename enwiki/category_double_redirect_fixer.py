@@ -15,13 +15,12 @@ The following parameters are supported:
 # License: MIT
 import mwparserfromhell
 import pywikibot
-from pywikibot.bot import SingleSiteBot, ExistingPageBot
+from pywikibot.bot import ExistingPageBot, SingleSiteBot
+from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import removeDisabledParts
 
 
-docuReplacements = { #pylint: disable=invalid-name
-    '&params;': pywikibot.pagegenerators.parameterHelp
-}
+docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
 
 
 def get_template_pages(templates):
@@ -56,13 +55,12 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
             pages to work
         @type generator: generator
         """
-        self.availableOptions.update({
-            'summary': 'Fix double redirect'
-        })
+        self.availableOptions.update({'summary': 'Fix double redirect'})
         self.generator = generator
         super().__init__(**kwargs)
-        self.templates = get_template_pages([
-            pywikibot.Page(self.site, 'Category redirect', ns=10)])
+        self.templates = get_template_pages(
+            [pywikibot.Page(self.site, 'Category redirect', ns=10)]
+        )
 
     def init_page(self, item):
         """Re-class the page."""
@@ -94,9 +92,8 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
         page = pywikibot.Page(
             self.site,
             'User:{username}/shutoff/{class_name}.json'.format(
-                username=self.site.user(),
-                class_name=self.__class__.__name__
-            )
+                username=self.site.user(), class_name=self.__class__.__name__
+            ),
         )
         if page.exists():
             content = page.get(force=True).strip()
@@ -119,13 +116,16 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
                 )
                 return
             seen.add(target)
-        wikicode = mwparserfromhell.parse(self.current_page.text,
-                                          skip_style_tags=True)
+        wikicode = mwparserfromhell.parse(
+            self.current_page.text, skip_style_tags=True
+        )
         for tpl in wikicode.ifilter_templates():
             try:
-                template = pywikibot.Page(self.site,
-                                          removeDisabledParts(str(tpl.name)),
-                                          ns=10)
+                template = pywikibot.Page(
+                    self.site,
+                    removeDisabledParts(str(tpl.name), site=self.site),
+                    ns=10,
+                )
                 template.title()
             except pywikibot.InvalidTitle:
                 continue
@@ -146,7 +146,7 @@ def main(*args):
     local_args = pywikibot.handle_args(args)
     site = pywikibot.Site()
     site.login()
-    gen_factory = pywikibot.pagegenerators.GeneratorFactory(site)
+    gen_factory = GeneratorFactory(site)
     for arg in local_args:
         if gen_factory.handleArg(arg):
             continue
@@ -155,8 +155,7 @@ def main(*args):
         if arg == 'summary':
             if not value:
                 value = pywikibot.input(
-                    'Please enter a value for {}'.format(arg),
-                    default=None
+                    'Please enter a value for {}'.format(arg), default=None
                 )
             options[arg] = value
         else:
