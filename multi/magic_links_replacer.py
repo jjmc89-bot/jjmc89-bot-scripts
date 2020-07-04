@@ -25,9 +25,7 @@ from pywikibot.textlib import replaceExcept
 
 
 docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
-
-# For _create_regexes().
-_REGEXES = dict()
+_regexes = dict() # For _create_regexes().
 
 
 def get_json_from_page(page):
@@ -77,7 +75,7 @@ def validate_config(config):
 
 
 def _create_regexes():
-    """Fill (and possibly overwrite) _REGEXES with default regexes."""
+    """Fill (and possibly overwrite) _regexes with default regexes."""
     space = r'(?:[^\S\n]|&nbsp;|&\#0*160;|&\#[Xx]0*[Aa]0;)'
     spaces = r'{space}+'.format(space=space)
     space_dash = r'(?:-|{space})'.format(space=space)
@@ -93,7 +91,7 @@ def _create_regexes():
     # Based on pywikibot.textlib.compileLinkR
     # and https://gist.github.com/gruber/249502
     url = r'''(?:[a-z][\w-]+://[^\]\s<>"]*[^\]\s\.:;,<>"\|\)`!{}'?«»“”‘’])'''
-    _REGEXES.update(
+    _regexes.update(
         {
             'bare_url': re.compile(r'\b({})'.format(url), flags=re.I),
             'bracket_url': re.compile(
@@ -168,7 +166,7 @@ class MagicLinksReplacer(SingleSiteBot, NoRedirectPageBot, ExistingPageBot):
         super().__init__(**kwargs)
         _create_regexes()
         self.replace_exceptions = [
-            _REGEXES[key]
+            _regexes[key]
             for key in ('bare_url', 'bracket_url', 'tags_content', 'tags')
         ]
         self.replace_exceptions += [
@@ -205,32 +203,16 @@ class MagicLinksReplacer(SingleSiteBot, NoRedirectPageBot, ExistingPageBot):
         """Process one page."""
         self.check_disabled()
         text = ''
-        sections = split_into_sections(self.current_page.text)
-        for section in sections:
-            if self.getOption('ISBN'):
-                section = replaceExcept(
-                    section,
-                    _REGEXES['ISBN'],
-                    self.getOption('ISBN'),
-                    self.replace_exceptions,
-                    site=self.site,
-                )
-            if self.getOption('PMID'):
-                section = replaceExcept(
-                    section,
-                    _REGEXES['PMID'],
-                    self.getOption('PMID'),
-                    self.replace_exceptions,
-                    site=self.site,
-                )
-            if self.getOption('RFC'):
-                section = replaceExcept(
-                    section,
-                    _REGEXES['RFC'],
-                    self.getOption('RFC'),
-                    self.replace_exceptions,
-                    site=self.site,
-                )
+        for section in split_into_sections(self.current_page.text):
+            for identifier in ('ISBN', 'PMID', 'RFC'):
+                if self.getOption(identifier):
+                    section = replaceExcept(
+                        section,
+                        _regexes[identifier],
+                        self.getOption(identifier),
+                        self.replace_exceptions,
+                        site=self.site,
+                    )
             text += section
         self.put_current(text, summary=self.getOption('summary'))
 
@@ -243,11 +225,9 @@ def main(*args):
     @type args: list of unicode
     """
     options = {}
-    # Process global arguments
     local_args = pywikibot.handle_args(args)
     site = pywikibot.Site()
     site.login()
-    # Parse command line arguments
     gen_factory = GeneratorFactory(site)
     for arg in local_args:
         if gen_factory.handleArg(arg):
@@ -266,8 +246,7 @@ def main(*args):
     if 'config' not in options:
         pywikibot.bot.suggest_help(missing_parameters=['config'])
         return False
-    config = pywikibot.Page(site, options.pop('config'))
-    config = get_json_from_page(config)
+    config = get_json_from_page(pywikibot.Page(site, options.pop('config')))
     if validate_config(config):
         options.update(config)
     else:
