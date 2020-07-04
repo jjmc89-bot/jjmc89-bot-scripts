@@ -1,13 +1,20 @@
 language: python
 python:
-    - 3.5 # Toolforge
-    - 3.6
-    - 3.7
-    - 3.8
+  - 3.5 # Toolforge bastion/grid
+  - 3.6
+  - 3.7 # Toolforge k8s
+  - 3.8
+  - nightly
+  - pypy3
+jobs:
+  allow_failures:
+  - python: nightly
+  - python: pypy3
+  fast_finish: true
 os: linux
 install:
-    - pip install -r requirements.txt
-before_script:
-    - pip install -r dev-requirements.txt
+  - pip install --upgrade pip setuptools wheel
+  - pip install -r requirements.txt
+  - pip install -r requirements-dev.txt
 script:
-    - cd ..; pylint --rcfile JJMC89_bot/.pylintrc JJMC89_bot
+  - pylint **/*.py
