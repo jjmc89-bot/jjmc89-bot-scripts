@@ -528,10 +528,7 @@ def parse_line(line, site):
                 else:
                     results['new_cats'].append(page)
             else:
-                try:
-                    results['cfd_page'] = CfdPage(page)
-                except ValueError:
-                    raise ValueError('Found unknown link: {}'.format(page))
+                results['cfd_page'] = CfdPage(page)
     return results
 
 
