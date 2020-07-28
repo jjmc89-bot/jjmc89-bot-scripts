@@ -500,10 +500,10 @@ def get_template_pages(templates):
     return pages
 
 
-def parse_line(line, site, cfd_page):
+def parse_line(line, site):
     """Parse a line of wikitext from a CFD working page."""
     results = {
-        'cfd_page': cfd_page,
+        'cfd_page': None,
         'prefix': '',
         'old_cat': None,
         'new_cats': list(),
@@ -558,13 +558,12 @@ def parse_section(section, site, mode):
     cfd_page = None
     cfd_prefix = cfd_suffix = ''
     for line in str(section).splitlines():
-        options = parse_line(line, site, cfd_page)
-        if options['cfd_page'] != cfd_page:
+        options = parse_line(line, site)
+        if options['cfd_page']:
             cfd_prefix = options['prefix']
             cfd_suffix = options['suffix']
-        cfd_page = options.pop('cfd_page')
-        if not cfd_page or not options['old_cat']:
-            # Must have a CFD and an old cat.
+        cfd_page = options.pop('cfd_page') or cfd_page
+        if not (cfd_page and options['old_cat']):
             continue
         prefix = options.pop('prefix') + cfd_prefix
         suffix = options.pop('suffix') or cfd_suffix
@@ -582,14 +581,12 @@ def parse_section(section, site, mode):
             )
             not_matches = re.findall(r'\b(not )(\w+)\b', suffix, flags=re.I)
             if nc_matches:
-                result = nc_matches[0][0]
-                action = nc_matches[0][1]
+                result, action = nc_matches[0]
             elif not_matches:
-                result = not_matches[0][0] + not_matches[0][1]
+                result = ''.join(not_matches[0])
                 action = re.sub(r'ed$', 'e', not_matches[0][1])
             elif 'keep' in suffix.lower():
-                result = 'keep'
-                action = 'delete'
+                result, action = 'keep', 'delete'
             else:
                 action = options['cfd'].get_action(options['old_cat'])
                 result = options['cfd'].get_result()
