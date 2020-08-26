@@ -75,11 +75,13 @@ def validate_options(options, site):
             if not isinstance(key, str):
                 return False
             options[key] = '{{' + value + '}}'
-            options['editnotice_page'] = pywikibot.Page(site, value, ns=10)
-            if not options['editnotice_page'].exists():
+            editnotice_page = pywikibot.Page(site, value, ns=10)
+            if not editnotice_page.exists():
                 return False
     if sorted(has_keys) != sorted(required_keys):
         return False
+    options['editnotice_page'] = editnotice_page
+    options.pop('editnotice_template')
     return True
 
 
