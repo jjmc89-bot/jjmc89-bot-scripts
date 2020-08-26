@@ -81,7 +81,6 @@ def validate_options(options, site):
     if sorted(has_keys) != sorted(required_keys):
         return False
     options['editnotice_page'] = editnotice_page
-    options.pop('editnotice_template')
     return True
 
 
