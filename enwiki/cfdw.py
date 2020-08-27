@@ -8,13 +8,15 @@ This script processes Categories for discussion working pages.
 # Author : JJMC89
 # License: MIT
 import re
+from typing import Dict, Generator, Iterable, List, Optional, Set, Union
 
 import mwparserfromhell
 import pywikibot
-from mwparserfromhell.nodes import Template, Text, Wikilink
+from mwparserfromhell.nodes import Node, Template, Text, Wikilink
 from pywikibot.bot import ExistingPageBot, SingleSiteBot
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import removeDisabledParts, replaceExcept
+from typing_extensions import TypedDict
 
 
 docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
@@ -33,13 +35,52 @@ TPL = {
         'Cfr-speedy full',
     ],
     'old cfd': ['Old CfD'],
-}
+}  # type: Dict[str, Iterable[Union[str, pywikibot.Page]]]
+
+ActionOptions = TypedDict(
+    'ActionOptions',
+    {
+        'action': str,
+        'noredirect': bool,
+        'redirect': bool,
+        'result': str,
+    },
+    total=False,
+)
+BotOptions = TypedDict(
+    'BotOptions',
+    {
+        'new_cats': List[pywikibot.Category],
+        'old_cat': pywikibot.Category,
+        'summary': str,
+    },
+    total=False,
+)
+LineResults = TypedDict(
+    'LineResults',
+    {
+        'cfd_page': Optional['CfdPage'],
+        'new_cats': List[pywikibot.Category],
+        'old_cat': Optional[pywikibot.Category],
+        'prefix': str,
+        'suffix': str,
+    },
+)
+PageSource = Union[
+    pywikibot.Page, pywikibot.site.APISite, pywikibot.page.BaseLink
+]
 
 
 class CfdBot(SingleSiteBot, ExistingPageBot):
     """Bot to update categories."""
 
-    def __init__(self, generator, **kwargs):
+    def __init__(
+        self,
+        generator: Iterable[pywikibot.Page],
+        **kwargs: Union[
+            bool, str, pywikibot.Category, Iterable[pywikibot.Category]
+        ]
+    ) -> None:
         """
         Initializer.
 
@@ -61,7 +102,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
             self.getOption('new_cats'), reverse=True
         )
 
-    def treat_page(self):
+    def treat_page(self) -> None:
         """Process one page."""
         cats = list()
         old_cat_link = None
@@ -112,24 +153,20 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
 class CfdPage(pywikibot.Page):
     """Represents a CFD page."""
 
-    def __init__(self, source, title=''):
+    def __init__(self, source: PageSource, title: str = '') -> None:
         """Initializer."""
         super().__init__(source, title)
-        if (
-            not self.title(with_ns=False).startswith(
-                'Categories for discussion/'
-            )
-            or self.namespace() != 4
+        if not (
+            self.title(with_ns=False).startswith('Categories for discussion/')
+            and self.namespace() == 4
         ):
             raise ValueError('{} is not a CFD page.'.format(self))
 
-    def _cat_from_node(self, node):
+    def _cat_from_node(self, node: Node) -> Optional[pywikibot.Category]:
         """
         Return the category from the node.
 
         @param node: Node to get a category from
-        @type node: mwparserfromhell.Node
-        @rtype: L{pywikibot.Category} or None
         """
         if isinstance(node, Template):
             tpl = pywikibot.Page(self.site, str(node.name), ns=10)
@@ -150,13 +187,11 @@ class CfdPage(pywikibot.Page):
                     pass
         return None
 
-    def find_discussion(self, category):
+    def find_discussion(self, category: pywikibot.Category) -> 'CfdPage':
         """
         Return the relevant discussion.
 
         @param category: The category being discussed
-        @type category: L{pywikibot.Category}
-        @rtype: CfdPage
         """
         if self.section():
             return self
@@ -182,16 +217,14 @@ class CfdPage(pywikibot.Page):
                     return discussion
         return self
 
-    def get_action(self, category):
+    def get_action(self, category: pywikibot.Category) -> str:
         """
         Return the discussion action.
 
         @param category: The category being discussed
-        @type category: L{pywikibot.Category}
-        @rtype: str or None
         """
         if not self.section():
-            return None
+            return ''
         text = removeDisabledParts(self.text, tags=EXCEPTIONS, site=self.site)
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         for section in wikicode.get_sections(levels=[4]):
@@ -200,7 +233,7 @@ class CfdPage(pywikibot.Page):
                 break
         else:
             section = None  # Trick pylint.
-            return None
+            return ''
         # Parse the discussion for category links and action.
         for line in str(section).splitlines():
             found = False
@@ -213,16 +246,12 @@ class CfdPage(pywikibot.Page):
             matches = re.findall(r"'''Propose (.+?)'''", line)
             if found and matches:
                 return matches[0]
-        return None
+        return ''
 
-    def get_result(self):
-        """
-        Return the discussion result.
-
-        @rtype: str or None
-        """
+    def get_result(self) -> str:
+        """Return the discussion result."""
         if not self.section():
-            return None
+            return ''
         text = removeDisabledParts(self.text, tags=EXCEPTIONS, site=self.site)
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         for section in wikicode.get_sections(levels=[4]):
@@ -231,26 +260,149 @@ class CfdPage(pywikibot.Page):
                 break
         else:
             section = None  # Trick pylint.
-            return None
+            return ''
         for line in str(section).splitlines():
             matches = re.findall(
-                r"''The result of the discussion was:''\s+" r"'''(.+?)'''",
+                r"''The result of the discussion was:''\s+'''(.+?)'''",
                 line,
             )
             if matches:
                 return matches[0]
-        return None
+        return ''
 
 
-def add_old_cfd(cfd, **kwargs):
+class CFDWPage(pywikibot.Page):
+    """Represents a CFDW page."""
+
+    MODES = ('move', 'merge', 'empty', 'retain')
+
+    def __init__(self, source: PageSource, title: str = '') -> None:
+        """Initializer."""
+        super().__init__(source, title)
+        if not (
+            self.title(with_ns=False).startswith(
+                'Categories for discussion/Working'
+            )
+            and self.namespace() == 4
+        ):
+            raise ValueError('{} is not a CFDW page.'.format(self))
+        self.mode = None  # type: Optional[str]
+
+    def parse(self) -> None:
+        """Parse the page."""
+        text = removeDisabledParts(self.text, tags=EXCEPTIONS, site=self.site)
+        wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
+        for section in wikicode.get_sections(flat=True, include_lead=False):
+            heading = section.filter_headings()[0]
+            section_title = str(heading.title).lower()
+            for mode in self.MODES:
+                if mode in section_title:
+                    self.mode = mode
+                    break
+            else:
+                continue
+            try:
+                self._parse_section(str(section))
+            except (ValueError, pywikibot.Error):
+                pywikibot.exception(tb=True)
+
+    def _parse_section(self, section: str) -> None:
+        """Parse a section and invoke the bot."""
+        cfd_page = None
+        cfd_prefix = cfd_suffix = ''
+        for line in section.splitlines():
+            line_results = self._parse_line(line)
+            bot_options = BotOptions()
+            bot_options['old_cat'] = line_results['old_cat']
+            bot_options['new_cats'] = line_results['new_cats']
+            action_options = ActionOptions()
+            if line_results['cfd_page']:
+                cfd_prefix = line_results['prefix']
+                cfd_suffix = line_results['suffix']
+            cfd_page = line_results['cfd_page'] or cfd_page
+            if not (cfd_page and bot_options['old_cat']):
+                continue
+            prefix = line_results['prefix'] + cfd_prefix
+            suffix = line_results['suffix'] or cfd_suffix
+            if 'NO BOT' in prefix:
+                pywikibot.log('Bot disabled for: {}'.format(line))
+                continue
+            cfd = cfd_page.find_discussion(line_results['old_cat'])
+            if self.mode == 'merge':
+                action_options['redirect'] = 'REDIRECT' in prefix
+            elif self.mode == 'move':
+                action_options['noredirect'] = 'REDIRECT' not in prefix
+            elif self.mode == 'retain':
+                nc_matches = re.findall(
+                    r'\b(no consensus) (?:for|to) (\w+)\b', suffix, flags=re.I
+                )
+                not_matches = re.findall(
+                    r'\b(not )(\w+)\b', suffix, flags=re.I
+                )
+                if nc_matches:
+                    (
+                        action_options['result'],
+                        action_options['action'],
+                    ) = nc_matches[0]
+                elif not_matches:
+                    action_options['result'] = ''.join(not_matches[0])
+                    action_options['action'] = re.sub(
+                        r'ed$', 'e', not_matches[0][1]
+                    )
+                elif 'keep' in suffix.lower():
+                    action_options['result'] = 'keep'
+                    action_options['action'] = 'delete'
+                else:
+                    action_options['result'] = cfd.get_result()
+                    action_options['action'] = cfd.get_action(
+                        bot_options['old_cat']
+                    )
+            assert self.mode is not None  # for mypy
+            if check_action(self.mode, bot_options, action_options):
+                do_action(self.mode, cfd, bot_options, action_options)
+
+    def _parse_line(self, line: str) -> LineResults:
+        """Parse a line of wikitext."""
+        results = LineResults(
+            cfd_page=None, old_cat=None, new_cats=list(), prefix='', suffix='',
+        )
+        link_found = False
+        wikicode = mwparserfromhell.parse(line, skip_style_tags=True)
+        nodes = wikicode.filter(recursive=False)
+        for index, node in enumerate(nodes, start=1):
+            if isinstance(node, Text):
+                if not link_found:
+                    results['prefix'] = str(node).strip()
+                elif link_found and index == len(nodes):
+                    results['suffix'] = str(node).strip()
+            elif isinstance(node, Wikilink):
+                link_found = True
+                page = pywikibot.Page(self.site, str(node.title))
+                if page.is_categorypage():
+                    page = pywikibot.Category(page)
+                    if not results['old_cat']:
+                        results['old_cat'] = page
+                    else:
+                        results['new_cats'].append(page)
+                else:
+                    results['cfd_page'] = CfdPage(page)
+        return results
+
+
+def add_old_cfd(
+    page: pywikibot.Page,
+    cfd_page: CfdPage,
+    action: str,
+    result: str,
+    summary: str,
+) -> None:
     """Add {{Old CfD}} to the talk page."""
-    talk = kwargs['old_cat'].toggleTalkPage()
-    date = cfd.title(with_section=False).rpartition('/')[2]
-    if talk.exists():
-        wikicode = mwparserfromhell.parse(talk.text, skip_style_tags=True)
+    date = cfd_page.title(with_section=False).rpartition('/')[2]
+    if page.exists():
+        wikicode = mwparserfromhell.parse(page.text, skip_style_tags=True)
         for tpl in wikicode.ifilter_templates():
             try:
-                template = pywikibot.Page(talk.site, str(tpl.name), ns=10)
+                template = pywikibot.Page(page.site, str(tpl.name), ns=10)
                 if template not in TPL['old cfd'] or not tpl.has(
                     'date', ignore_empty=True
                 ):
@@ -261,43 +413,41 @@ def add_old_cfd(cfd, **kwargs):
                 # Template already present.
                 return
     old_cfd = Template('Old CfD')
-    old_cfd.add('action', kwargs['action'])
+    old_cfd.add('action', action)
     old_cfd.add('date', date)
-    old_cfd.add('section', cfd.section())
-    old_cfd.add('result', kwargs['result'])
-    talk.text = str(old_cfd) + '\n' + talk.text
-    talk.save(summary=kwargs['summary'])
+    old_cfd.add('section', cfd_page.section())
+    old_cfd.add('result', result)
+    page.text = str(old_cfd) + '\n' + page.text
+    page.save(summary=summary)
 
 
-def check_action(mode, **kwargs):
+def check_action(
+    mode: str, bot_options: BotOptions, action_options: ActionOptions
+) -> bool:
     """
     Check if the action can be performeed.
 
     @param mode: Mode/action to check
-    @type mode: str
-    @kwarg old_cat: Current category
-    @type old_cat: L{pywikibot.Category}
-    @kwarg new_cats: Target categories
-    @type new_cats: Iterable of L{pywikibot.Category}
-    @rtype: bool
+    @param bot_options: Options for the bot
+    @param action_options: Options for the action
     """
     if mode == 'empty':
-        if kwargs['new_cats']:
+        if bot_options['new_cats']:
             pywikibot.error(
                 'empty mode has new categories for {}.'.format(
-                    kwargs['old_cat']
+                    bot_options['old_cat']
                 )
             )
             return False
     elif mode == 'merge':
-        if not kwargs['new_cats']:
+        if not bot_options['new_cats']:
             pywikibot.error(
                 'merge mode has no new categories for {}.'.format(
-                    kwargs['old_cat']
+                    bot_options['old_cat']
                 )
             )
             return False
-        for new_cat in kwargs['new_cats']:
+        for new_cat in bot_options['new_cats']:
             if not new_cat.exists():
                 pywikibot.error('{} does not exist.'.format(new_cat))
                 return False
@@ -305,41 +455,47 @@ def check_action(mode, **kwargs):
                 pywikibot.error('{} is a redirect.'.format(new_cat))
                 return False
     elif mode == 'move':
-        if len(kwargs['new_cats']) != 1:
+        if len(bot_options['new_cats']) != 1:
             pywikibot.error(
                 'move mode has {} new categories.'.format(
-                    len(kwargs['new_cats'])
+                    len(bot_options['new_cats'])
                 )
             )
             return False
         if (
-            kwargs['old_cat'].isCategoryRedirect()
-            or kwargs['old_cat'].isRedirectPage()
-        ) and not kwargs['new_cats'][0].exists():
+            bot_options['old_cat'].isCategoryRedirect()
+            or bot_options['old_cat'].isRedirectPage()
+        ) and not bot_options['new_cats'][0].exists():
             pywikibot.error(
-                'No target for move to {}.'.format(kwargs['new_cats'][0])
+                'No target for move to {}.'.format(bot_options['new_cats'][0])
             )
             return False
         if (
-            kwargs['new_cats'][0].isCategoryRedirect()
-            or kwargs['new_cats'][0].isRedirectPage()
+            bot_options['new_cats'][0].isCategoryRedirect()
+            or bot_options['new_cats'][0].isRedirectPage()
         ):
-            pywikibot.error('{} is a redirect.'.format(kwargs['new_cats'][0]))
+            pywikibot.error(
+                '{} is a redirect.'.format(bot_options['new_cats'][0])
+            )
             return False
     elif mode == 'retain':
-        if not kwargs['old_cat'].exists():
-            pywikibot.error('{} does not exist.'.format(kwargs['old_cat']))
+        if not bot_options['old_cat'].exists():
+            pywikibot.error(
+                '{} does not exist.'.format(bot_options['old_cat'])
+            )
             return False
-        if kwargs['new_cats']:
+        if bot_options['new_cats']:
             pywikibot.error(
                 'retain mode has new categories for {}.'.format(
-                    kwargs['old_cat']
+                    bot_options['old_cat']
                 )
             )
             return False
-        if not kwargs['action'] or not kwargs['result']:
+        if not action_options['action'] or not action_options['result']:
             pywikibot.error(
-                'Missing action or result for {}.'.format(kwargs['old_cat'])
+                'Missing action or result for {}.'.format(
+                    bot_options['old_cat']
+                )
             )
             return False
     else:
@@ -348,7 +504,7 @@ def check_action(mode, **kwargs):
     return True
 
 
-def delete_page(page, summary):
+def delete_page(page: pywikibot.Page, summary: str) -> None:
     """Delete the page and dependent pages."""
     page.delete(reason=summary, prompt=False)
     if page.exists():
@@ -370,51 +526,54 @@ def delete_page(page, summary):
             )
 
 
-def do_action(mode, **kwargs):
+def do_action(
+    mode: str,
+    cfd_page: CfdPage,
+    bot_options: BotOptions,
+    action_options: ActionOptions,
+) -> None:
     """
     Perform the action.
 
     @param mode: Action to perform
-    @type mode: str
-    @kwarg old_cat: Current category
-    @type old_cat: L{pywikibot.Category}
-    @kwarg new_cats: Target categories
-    @type new_cats: Iterable of L{pywikibot.Category}
-    @kwarg cfd: CFD discussion
-    @type cfd: L{CfdPage}
+    @param cfd_page: CfD discussion
+    @param bot_options: Options for the bot
+    @param action_options: Options for the action
     """
-    old_cat = kwargs['old_cat']
-    cfd = kwargs.pop('cfd')
-    cfd_link = cfd.title(as_link=True)
+    old_cat = bot_options['old_cat']
+    cfd_link = cfd_page.title(as_link=True)
     gen = doc_page_add_generator(old_cat.members())
     if mode == 'empty':
-        kwargs['summary'] = 'Removing {old_cat} per {cfd}'.format(
+        bot_options['summary'] = 'Removing {old_cat} per {cfd}'.format(
             old_cat=old_cat.title(as_link=True, textlink=True), cfd=cfd_link
         )
-        CfdBot(gen, site=cfd.site, **kwargs).run()
+        CfdBot(gen, site=cfd_page.site, **bot_options).run()
         # Wait for the category to be registered as empty.
         pywikibot.sleep(pywikibot.config2.put_throttle)
         if old_cat.exists() and old_cat.isEmptyCategory():
             delete_page(old_cat, cfd_link)
     elif mode == 'merge':
         redirect = False
-        if len(kwargs['new_cats']) == 1:
-            new_cats = kwargs['new_cats'][0].title(as_link=True, textlink=True)
-            redirect = kwargs['redirect']
-        elif len(kwargs['new_cats']) == 2:
+        if len(bot_options['new_cats']) == 1:
+            new_cats = bot_options['new_cats'][0].title(
+                as_link=True, textlink=True
+            )
+            redirect = action_options['redirect']
+        elif len(bot_options['new_cats']) == 2:
             new_cats = ' and '.join(
                 cat.title(as_link=True, textlink=True)
-                for cat in kwargs['new_cats']
+                for cat in bot_options['new_cats']
             )
         else:
-            new_cats = '{} categories'.format(len(kwargs['new_cats']))
-        kwargs.pop('redirect')
-        kwargs['summary'] = 'Merging {old_cat} to {new_cats} per {cfd}'.format(
+            new_cats = '{} categories'.format(len(bot_options['new_cats']))
+        bot_options[
+            'summary'
+        ] = 'Merging {old_cat} to {new_cats} per {cfd}'.format(
             old_cat=old_cat.title(as_link=True, textlink=True),
             new_cats=new_cats,
             cfd=cfd_link,
         )
-        CfdBot(gen, site=cfd.site, **kwargs).run()
+        CfdBot(gen, site=cfd_page.site, **bot_options).run()
         # Wait for the category to be registered as empty.
         pywikibot.sleep(pywikibot.config2.put_throttle)
         if (
@@ -425,49 +584,58 @@ def do_action(mode, **kwargs):
             if redirect:
                 redirect_cat(
                     old_cat,
-                    kwargs['new_cats'][0],
+                    bot_options['new_cats'][0],
                     'Merged to {new_cats} per {cfd}'.format(
-                        new_cats=new_cats, cfd=cfd_link
+                        new_cats=bot_options['new_cats'], cfd=cfd_link
                     ),
                 )
             else:
                 delete_page(old_cat, cfd_link)
     elif mode == 'move':
-        noredirect = kwargs.pop('noredirect')
         if (
             old_cat.exists()
             and not old_cat.isCategoryRedirect()
             and not old_cat.isRedirectPage()
-            and not kwargs['new_cats'][0].exists()
+            and not bot_options['new_cats'][0].exists()
         ):
             # Remove the last condition once merging is supported.
             old_cat.move(
-                kwargs['new_cats'][0].title(),
+                bot_options['new_cats'][0].title(),
                 reason=cfd_link,
-                noredirect=noredirect,
+                noredirect=action_options['noredirect'],
             )
-            remove_cfd_tpl(kwargs['new_cats'][0], 'Category moved')
-        kwargs['summary'] = 'Moving {old_cat} to {new_cat} per {cfd}'.format(
+            remove_cfd_tpl(bot_options['new_cats'][0], 'Category moved')
+        bot_options[
+            'summary'
+        ] = 'Moving {old_cat} to {new_cat} per {cfd}'.format(
             old_cat=old_cat.title(as_link=True, textlink=True),
-            new_cat=kwargs['new_cats'][0].title(as_link=True, textlink=True),
+            new_cat=bot_options['new_cats'][0].title(
+                as_link=True, textlink=True
+            ),
             cfd=cfd_link,
         )
-        CfdBot(gen, site=cfd.site, **kwargs).run()
+        CfdBot(gen, site=cfd_page.site, **bot_options).run()
     elif mode == 'retain':
-        kwargs['summary'] = '{cfd} closed as {result}'.format(
-            cfd=cfd_link, result=kwargs['result']
+        summary = '{cfd} closed as {result}'.format(
+            cfd=cfd_link, result=action_options['result']
         )
-        remove_cfd_tpl(old_cat, kwargs['summary'])
-        add_old_cfd(cfd, **kwargs)
+        remove_cfd_tpl(old_cat, summary)
+        add_old_cfd(
+            old_cat.toggleTalkPage(),
+            cfd_page,
+            action_options['action'],
+            action_options['result'],
+            summary,
+        )
 
 
-def doc_page_add_generator(generator):
+def doc_page_add_generator(
+    generator: Iterable[pywikibot.Page],
+) -> Generator[pywikibot.Page, None, None]:
     """
     Add documentation subpages for pages from another generator.
 
     @param generator: Pages to iterate over
-    @type generator: iterable
-    @rtype: generator
     """
     for page in generator:
         yield page
@@ -479,15 +647,10 @@ def doc_page_add_generator(generator):
                 yield doc_page
 
 
-def get_template_pages(templates):
-    """
-    Given an iterable of templates, return a set of pages.
-
-    @param templates: iterable of templates (L{pywikibot.Page})
-    @type templates: iterable
-
-    @rtype: set
-    """
+def get_template_pages(
+    templates: Iterable[pywikibot.Page],
+) -> Set[pywikibot.Page]:
+    """Given an iterable of templates, return a set of pages."""
     pages = set()
     for template in templates:
         if template.isRedirectPage():
@@ -500,108 +663,15 @@ def get_template_pages(templates):
     return pages
 
 
-def parse_line(line, site):
-    """Parse a line of wikitext from a CFD working page."""
-    results = {
-        'cfd_page': None,
-        'prefix': '',
-        'old_cat': None,
-        'new_cats': list(),
-        'suffix': '',
-    }
-    link_found = False
-    wikicode = mwparserfromhell.parse(line, skip_style_tags=True)
-    nodes = wikicode.filter(recursive=False)
-    for index, node in enumerate(nodes, start=1):
-        if isinstance(node, Text):
-            if not link_found:
-                results['prefix'] = str(node).strip()
-            elif link_found and index == len(nodes):
-                results['suffix'] = str(node).strip()
-        elif isinstance(node, Wikilink):
-            link_found = True
-            page = pywikibot.Page(site, str(node.title))
-            if page.is_categorypage():
-                page = pywikibot.Category(page)
-                if not results['old_cat']:
-                    results['old_cat'] = page
-                else:
-                    results['new_cats'].append(page)
-            else:
-                results['cfd_page'] = CfdPage(page)
-    return results
-
-
-def parse_page(page):
-    """Parse a CFD working page."""
-    text = removeDisabledParts(page.text, tags=EXCEPTIONS, site=page.site)
-    wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
-    for section in wikicode.get_sections(flat=True, include_lead=False):
-        heading = section.filter_headings()[0]
-        section_title = str(heading.title).lower()
-        for mode in ('move', 'merge', 'empty', 'retain'):
-            if mode in section_title:
-                break
-        else:
-            continue
-        try:
-            parse_section(section, page.site, mode)
-        except (ValueError, pywikibot.Error):
-            pywikibot.exception(tb=True)
-
-
-def parse_section(section, site, mode):
-    """Parse a section of a CFD working page and invoke a bot."""
-    cfd_page = None
-    cfd_prefix = cfd_suffix = ''
-    for line in str(section).splitlines():
-        options = parse_line(line, site)
-        if options['cfd_page']:
-            cfd_prefix = options['prefix']
-            cfd_suffix = options['suffix']
-        cfd_page = options.pop('cfd_page') or cfd_page
-        if not (cfd_page and options['old_cat']):
-            continue
-        prefix = options.pop('prefix') + cfd_prefix
-        suffix = options.pop('suffix') or cfd_suffix
-        if 'NO BOT' in prefix:
-            pywikibot.log('Bot disabled for: {}'.format(options))
-            continue
-        options['cfd'] = cfd_page.find_discussion(options['old_cat'])
-        if mode == 'merge':
-            options['redirect'] = 'REDIRECT' in prefix
-        elif mode == 'move':
-            options['noredirect'] = 'REDIRECT' not in prefix
-        elif mode == 'retain':
-            nc_matches = re.findall(
-                r'\b(no consensus) (?:for|to) (\w+)\b', suffix, flags=re.I
-            )
-            not_matches = re.findall(r'\b(not )(\w+)\b', suffix, flags=re.I)
-            if nc_matches:
-                result, action = nc_matches[0]
-            elif not_matches:
-                result = ''.join(not_matches[0])
-                action = re.sub(r'ed$', 'e', not_matches[0][1])
-            elif 'keep' in suffix.lower():
-                result, action = 'keep', 'delete'
-            else:
-                action = options['cfd'].get_action(options['old_cat'])
-                result = options['cfd'].get_result()
-            options.update(action=action, result=result)
-        if check_action(mode, **options):
-            do_action(mode, **options)
-
-
-def redirect_cat(cat, target, summary):
+def redirect_cat(
+    cat: pywikibot.Category, target: pywikibot.Category, summary: str
+) -> None:
     """
     Redirect a category to another category.
 
     @param cat: Category to redirect
-    @type cat: L{pywikibot.Category}
     @param target: Category redirect target
-    @type target: L{pywikibot.Category}
     @param summary: Edit summary
-    @type summary: str
     """
     tpl = Template('Category redirect')
     tpl.add('1', target.title(with_ns=False))
@@ -609,14 +679,12 @@ def redirect_cat(cat, target, summary):
     cat.save(summary=summary)
 
 
-def remove_cfd_tpl(page, summary):
+def remove_cfd_tpl(page: pywikibot.Page, summary: str) -> None:
     """
     Remove the CfD template from the page.
 
     @param page: Page to edit
-    @type page: L{pywikibot.Page}
     @param summary: Edit summary
-    @type summary: str
     """
     text = re.sub(
         r'<!--\s*BEGIN CFD TEMPLATE\s*-->.*?'
@@ -637,12 +705,11 @@ def remove_cfd_tpl(page, summary):
     page.save(summary=summary)
 
 
-def main(*args):
+def main(*args: str) -> None:
     """
     Process command line arguments and invoke bot.
 
     @param args: command line arguments
-    @type args: list of unicode
     """
     local_args = pywikibot.handle_args(args)
     site = pywikibot.Site()
@@ -655,8 +722,9 @@ def main(*args):
             [pywikibot.Page(site, tpl, ns=10) for tpl in value]
         )
     for page in gen_factory.getCombinedGenerator():
+        page = CFDWPage(page)
         if page.protection().get('edit', ('', ''))[0] == 'sysop':
-            parse_page(page)
+            page.parse()
 
 
 if __name__ == '__main__':
