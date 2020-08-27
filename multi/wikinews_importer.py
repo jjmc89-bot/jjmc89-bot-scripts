@@ -9,6 +9,7 @@
 #                    (https://tools.wmflabs.org/?tool=wikinews-importer)
 # Modified by      : JJMC89
 ##########################################################################################
+# flake8: noqa
 # pylint: disable=all
 import sys
 import re

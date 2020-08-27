@@ -25,7 +25,7 @@ from pywikibot.textlib import replaceExcept
 
 
 docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
-_regexes = dict() # For _create_regexes().
+_regexes = dict()  # For _create_regexes().
 
 
 def get_json_from_page(page):
