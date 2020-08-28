@@ -39,19 +39,14 @@ TPL = {
 
 ActionOptions = TypedDict(
     'ActionOptions',
-    {
-        'action': str,
-        'noredirect': bool,
-        'redirect': bool,
-        'result': str,
-    },
+    {'action': str, 'noredirect': bool, 'redirect': bool, 'result': str},
     total=False,
 )
 BotOptions = TypedDict(
     'BotOptions',
     {
-        'new_cats': List[pywikibot.Category],
         'old_cat': pywikibot.Category,
+        'new_cats': List[pywikibot.Category],
         'summary': str,
     },
     total=False,
@@ -64,6 +59,15 @@ LineResults = TypedDict(
         'old_cat': Optional[pywikibot.Category],
         'prefix': str,
         'suffix': str,
+    },
+)
+Instruction = TypedDict(
+    'Instruction',
+    {
+        'mode': str,
+        'bot_options': BotOptions,
+        'action_options': ActionOptions,
+        'cfd_page': 'CfdPage',
     },
 )
 PageSource = Union[
@@ -263,8 +267,7 @@ class CfdPage(pywikibot.Page):
             return ''
         for line in str(section).splitlines():
             matches = re.findall(
-                r"''The result of the discussion was:''\s+'''(.+?)'''",
-                line,
+                r"''The result of the discussion was:''\s+'''(.+?)'''", line
             )
             if matches:
                 return matches[0]
@@ -287,6 +290,7 @@ class CFDWPage(pywikibot.Page):
         ):
             raise ValueError('{} is not a CFDW page.'.format(self))
         self.mode = None  # type: Optional[str]
+        self.instructions = list()  # type: List[Instruction]
 
     def parse(self) -> None:
         """Parse the page."""
@@ -305,6 +309,8 @@ class CFDWPage(pywikibot.Page):
                 self._parse_section(str(section))
             except (ValueError, pywikibot.Error):
                 pywikibot.exception(tb=True)
+        self._check()
+        self._run_bot()
 
     def _parse_section(self, section: str) -> None:
         """Parse a section and invoke the bot."""
@@ -358,8 +364,14 @@ class CFDWPage(pywikibot.Page):
                         bot_options['old_cat']
                     )
             assert self.mode is not None  # for mypy
-            if check_action(self.mode, bot_options, action_options):
-                do_action(self.mode, cfd, bot_options, action_options)
+            self.instructions.append(
+                Instruction(
+                    mode=self.mode,
+                    cfd_page=cfd,
+                    bot_options=bot_options,
+                    action_options=action_options,
+                )
+            )
 
     def _parse_line(self, line: str) -> LineResults:
         """Parse a line of wikitext."""
@@ -387,6 +399,30 @@ class CFDWPage(pywikibot.Page):
                 else:
                     results['cfd_page'] = CfdPage(page)
         return results
+
+    def _check(self) -> None:
+        """Check the instructions."""
+        instructions = list()
+        seen_cats = set()
+        for instruction in self.instructions:
+            old_cat = instruction['bot_options']['old_cat']
+            if old_cat in seen_cats:
+                pywikibot.warning(
+                    '{} is already involved in a previous instruction. '
+                    'Skipping: {}.'.format(old_cat, instruction)
+                )
+                continue
+            seen_cats.add(old_cat)
+            for new_cat in instruction['bot_options']['new_cats']:
+                seen_cats.add(new_cat)
+            if check_instruction(instruction):
+                instructions.append(instruction)
+        self.instructions = instructions
+
+    def _run_bot(self) -> None:
+        """Run the bot."""
+        for instruction in self.instructions:
+            do_instruction(instruction)
 
 
 def add_old_cfd(
@@ -421,17 +457,11 @@ def add_old_cfd(
     page.save(summary=summary)
 
 
-def check_action(
-    mode: str, bot_options: BotOptions, action_options: ActionOptions
-) -> bool:
-    """
-    Check if the action can be performeed.
-
-    @param mode: Mode/action to check
-    @param bot_options: Options for the bot
-    @param action_options: Options for the action
-    """
-    if mode == 'empty':
+def check_instruction(instruction: Instruction) -> bool:
+    """Check if the instruction can be performeed."""
+    bot_options = instruction['bot_options']
+    action_options = instruction['action_options']
+    if instruction['mode'] == 'empty':
         if bot_options['new_cats']:
             pywikibot.error(
                 'empty mode has new categories for {}.'.format(
@@ -439,7 +469,7 @@ def check_action(
                 )
             )
             return False
-    elif mode == 'merge':
+    elif instruction['mode'] == 'merge':
         if not bot_options['new_cats']:
             pywikibot.error(
                 'merge mode has no new categories for {}.'.format(
@@ -454,7 +484,7 @@ def check_action(
             if new_cat.isCategoryRedirect() or new_cat.isRedirectPage():
                 pywikibot.error('{} is a redirect.'.format(new_cat))
                 return False
-    elif mode == 'move':
+    elif instruction['mode'] == 'move':
         if len(bot_options['new_cats']) != 1:
             pywikibot.error(
                 'move mode has {} new categories.'.format(
@@ -478,7 +508,7 @@ def check_action(
                 '{} is a redirect.'.format(bot_options['new_cats'][0])
             )
             return False
-    elif mode == 'retain':
+    elif instruction['mode'] == 'retain':
         if not bot_options['old_cat'].exists():
             pywikibot.error(
                 '{} does not exist.'.format(bot_options['old_cat'])
@@ -499,7 +529,7 @@ def check_action(
             )
             return False
     else:
-        pywikibot.error('Unknown mode: {}.'.format(mode))
+        pywikibot.error('Unknown mode: {}.'.format(instruction['mode']))
         return False
     return True
 
@@ -526,24 +556,15 @@ def delete_page(page: pywikibot.Page, summary: str) -> None:
             )
 
 
-def do_action(
-    mode: str,
-    cfd_page: CfdPage,
-    bot_options: BotOptions,
-    action_options: ActionOptions,
-) -> None:
-    """
-    Perform the action.
-
-    @param mode: Action to perform
-    @param cfd_page: CfD discussion
-    @param bot_options: Options for the bot
-    @param action_options: Options for the action
-    """
+def do_instruction(instruction: Instruction) -> None:
+    """Perform the instruction."""
+    cfd_page = instruction['cfd_page']
+    bot_options = instruction['bot_options']
+    action_options = instruction['action_options']
     old_cat = bot_options['old_cat']
     cfd_link = cfd_page.title(as_link=True)
     gen = doc_page_add_generator(old_cat.members())
-    if mode == 'empty':
+    if instruction['mode'] == 'empty':
         bot_options['summary'] = 'Removing {old_cat} per {cfd}'.format(
             old_cat=old_cat.title(as_link=True, textlink=True), cfd=cfd_link
         )
@@ -552,7 +573,7 @@ def do_action(
         pywikibot.sleep(pywikibot.config2.put_throttle)
         if old_cat.exists() and old_cat.isEmptyCategory():
             delete_page(old_cat, cfd_link)
-    elif mode == 'merge':
+    elif instruction['mode'] == 'merge':
         redirect = False
         if len(bot_options['new_cats']) == 1:
             new_cats = bot_options['new_cats'][0].title(
@@ -591,7 +612,7 @@ def do_action(
                 )
             else:
                 delete_page(old_cat, cfd_link)
-    elif mode == 'move':
+    elif instruction['mode'] == 'move':
         if (
             old_cat.exists()
             and not old_cat.isCategoryRedirect()
@@ -615,7 +636,7 @@ def do_action(
             cfd=cfd_link,
         )
         CfdBot(gen, site=cfd_page.site, **bot_options).run()
-    elif mode == 'retain':
+    elif instruction['mode'] == 'retain':
         summary = '{cfd} closed as {result}'.format(
             cfd=cfd_link, result=action_options['result']
         )
