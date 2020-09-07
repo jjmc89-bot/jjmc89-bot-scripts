@@ -311,7 +311,7 @@ class CFDWPage(pywikibot.Page):
         self._check_run()
 
     def _parse_section(self, section: str) -> None:
-        """Parse a section and invoke the bot."""
+        """Parse a section of a page."""
         cfd_page = None
         cfd_prefix = cfd_suffix = ''
         for line in section.splitlines():
