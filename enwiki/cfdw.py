@@ -308,8 +308,7 @@ class CFDWPage(pywikibot.Page):
                 self._parse_section(str(section))
             except (ValueError, pywikibot.Error):
                 pywikibot.exception(tb=True)
-        self._check()
-        self._run_bot()
+        self._check_run()
 
     def _parse_section(self, section: str) -> None:
         """Parse a section and invoke the bot."""
@@ -392,8 +391,8 @@ class CFDWPage(pywikibot.Page):
                     results['cfd_page'] = CfdPage(page)
         return results
 
-    def _check(self) -> None:
-        """Check the instructions."""
+    def _check_run(self) -> None:
+        """Check and run the instructions."""
         instructions = list()
         seen = set()
         skip = set()
@@ -405,7 +404,7 @@ class CFDWPage(pywikibot.Page):
             seen.add(old_cat)
             for new_cat in instruction['bot_options']['new_cats']:
                 seen.add(new_cat)
-        # Only keep instructions that shouldn't be skipped.
+        # Only action instructions that shouldn't be skipped.
         for instruction in self.instructions:
             old_cat = instruction['bot_options']['old_cat']
             cats = {old_cat}
@@ -417,12 +416,8 @@ class CFDWPage(pywikibot.Page):
                 )
             elif check_instruction(instruction):
                 instructions.append(instruction)
+                do_instruction(instruction)
         self.instructions = instructions
-
-    def _run_bot(self) -> None:
-        """Run the bot."""
-        for instruction in self.instructions:
-            do_instruction(instruction)
 
 
 def add_old_cfd(
