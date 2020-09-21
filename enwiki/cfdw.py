@@ -8,7 +8,7 @@ This script processes Categories for discussion working pages.
 # Author : JJMC89
 # License: MIT
 import re
-from typing import Dict, Generator, Iterable, List, Optional, Set, Union
+from typing import Any, Dict, Generator, Iterable, List, Optional, Set, Union
 
 import mwparserfromhell
 import pywikibot
@@ -42,6 +42,8 @@ BotOptions = TypedDict(
     {
         'old_cat': pywikibot.Category,
         'new_cats': List[pywikibot.Category],
+        'generator': Iterable[pywikibot.Page],
+        'site': pywikibot.site.APISite,
         'summary': str,
     },
     total=False,
@@ -77,20 +79,8 @@ PageSource = Union[
 class CfdBot(SingleSiteBot, ExistingPageBot):
     """Bot to update categories."""
 
-    def __init__(
-        self,
-        generator: Iterable[pywikibot.Page],
-        **kwargs: Union[
-            bool, str, pywikibot.Category, Iterable[pywikibot.Category]
-        ]
-    ) -> None:
-        """
-        Initializer.
-
-        @param generator: the page generator that determines on which
-            pages to work
-        @type generator: generator
-        """
+    def __init__(self, **kwargs: Any) -> None:
+        """Initializer."""
         self.availableOptions.update(
             {
                 'always': True,
@@ -99,7 +89,6 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
                 'summary': None,
             }
         )
-        self.generator = generator
         super().__init__(**kwargs)
         self.options['new_cats'] = sorted(
             self.getOption('new_cats'), reverse=True
@@ -455,6 +444,13 @@ def add_old_cfd(
 def check_instruction(instruction: Instruction) -> bool:
     """Check if the instruction can be performeed."""
     bot_options = instruction['bot_options']
+    if bot_options['old_cat'] in bot_options['new_cats']:
+        pywikibot.error(
+            '{} is also a {} target.'.format(
+                bot_options['old_cat'], instruction['mode']
+            )
+        )
+        return False
     if instruction['mode'] == 'empty':
         if bot_options['new_cats']:
             pywikibot.error(
@@ -555,13 +551,14 @@ def do_instruction(instruction: Instruction) -> None:
     cfd_page = instruction['cfd_page']
     bot_options = instruction['bot_options']
     old_cat = bot_options['old_cat']
+    bot_options['generator'] = doc_page_add_generator(old_cat.members())
+    bot_options['site'] = cfd_page.site
     cfd_link = cfd_page.title(as_link=True)
-    gen = doc_page_add_generator(old_cat.members())
     if instruction['mode'] == 'empty':
         bot_options['summary'] = 'Removing {old_cat} per {cfd}'.format(
             old_cat=old_cat.title(as_link=True, textlink=True), cfd=cfd_link
         )
-        CfdBot(gen, site=cfd_page.site, **bot_options).run()
+        CfdBot(**bot_options).run()
         # Wait for the category to be registered as empty.
         pywikibot.sleep(pywikibot.config2.put_throttle)
         if old_cat.exists() and old_cat.isEmptyCategory():
@@ -587,7 +584,7 @@ def do_instruction(instruction: Instruction) -> None:
             new_cats=new_cats,
             cfd=cfd_link,
         )
-        CfdBot(gen, site=cfd_page.site, **bot_options).run()
+        CfdBot(**bot_options).run()
         # Wait for the category to be registered as empty.
         pywikibot.sleep(pywikibot.config2.put_throttle)
         if (
@@ -628,7 +625,7 @@ def do_instruction(instruction: Instruction) -> None:
             ),
             cfd=cfd_link,
         )
-        CfdBot(gen, site=cfd_page.site, **bot_options).run()
+        CfdBot(**bot_options).run()
     elif instruction['mode'] == 'retain':
         summary = '{cfd} closed as {result}'.format(
             cfd=cfd_link, result=instruction['result']
