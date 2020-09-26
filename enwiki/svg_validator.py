@@ -193,10 +193,12 @@ class SVGValidatorBot(SingleSiteBot, ExistingPageBot):
             n_errors = len(errors)
             new_tpl = Template('Invalid SVG')
             new_tpl.add('1', n_errors)
-            summary = 'Tagging invalid SVG: {} error(s)'.format(n_errors)
+            summary = 'W3C invalid SVG: {} error{}'.format(
+                n_errors, 's' if n_errors > 1 else ''
+            )
         else:
             new_tpl = Template('Valid SVG')
-            summary = 'Tagging valid SVG'
+            summary = 'W3C valid SVG'
         wikicode = mwparserfromhell.parse(
             self.current_page.text, skip_style_tags=True
         )
@@ -214,8 +216,9 @@ class SVGValidatorBot(SingleSiteBot, ExistingPageBot):
                 wikicode.replace(tpl, new_tpl)
                 break
         else:
-            wikicode.insert(0, str(new_tpl) + '\n')
-        self.put_current(str(wikicode), summary=summary)
+            wikicode.insert(0, '\n')
+            wikicode.insert(0, new_tpl)
+        self.put_current(str(wikicode), summary=summary, minor=not errors)
 
 
 def main(*args: str) -> None:
