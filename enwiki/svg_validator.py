@@ -9,7 +9,6 @@ The following arguments are supported:
 
 &params;
 """
-import re
 from typing import Any, Dict, FrozenSet, Iterable, List
 
 import mwparserfromhell
@@ -19,11 +18,11 @@ from mwparserfromhell.nodes import Template
 from pywikibot.bot import ExistingPageBot, SingleSiteBot
 from pywikibot.comms.http import user_agent
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
+from pywikibot.textlib import removeDisabledParts
 from requests.exceptions import Timeout, RequestException
 
 
 docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
-HTML_COMMENT = re.compile(r'<!--.*?-->', flags=re.DOTALL)
 
 
 # Cache for get_redirects().
@@ -202,8 +201,15 @@ class SVGValidatorBot(SingleSiteBot, ExistingPageBot):
             self.current_page.text, skip_style_tags=True
         )
         for tpl in wikicode.ifilter_templates():
-            tpl_title = HTML_COMMENT.sub('', str(tpl.name)).strip()
-            template = pywikibot.Page(self.site, tpl_title, ns=10)
+            try:
+                template = pywikibot.Page(
+                    self.site,
+                    removeDisabledParts(str(tpl.name), site=self.site).strip(),
+                    ns=10,
+                )
+                template.title()
+            except pywikibot.InvalidTitle:
+                continue
             if template in self.templates:
                 wikicode.replace(tpl, new_tpl)
                 break
