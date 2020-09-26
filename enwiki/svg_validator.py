@@ -9,7 +9,8 @@ The following arguments are supported:
 
 &params;
 """
-from typing import Any, List
+import re
+from typing import Any, Dict, FrozenSet, Iterable, List
 
 import mwparserfromhell
 import pywikibot
@@ -22,6 +23,35 @@ from requests.exceptions import Timeout, RequestException
 
 
 docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
+HTML_COMMENT = re.compile(r'<!--.*?-->', flags=re.DOTALL)
+
+
+# Cache for get_redirects().
+_redirects_cache = (
+    dict()
+)  # type: Dict[FrozenSet[pywikibot.Page], FrozenSet[pywikibot.Page]]
+
+
+def get_redirects(
+    pages: Iterable[pywikibot.Page],
+) -> FrozenSet[pywikibot.Page]:
+    """Given pages, return all possible titles."""
+    pages = frozenset(pages)
+    if pages not in _redirects_cache:
+        link_pages = set()
+        for page in pages:
+            while page.isRedirectPage():
+                try:
+                    page = page.getRedirectTarget()
+                except pywikibot.CircularRedirect:
+                    break
+            if not page.exists():
+                continue
+            link_pages.add(page)
+            for redirect in page.backlinks(filter_redirects=True):
+                link_pages.add(redirect)
+        _redirects_cache[pages] = frozenset(link_pages)
+    return _redirects_cache[pages]
 
 
 class SVGValidatorBot(SingleSiteBot, ExistingPageBot):
@@ -36,6 +66,12 @@ class SVGValidatorBot(SingleSiteBot, ExistingPageBot):
             '{script_product} ({script_comments}) {http_backend} {python}',
         )
         self.nu_session.params = {'level': 'error', 'out': 'json'}
+        self.templates = get_redirects(
+            {
+                pywikibot.Page(self.site, 'Invalid SVG', ns=10),
+                pywikibot.Page(self.site, 'Valid SVG', ns=10),
+            }
+        )
 
     def teardown(self) -> None:
         """Close the W3C nu validator session."""
@@ -154,19 +190,21 @@ class SVGValidatorBot(SingleSiteBot, ExistingPageBot):
         except (AssertionError, RequestException, RuntimeError):
             pywikibot.exception()
             return
-        summary = 'Tagging {} SVG'
         if errors:
-            summary = summary.format('invalid')
+            n_errors = len(errors)
             new_tpl = Template('Invalid SVG')
-            new_tpl.add('1', len(errors))
+            new_tpl.add('1', n_errors)
+            summary = 'Tagging invalid SVG: {} error(s)'.format(n_errors)
         else:
-            summary = summary.format('valid')
             new_tpl = Template('Valid SVG')
+            summary = 'Tagging valid SVG'
         wikicode = mwparserfromhell.parse(
             self.current_page.text, skip_style_tags=True
         )
         for tpl in wikicode.ifilter_templates():
-            if tpl.name.matches({'Valid SVG', 'Invalid SVG'}):
+            tpl_title = HTML_COMMENT.sub('', str(tpl.name)).strip()
+            template = pywikibot.Page(self.site, tpl_title, ns=10)
+            if template in self.templates:
                 wikicode.replace(tpl, new_tpl)
                 break
         else:
