@@ -387,6 +387,10 @@ class CFDWPage(pywikibot.Page):
         skip = set()
         # Collect categories and skips.
         for instruction in self.instructions:
+            if instruction in instructions:
+                # Remove duplicate.
+                continue
+            instructions.append(instruction)
             old_cat = instruction['bot_options']['old_cat']
             if old_cat in seen:
                 skip.add(old_cat)
@@ -394,7 +398,8 @@ class CFDWPage(pywikibot.Page):
             for new_cat in instruction['bot_options']['new_cats']:
                 seen.add(new_cat)
         # Only action instructions that shouldn't be skipped.
-        for instruction in self.instructions:
+        self.instructions = list()
+        for instruction in instructions:
             old_cat = instruction['bot_options']['old_cat']
             cats = {old_cat}
             cats.update(instruction['bot_options']['new_cats'])
@@ -404,9 +409,8 @@ class CFDWPage(pywikibot.Page):
                     '{}.'.format(old_cat, instruction)
                 )
             elif check_instruction(instruction):
-                instructions.append(instruction)
+                self.instructions.append(instruction)
                 do_instruction(instruction)
-        self.instructions = instructions
 
 
 def add_old_cfd(
