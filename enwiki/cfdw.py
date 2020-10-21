@@ -81,7 +81,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
 
     def __init__(self, **kwargs: Any) -> None:
         """Initializer."""
-        self.availableOptions.update(
+        self.availableOptions.update(  # pylint: disable=no-member
             {
                 'always': True,
                 'new_cats': list(),

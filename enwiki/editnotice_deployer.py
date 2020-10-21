@@ -134,7 +134,7 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
             pages to work
         @type generator: generator
         """
-        self.availableOptions.update(
+        self.availableOptions.update(  # pylint: disable=no-member
             {'editnotice_page': None, 'editnotice_template': None}
         )
         self.generator = generator

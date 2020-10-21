@@ -159,7 +159,7 @@ class MagicLinksReplacer(SingleSiteBot, NoRedirectPageBot, ExistingPageBot):
             pages to work
         @type generator: generator
         """
-        self.availableOptions.update(
+        self.availableOptions.update(  # pylint: disable=no-member
             {'summary': None, 'ISBN': None, 'PMID': None, 'RFC': None}
         )
         self.generator = generator

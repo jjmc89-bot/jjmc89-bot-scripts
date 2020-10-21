@@ -55,7 +55,9 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
             pages to work
         @type generator: generator
         """
-        self.availableOptions.update({'summary': 'Fix double redirect'})
+        self.availableOptions.update(  # pylint: disable=no-member
+            {'summary': 'Fix double redirect'}
+        )
         self.generator = generator
         super().__init__(**kwargs)
         self.templates = get_template_pages(

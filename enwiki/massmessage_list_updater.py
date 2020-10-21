@@ -157,7 +157,7 @@ class UserGroupsMassMessageListUpdater(
             pages to work
         @type generator: generator
         """
-        self.availableOptions.update(
+        self.availableOptions.update(  # pylint: disable=no-member
             {
                 'config': dict(),
                 'group_changes': list(),
