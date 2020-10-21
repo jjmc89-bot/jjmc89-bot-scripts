@@ -163,7 +163,7 @@ class SVGValidatorBot(SingleSiteBot, ExistingPageBot):
                 continue
             if message['type'] not in ('non-document-error', 'error', 'info'):
                 pywikibot.error(
-                    'Unknown message type: {type}.'.format(**message)
+                    'Unknown message type: {type}.'.format_map(message)
                 )
                 continue
             message.setdefault('message', '')
@@ -171,7 +171,7 @@ class SVGValidatorBot(SingleSiteBot, ExistingPageBot):
             if message['type'] == 'non-document-error':
                 raise RuntimeError(
                     'Validation indeterminate. {type}/'
-                    '{subType}: {message}'.format(**message)
+                    '{subType}: {message}'.format_map(message)
                 )
             if message['type'] == 'error':
                 errors.append(message['message'])
