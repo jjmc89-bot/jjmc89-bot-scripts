@@ -3,13 +3,6 @@
 # Use multiple processes to speed up Pylint.
 jobs=0
 
-
-[MESSAGES CONTROL]
-
-# Disable the message, report, category or checker with the given id.
-disable=bad-continuation,bad-whitespace # To be removed in 2.6.0.
-
-
 [REPORTS]
 
 # Tells whether to display a full report or only the messages
