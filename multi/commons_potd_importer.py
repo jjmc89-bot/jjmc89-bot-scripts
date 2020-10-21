@@ -11,10 +11,11 @@ The following parameters are supported:
 """
 # Author : JJMC89
 # License: MIT
+from datetime import datetime
+from typing import Any, Iterable, Set
 
 import mwparserfromhell
 import pywikibot
-from mwparserfromhell.nodes import Wikilink
 from pywikibot.bot import ExistingPageBot, MultipleSitesBot
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 
@@ -22,14 +23,13 @@ from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
 
 
-def get_template_titles(templates):
+def get_template_titles(
+    templates: Iterable[pywikibot.Page],
+) -> Set[pywikibot.Page]:
     """
     Given an iterable of templates, return a set of pages.
 
     @param templates: iterable of templates (L{pywikibot.Page})
-    @type templates: iterable
-
-    @rtype: set
     """
     titles = set()
     for template in templates:
@@ -46,18 +46,13 @@ def get_template_titles(templates):
 class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
     """Bot to import the Commons POTD with caption."""
 
-    def __init__(self, generator, **kwargs):
-        """
-        Iniitializer.
-
-        @param generator: the page generator that determines on which pages
-            to work
-        @type generator: generator
-        """
-        self.generator = generator
+    def __init__(self, **kwargs: Any) -> None:
+        """Iniitialize."""
         super().__init__(**kwargs)
         self.commons = pywikibot.Site('commons', 'commons')
-        date = self.commons.server_time().date().isoformat()
+        # T266084
+        # date = self.commons.server_time().date().isoformat()
+        date = datetime.utcnow().date().isoformat()
         self.potd_title = 'Template:Potd/{}'.format(date)
         potd_tpl = pywikibot.Page(self.commons, self.potd_title)
         potd_fn_titles = get_template_titles(
@@ -79,7 +74,7 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
         # repo = self.commons.data_repository
         # self.DOC_ITEM = pywikibot.ItemPage(repo, 'Q4608595')
 
-    def treat_page(self):
+    def treat_page(self) -> None:
         """Process one page."""
         site = self.current_page.site
         # doc_tpl = self.DOC_ITEM.getSitelink(site)
@@ -103,23 +98,26 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
                 # Remove templates, etc.
                 caption = self.commons.expand_text(caption)
                 # Make all interwikilinks go through Commons.
-                caption = mwparserfromhell.parse(caption, skip_style_tags=True)
-                for wikilink in caption.ifilter(forcetype=Wikilink):
+                caption_wikicode = mwparserfromhell.parse(
+                    caption, skip_style_tags=True
+                )
+                for wikilink in caption_wikicode.ifilter_wikilinks():
                     title = wikilink.title.strip()
                     prefix = ':c' + ('' if title.startswith(':') else ':')
                     wikilink.title = prefix + title
                 summary += '[[:c:{}|caption attribution]]'.format(
                     caption_title
                 )
+                caption = str(caption_wikicode)
                 break
-        if not caption:
+        else:
             summary += 'failed to get a caption'
         text = (
             '<includeonly>{{{{#switch:{{{{{{1|}}}}}}\n'
             '|caption={caption}\n'
             '|#default={file}\n'
             '}}}}</includeonly><noinclude>{{{{{doc}}}}}</noinclude>'.format(
-                caption=str(caption),
+                caption=caption,
                 file=self.potd,
                 doc=doc_tpl.title(with_ns=False),
             )
@@ -127,12 +125,11 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
         self.put_current(text, summary=summary, minor=False)
 
 
-def main(*args):
+def main(*args: str) -> None:
     """
     Process command line arguments and invoke bot.
-    If args is an empty list, sys.argv is used.
+
     @param args: command line arguments
-    @type args: list of unicode
     """
     options = {}
     # Process global arguments
@@ -147,7 +144,7 @@ def main(*args):
         if arg == '-always':
             options['always'] = True
     gen = gen_factory.getCombinedGenerator()
-    CommonsPotdImporter(gen, site=site, **options).run()
+    CommonsPotdImporter(generator=gen, **options).run()
 
 
 if __name__ == '__main__':
