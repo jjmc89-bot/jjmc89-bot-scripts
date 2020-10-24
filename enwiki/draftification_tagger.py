@@ -156,7 +156,7 @@ def main(*args: str) -> None:
     parser.add_argument(
         '--start',
         type=pywikibot.Timestamp.fromISOformat,
-        help='Timestampt to start from',
+        help='Timestamp to start from',
         metavar='%Y-%m-%dT%H:%M:%SZ',
     )
     parser.add_argument(
