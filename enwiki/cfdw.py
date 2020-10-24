@@ -81,7 +81,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
 
     def __init__(self, **kwargs: Any) -> None:
         """Initializer."""
-        self.availableOptions.update(  # pylint: disable=no-member
+        self.available_options.update(  # pylint: disable=no-member
             {
                 'always': True,
                 'new_cats': list(),
@@ -90,9 +90,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
             }
         )
         super().__init__(**kwargs)
-        self.options['new_cats'] = sorted(
-            self.getOption('new_cats'), reverse=True
-        )
+        self.opt.new_cats = sorted(self.opt.new_cats, reverse=True)
 
     def treat_page(self) -> None:
         """Process one page."""
@@ -110,16 +108,16 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
             except (ValueError, pywikibot.Error):
                 continue
             cats.append(link_cat)
-            if link_cat == self.getOption('old_cat'):
+            if link_cat == self.opt.old_cat:
                 old_cat_link = link
         if not old_cat_link:
             pywikibot.log(
                 'Did not find {} in {}.'.format(
-                    self.getOption('old_cat'), self.current_page
+                    self.opt.old_cat, self.current_page
                 )
             )
             return
-        new_cats = self.getOption('new_cats')
+        new_cats = self.opt.new_cats
         if len(new_cats) == 1 and new_cats[0] not in cats:
             # Update the title to keep the sort key.
             old_cat_link.title = new_cats[0].title()
@@ -135,10 +133,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
                 str(wikicode), old_cat_regex, '', EXCEPTIONS, site=self.site
             )
         self.put_current(
-            text,
-            summary=self.getOption('summary'),
-            asynchronous=False,
-            nocreate=True,
+            text, summary=self.opt.summary, asynchronous=False, nocreate=True,
         )
 
 
@@ -601,7 +596,7 @@ def do_instruction(instruction: Instruction) -> None:
                     old_cat,
                     bot_options['new_cats'][0],
                     'Merged to {new_cats} per {cfd}'.format(
-                        new_cats=bot_options['new_cats'], cfd=cfd_link
+                        new_cats=new_cats, cfd=cfd_link
                     ),
                 )
             else:
