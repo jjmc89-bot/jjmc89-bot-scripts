@@ -1,147 +1,49 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-This script updates user groups MassMessage lists.
-
-The following parameters are required:
-
--config           The page title that has the JSON config (object)
-
-The following parameters are supported:
-
--always           Don't prompt to save changes.
-
--end_date         Logs will be parsed starting on this date. The default is
-                  yesterday. Format: YYYY-MM-DD.
-
--meta             metawiki will also be checked for group changes. Should be
-                  specified when running on WMF wikis with CentralAuth.
-
--rename           Rename logs will be parsed. If -meta from metawiki.
-
--start_date       Logs will be parsed ending on this date. The default is
-                  yesterday. Format: YYYY-MM-DD.
-"""
+"""Update user groups MassMessage lists."""
 # Author : JJMC89
 # License: MIT
+import argparse
 import datetime
 import json
 import re
 from collections import OrderedDict
+from contextlib import suppress
 from datetime import date, time, timedelta
 from itertools import chain
 from operator import itemgetter
+from typing import Any, Dict, List, Optional, Set, Union
 
 import pywikibot
-from pywikibot.bot import ExistingPageBot, NoRedirectPageBot, SingleSiteBot
+from pywikibot.bot import (
+    _GLOBAL_HELP,
+    ExistingPageBot,
+    NoRedirectPageBot,
+    SingleSiteBot,
+)
 from pywikibot.pagegenerators import PreloadingGenerator
+from typing_extensions import TypedDict
 
 
-def get_json_from_page(page):
-    """
-    Return JSON from the page.
-
-    @param page: Page to read
-    @type page: L{pywikibot.Page}
-
-    @rtype: dict or None
-    """
-    if not page.exists():
-        pywikibot.error('{} does not exist.'.format(page.title()))
-        return None
-    if page.isRedirectPage():
-        pywikibot.error('{} is a redirect.'.format(page.title()))
-        return None
-    if page.isEmpty():
-        pywikibot.log('{} is empty.'.format(page.title()))
-        return None
-    try:
-        return json.loads(page.get().strip())
-    except ValueError:
-        pywikibot.error('{} does not contain valid JSON.'.format(page.title()))
-        raise
-
-
-def validate_config(config, site):
-    """
-    Validate the configuration and return bool.
-
-    @param config: configuration to validate
-    @type config: dict
-    @param site: site used in the validation
-    @type site: L{pywikibot.Site}
-
-    @rtype: bool
-    """
-    pywikibot.log('config:')
-    if not isinstance(config, dict):
-        return False
-    for title, page_config in config.items():
-        pywikibot.log('-{} = {}'.format(title, page_config))
-        page_config['page'] = pywikibot.Page(site, title)
-        required_keys = ['enabled', 'group', 'page']
-        has_keys = list()
-        for key, value in page_config.items():
-            if key in required_keys:
-                has_keys.append(key)
-            if key in ('add', 'enabled', 'remove', 'required'):
-                if not isinstance(value, bool):
-                    return False
-            elif key == 'group':
-                if isinstance(value, str):
-                    page_config[key] = set([value])
-                else:
-                    return False
-            elif key == 'page':
-                if value.content_model != 'MassMessageListContent':
-                    return False
-            else:
-                return False
-        if sorted(has_keys) != sorted(required_keys):
-            return False
-    return True
-
-
-def validate_options(options):
-    """
-    Validate the options and return bool.
-
-    @param options: options to validate
-    @type options: dict
-
-    @rtype: bool
-    """
-    pywikibot.log('Options:')
-    required_keys = ['config', 'end_date', 'start_date']
-    has_keys = list()
-    for key in ('end_date', 'start_date'):
-        if key not in options:
-            continue
-        value = options[key]
-        if isinstance(value, datetime.date):
-            pass
-        elif isinstance(value, str):
-            try:
-                value = datetime.datetime.strptime(value, '%Y-%m-%d').date()
-            except ValueError:
-                pywikibot.error('Date format must be YYYY-MM-DD.')
-                return False
-        else:
-            return False
-        options[key] = value
-    for key, value in options.items():
-        pywikibot.log('-{} = {}'.format(key, value))
-        if key in required_keys:
-            has_keys.append(key)
-        if key == 'config':
-            if not isinstance(value, str):
-                return False
-        elif key in 'end_date' 'start_date':
-            if not isinstance(value, datetime.date):
-                return False
-    if sorted(has_keys) != sorted(required_keys):
-        return False
-    return True
+GroupChange = TypedDict(
+    'GroupChange',
+    {
+        'user': pywikibot.User,
+        'added': Set[str],
+        'removed': Set[str],
+        'timestamp': pywikibot.Timestamp,
+    },
+)
+PageDict = Dict[
+    Union[str, pywikibot.User], Union[pywikibot.Page, Set[pywikibot.Page]]
+]
+Rename = TypedDict(
+    'Rename',
+    {
+        'olduser': pywikibot.User,
+        'newuser': pywikibot.User,
+        'timestamp': pywikibot.Timestamp,
+    },
+)
 
 
 class UserGroupsMassMessageListUpdater(
@@ -149,15 +51,9 @@ class UserGroupsMassMessageListUpdater(
 ):
     """Bot to update MassMessage lists."""
 
-    def __init__(self, generator, **kwargs):
-        """
-        Constructor.
-
-        @param generator: the page generator that determines on which
-            pages to work
-        @type generator: generator
-        """
-        self.availableOptions.update(  # pylint: disable=no-member
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialize."""
+        self.available_options.update(  # pylint: disable=no-member
             {
                 'config': dict(),
                 'group_changes': list(),
@@ -166,36 +62,31 @@ class UserGroupsMassMessageListUpdater(
                 ],
             }
         )
-        self.generator = generator
         super().__init__(**kwargs)
 
-    def check_disabled(self):
+    def check_disabled(self) -> None:
         """Check if the task is disabled. If so, quit."""
-        if not self.site.logged_in():
-            self.site.login()
+        class_name = self.__class__.__name__
         page = pywikibot.Page(
             self.site,
-            'User:{username}/shutoff/{class_name}.json'.format(
-                username=self.site.user(), class_name=self.__class__.__name__
-            ),
+            'User:{}/shutoff/{}.json'.format(self.site.username(), class_name),
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                e = '{} disabled:\n{}'.format(self.__class__.__name__, content)
-                pywikibot.error(e)
+                pywikibot.error('{} disabled:\n{}'.format(class_name, content))
                 self.quit()
 
-    def treat_page(self):
+    def treat_page(self) -> None:
         """Process one page."""
         self.check_disabled()
 
-        page_config = self.getOption('config')[self.current_page.title()]
+        page_config = self.opt.config[self.current_page.title()]
         added_count = removed_count = renamed_count = 0
         page_json = json.loads(
             self.current_page.text, object_pairs_hook=OrderedDict
         )
-        page_dict = {'>nonusers': set()}
+        page_dict = {'>nonusers': set()}  # type: PageDict
 
         # Process the current targets.
         for item in page_json['targets']:
@@ -211,7 +102,7 @@ class UserGroupsMassMessageListUpdater(
             else:
                 user = pywikibot.User(base_page)
             # Handle renames.
-            for rename in self.getOption('renames'):
+            for rename in self.opt.renames:
                 if user != rename['olduser']:
                     continue
                 newuser = rename['newuser']
@@ -246,7 +137,7 @@ class UserGroupsMassMessageListUpdater(
             page_dict[user] = page
 
         # Handle group changes.
-        for change in self.getOption('group_changes'):
+        for change in self.opt.group_changes:
             user = change['user']
             if (
                 page_config.get('add', None)
@@ -265,15 +156,15 @@ class UserGroupsMassMessageListUpdater(
                     removed_count += 1
 
         # Build JSON and save.
-        if added_count + removed_count + renamed_count > 0:
-            new_pge_json = OrderedDict()
-            new_pge_json['description'] = page_json['description']
-            new_pge_json['targets'] = list()
+        if added_count or removed_count or renamed_count:
+            new_page_json = OrderedDict()
+            new_page_json['description'] = page_json['description']
+            new_page_json['targets'] = list()
             for page in sorted(
                 page_dict.pop('>nonusers') | set(page_dict.values())
             ):
-                new_pge_json['targets'].append({'title': page.title()})
-            text = json.dumps(new_pge_json, ensure_ascii=False, indent=4)
+                new_page_json['targets'].append({'title': page.title()})
+            text = json.dumps(new_page_json, ensure_ascii=False, indent=4)
             summary = 'Update MassMessage list: {} added, {} removed'.format(
                 added_count, removed_count
             )
@@ -282,126 +173,223 @@ class UserGroupsMassMessageListUpdater(
             self.put_current(text, summary=summary, minor=False)
 
 
-def main(*args):
+def make_arg_parser() -> argparse.ArgumentParser:
+    """Return the argument parser."""
+    parser = argparse.ArgumentParser(
+        description='Update user groups MassMessage lists',
+        epilog=re.sub(
+            r'\n\n?-help +.+?(\n\n-|\s*$)', r'\1', _GLOBAL_HELP, flags=re.S,
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        allow_abbrev=False,
+    )
+    parser.add_argument(
+        'config', help='Page title that has the JSON config (object)',
+    )
+    parser.add_argument(
+        '--always',
+        '-a',
+        action='store_true',
+        help='Do not prompt to save changes',
+    )
+    parser.add_argument(
+        '--meta',
+        action='store_true',
+        help=(
+            'metawiki will also be checked for group changes. '
+            'Should be specified when running on WMF wikis with CentralAuth.'
+        ),
+    )
+    parser.add_argument(
+        '--rename',
+        action='store_true',
+        help='Rename logs will be parsed. If --meta, from metawiki.',
+    )
+    yesterday = date.today() - timedelta(days=1)
+    parser.add_argument(
+        '--start',
+        default=datetime.datetime.combine(yesterday, time.min),
+        type=pywikibot.Timestamp.fromISOformat,
+        help='Timestamp to start from',
+        metavar='%Y-%m-%dT%H:%M:%SZ',
+    )
+    parser.add_argument(
+        '--end',
+        default=datetime.datetime.combine(yesterday, time.max),
+        type=pywikibot.Timestamp.fromISOformat,
+        help='Timestamp to end at',
+        metavar='%Y-%m-%dT%H:%M:%SZ',
+    )
+    return parser
+
+
+def get_json_from_page(page: pywikibot.Page) -> Optional[Dict[str, Any]]:
     """
-    Process command line arguments and invoke bot.
+    Return JSON from the page.
 
-    @param args: command line arguments
-    @type args: list of unicode
+    @param page: Page to read
     """
-    options = {
-        'end_date': date.today() - timedelta(days=1),
-        'start_date': date.today() - timedelta(days=1),
-    }
-    # Process global arguments
-    local_args = pywikibot.handle_args(args)
-    site = pywikibot.Site()
-    site.login()
-    # Parse command line arguments
-    for arg in local_args:
-        arg, _, value = arg.partition(':')
-        arg = arg[1:]
-        if arg in ('config', 'end_date', 'start_date'):
-            if not value:
-                value = pywikibot.input(
-                    'Please enter a value for {}'.format(arg), default=None
-                )
-            options[arg] = value
-        else:
-            options[arg] = True
-    if not validate_options(options):
-        pywikibot.bot.suggest_help(
-            additional_text='The specified options are invalid.'
-        )
-        return False
-    config = pywikibot.Page(site, options.pop('config'))
-    config = get_json_from_page(config)
-    if not validate_config(config, site):
-        pywikibot.bot.suggest_help(
-            additional_text='The specified configuration is invalid.'
-        )
-        return False
-    options['config'] = config
+    if not page.exists():
+        pywikibot.error('{} does not exist.'.format(page.title()))
+        return None
+    if page.isRedirectPage():
+        pywikibot.error('{} is a redirect.'.format(page.title()))
+        return None
+    if page.isEmpty():
+        pywikibot.log('{} is empty.'.format(page.title()))
+        return None
+    try:
+        return json.loads(page.get().strip())
+    except ValueError:
+        pywikibot.error('{} does not contain valid JSON.'.format(page.title()))
+        raise
 
-    meta = pywikibot.Site('meta', 'meta')
-    suffix = '@{}'.format(site.dbName())
-    start = datetime.datetime.combine(options.pop('start_date'), time.min)
-    end = datetime.datetime.combine(options.pop('end_date'), time.max)
-    # Parse rename logs into a list of dict.
-    if options.pop('rename', None):
-        renames = list()
-        if options.get('meta', None):
-            rename_events = meta.logevents(
-                logtype='gblrename', start=start, end=end, reverse=True
-            )
-        else:
-            rename_events = site.logevents(
-                logtype='renameuser', start=start, end=end, reverse=True
-            )
-        for rename in rename_events:
-            try:
-                renames.append(
-                    {
-                        'olduser': pywikibot.User(
-                            site, rename.data['params']['olduser']
-                        ),
-                        'newuser': pywikibot.User(
-                            site, rename.data['params']['newuser']
-                        ),
-                        'timestamp': rename.timestamp(),
-                    }
-                )
-            except KeyError:
-                continue
-        options['renames'] = sorted(renames, key=itemgetter('timestamp'))
 
-    # Parse rights logs into a list of dict.
+def validate_config(
+    config: Dict[str, Any], site: pywikibot.site.APISite
+) -> bool:
+    """
+    Validate the configuration and return bool.
+
+    @param config: configuration to validate
+    @param site: site used in the validation
+    """
+    pywikibot.log('config:')
+    for title, page_config in config.items():
+        pywikibot.log('-{} = {}'.format(title, page_config))
+        page_config['page'] = pywikibot.Page(site, title)
+        required_keys = ['enabled', 'group', 'page']
+        has_keys = list()
+        for key, value in page_config.items():
+            if key in required_keys:
+                has_keys.append(key)
+            if key in ('add', 'enabled', 'remove', 'required'):
+                if not isinstance(value, bool):
+                    return False
+            elif key == 'group':
+                if isinstance(value, str):
+                    page_config[key] = set([value])
+                else:
+                    return False
+            elif key == 'page':
+                if value.content_model != 'MassMessageListContent':
+                    return False
+            else:
+                return False
+        if sorted(has_keys) != sorted(required_keys):
+            return False
+    return True
+
+
+def get_renames(
+    rename_site: pywikibot.site.APISite,
+    logtype: str,
+    start: datetime.datetime,
+    end: datetime.datetime,
+    site: pywikibot.site.APISite,
+) -> List[Rename]:
+    """Retrun a sorted list of reenames."""
+    renames = list()
+    rename_events = rename_site.logevents(
+        logtype=logtype, start=start, end=end, reverse=True
+    )
+    for rename in rename_events:
+        with suppress(KeyError):
+            renames.append(
+                Rename(
+                    olduser=pywikibot.User(
+                        site, rename.data['params']['olduser']
+                    ),
+                    newuser=pywikibot.User(
+                        site, rename.data['params']['newuser']
+                    ),
+                    timestamp=rename.timestamp(),
+                )
+            )
+    return sorted(renames, key=itemgetter('timestamp'))
+
+
+def get_group_changes(
+    site: pywikibot.site.APISite,
+    start: datetime.datetime,
+    end: datetime.datetime,
+    meta: Optional[pywikibot.site.APISite],
+) -> List[GroupChange]:
+    """Return a sorted list of group canges."""
     group_changes = list()
     rights_events = site.logevents(
         logtype='rights', start=start, end=end, reverse=True
     )
-    if options.pop('meta', None):
+    if meta:
         meta_rights_events = set()
         for log_event in meta.logevents(
             logtype='rights', start=start, end=end, reverse=True
         ):
             try:
-                if log_event.page().title().endswith(suffix):
+                if log_event.page().title().endswith(site.suffix):
                     meta_rights_events.add(log_event)
             except KeyError:
                 continue
         rights_events = chain(rights_events, meta_rights_events)
     for log_event in rights_events:
-        try:
+        with suppress(KeyError):
             new_groups = set(log_event.newgroups)
             old_groups = set(log_event.oldgroups)
             group_changes.append(
-                {
-                    'user': pywikibot.User(
+                GroupChange(
+                    user=pywikibot.User(
                         site,
                         re.sub(
-                            r'{}$'.format(suffix), '', log_event.page().title()
+                            r'{}$'.format(site.suffix),
+                            '',
+                            log_event.page().title(),
                         ),
                     ),
-                    'added': new_groups - old_groups,
-                    'removed': old_groups - new_groups,
-                    'timestamp': log_event.timestamp(),
-                }
+                    added=new_groups - old_groups,
+                    removed=old_groups - new_groups,
+                    timestamp=log_event.timestamp(),
+                )
             )
-        except KeyError:
-            continue
-    options['group_changes'] = sorted(
-        group_changes, key=itemgetter('timestamp')
+    return sorted(group_changes, key=itemgetter('timestamp'))
+
+
+def main(*args: str) -> None:
+    """
+    Process command line arguments and invoke bot.
+
+    @param args: command line arguments
+    """
+    local_args = pywikibot.handle_args(args, do_help=False)
+    site = pywikibot.Site()
+    site.login()
+    site.suffix = '@{}'.format(site.dbName())
+    parser = make_arg_parser()
+    options = vars(parser.parse_args(args=local_args))
+    config_page = pywikibot.Page(site, options.pop('config'))
+    config = get_json_from_page(config_page)
+    if not isinstance(config, dict):
+        return
+    if not validate_config(config, site):
+        pywikibot.error('The specified configuration is invalid.')
+        return
+    options['config'] = config
+    meta = pywikibot.Site('meta', 'meta') if options.pop('meta') else None
+    start = options.pop('start')
+    end = options.pop('end')
+    if options.pop('rename'):
+        options['renames'] = get_renames(
+            rename_site=meta or site,
+            logtype='gblrename' if meta else 'renameuser',
+            start=start,
+            end=end,
+            site=site,
+        )
+    options['group_changes'] = get_group_changes(site, start, end, meta)
+    gen = PreloadingGenerator(
+        config[key]['page'] for key in config if config[key]['enabled']
     )
-
-    # Generate pages and invoke the bot.
-    gen = (
-        config[key]['page'] for key in config.keys() if config[key]['enabled']
-    )
-    gen = PreloadingGenerator(gen)
-    UserGroupsMassMessageListUpdater(gen, site=site, **options).run()
-    return True
+    UserGroupsMassMessageListUpdater(generator=gen, site=site, **options).run()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
