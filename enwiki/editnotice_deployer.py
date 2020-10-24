@@ -145,6 +145,14 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
         )
         self.editnotice_template = self.opt.editnotice_template
 
+    def skip_page(self, page: pywikibot.Page) -> bool:
+        if not page.exists() and page.has_deleted_revisions():
+            pywikibot.warning(
+                '{} has deleted revisions. Skipping.'.format(page)
+            )
+            return True
+        return super().skip_page(page)
+
     def check_disabled(self) -> None:
         """Check if the task is disabled. If so, quit."""
         class_name = self.__class__.__name__
