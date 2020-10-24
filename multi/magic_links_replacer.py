@@ -17,6 +17,7 @@ The following parameters are supported:
 # License: MIT
 import json
 import re
+from typing import Any, Dict, List, Optional, Pattern, Union
 
 import pywikibot
 from pywikibot.bot import ExistingPageBot, NoRedirectPageBot, SingleSiteBot
@@ -25,17 +26,15 @@ from pywikibot.textlib import replaceExcept
 
 
 docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
-_regexes = dict()  # For _create_regexes().
+# For _create_regexes().
+_regexes = dict()  # type: Dict[str, Pattern[str]]
 
 
-def get_json_from_page(page):
+def get_json_from_page(page: pywikibot.Page) -> Optional[Dict[str, Any]]:
     """
     Return JSON from the page.
 
     @param page: Page to read
-    @type page: L{pywikibot.Page}
-
-    @rtype: dict or None
     """
     if not page.exists():
         pywikibot.error('{} does not exist.'.format(page.title()))
@@ -53,14 +52,11 @@ def get_json_from_page(page):
         raise
 
 
-def validate_config(config):
+def validate_config(config: Dict[str, Any]) -> bool:
     """
     Validate the config and return bool.
 
     @param config: config to validate
-    @type config: dict
-
-    @rtype: bool
     """
     pywikibot.log('Config:')
     for key, value in config.items():
@@ -74,7 +70,7 @@ def validate_config(config):
     return True
 
 
-def _create_regexes():
+def _create_regexes() -> None:
     """Fill (and possibly overwrite) _regexes with default regexes."""
     space = r'(?:[^\S\n]|&nbsp;|&\#0*160;|&\#[Xx]0*[Aa]0;)'
     spaces = r'{space}+'.format(space=space)
@@ -125,14 +121,11 @@ def _create_regexes():
     )
 
 
-def split_into_sections(text):
+def split_into_sections(text: str) -> List[str]:
     """
     Splits wikitext into sections based on any level wiki heading.
 
     @param text: Text to split
-    @type text: str
-
-    @rtype: list
     """
     headings_regex = re.compile(
         r'^={1,6}.*?={1,6}(?: *<!--.*?-->)?\s*$', flags=re.M
@@ -151,24 +144,17 @@ def split_into_sections(text):
 class MagicLinksReplacer(SingleSiteBot, NoRedirectPageBot, ExistingPageBot):
     """Bot to replace magic links."""
 
-    def __init__(self, generator, **kwargs):
-        """
-        Constructor.
-
-        @param generator: the page generator that determines on which
-            pages to work
-        @type generator: generator
-        """
-        self.availableOptions.update(  # pylint: disable=no-member
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialize."""
+        self.available_options.update(  # pylint: disable=no-member
             {'summary': None, 'ISBN': None, 'PMID': None, 'RFC': None}
         )
-        self.generator = generator
         super().__init__(**kwargs)
         _create_regexes()
         self.replace_exceptions = [
             _regexes[key]
             for key in ('bare_url', 'bracket_url', 'tags_content', 'tags')
-        ]
+        ]  # type: List[Union[Pattern[str], str]]
         self.replace_exceptions += [
             'category',
             'comment',
@@ -180,26 +166,20 @@ class MagicLinksReplacer(SingleSiteBot, NoRedirectPageBot, ExistingPageBot):
             'template',
         ]
 
-    def check_disabled(self):
+    def check_disabled(self) -> None:
         """Check if the task is disabled. If so, quit."""
-        if self._treat_counter % 6 != 0:
-            return
-        if not self.site.logged_in():
-            self.site.login()
+        class_name = self.__class__.__name__
         page = pywikibot.Page(
             self.site,
-            'User:{username}/shutoff/{class_name}'.format(
-                username=self.site.user(), class_name=self.__class__.__name__
-            ),
+            'User:{}/shutoff/{}'.format(self.site.username(), class_name),
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                e = '{} disabled:\n{}'.format(self.__class__.__name__, content)
-                pywikibot.error(e)
+                pywikibot.error('{} disabled:\n{}'.format(class_name, content))
                 self.quit()
 
-    def treat_page(self):
+    def treat_page(self) -> None:
         """Process one page."""
         self.check_disabled()
         text = ''
@@ -217,12 +197,11 @@ class MagicLinksReplacer(SingleSiteBot, NoRedirectPageBot, ExistingPageBot):
         self.put_current(text, summary=self.getOption('summary'))
 
 
-def main(*args):
+def main(*args: str) -> bool:
     """
     Process command line arguments and invoke bot.
 
     @param args: command line arguments
-    @type args: list of unicode
     """
     options = {}
     local_args = pywikibot.handle_args(args)
@@ -247,14 +226,16 @@ def main(*args):
         pywikibot.bot.suggest_help(missing_parameters=['config'])
         return False
     config = get_json_from_page(pywikibot.Page(site, options.pop('config')))
+    if not isinstance(config, dict):
+        return False
     if validate_config(config):
         options.update(config)
     else:
         pywikibot.error('Invalid config.')
         return False
-    MagicLinksReplacer(gen, site=site, **options).run()
+    MagicLinksReplacer(generator=gen, site=site, **options).run()
     return True
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

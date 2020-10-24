@@ -23,6 +23,8 @@ The following parameters are supported:
 """
 # Author : JJMC89
 # License: MIT
+from typing import Any, Dict, Generator, Iterable, Set
+
 import mwparserfromhell
 import pywikibot
 from pywikibot import pagegenerators
@@ -34,14 +36,13 @@ docuReplacements = {  # pylint: disable=invalid-name
 }
 
 
-def get_template_titles(templates):
+def get_template_titles(
+    templates: Iterable[pywikibot.Page],
+) -> Set[pywikibot.Page]:
     """
     Given an iterable of templates, return a set of pages.
 
     @param templates: iterable of templates (L{pywikibot.Page})
-    @type templates: iterable
-
-    @rtype: set
     """
     titles = set()
     for template in templates:
@@ -55,14 +56,13 @@ def get_template_titles(templates):
     return titles
 
 
-def validate_options(options, site):
+def validate_options(
+    options: Dict[str, Any], site: pywikibot.site.APISite
+) -> bool:
     """
     Validate the options and return bool.
 
     @param options: options to validate
-    @type options: dict
-
-    @rtype: bool
     """
     pywikibot.log('Options:')
     required_keys = ['editnotice_template']
@@ -84,7 +84,9 @@ def validate_options(options, site):
     return True
 
 
-def page_with_subject_page_generator(generator, return_subject_only=False):
+def page_with_subject_page_generator(
+    generator: Iterable[pywikibot.Page], return_subject_only=False
+) -> Generator[pywikibot.Page, None, None]:
     """
     Yield pages and associated subject pages from another generator.
 
@@ -98,21 +100,27 @@ def page_with_subject_page_generator(generator, return_subject_only=False):
             yield page.toggleTalkPage()
 
 
-def subject_page_generator(generator):
+def subject_page_generator(
+    generator: Iterable[pywikibot.Page],
+) -> Generator[pywikibot.Page, None, None]:
     """Yield subject pages from another generator."""
     for page in generator:
         if not page.isTalkPage():
             yield page
 
 
-def talk_page_generator(generator):
+def talk_page_generator(
+    generator: Iterable[pywikibot.Page],
+) -> Generator[pywikibot.Page, None, None]:
     """Yield talk pages from another generator."""
     for page in generator:
         if page.isTalkPage():
             yield page
 
 
-def editnotice_page_generator(generator):
+def editnotice_page_generator(
+    generator: Iterable[pywikibot.Page],
+) -> Generator[pywikibot.Page, None, None]:
     """Yield editnotice pages for existing, non-redirect pages from another
     generator."""
     for page in generator:
@@ -126,44 +134,31 @@ def editnotice_page_generator(generator):
 class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
     """Bot to deploy editnotices."""
 
-    def __init__(self, generator, **kwargs):
-        """
-        Constructor.
-
-        @param generator: the page generator that determines on which
-            pages to work
-        @type generator: generator
-        """
-        self.availableOptions.update(  # pylint: disable=no-member
+    def __init__(self, **kwargs) -> None:
+        """Initializer."""
+        self.available_options.update(  # pylint: disable=no-member
             {'editnotice_page': None, 'editnotice_template': None}
         )
-        self.generator = generator
         super().__init__(**kwargs)
         self.editnotice_page_titles = get_template_titles(
-            [self.getOption('editnotice_page')]
+            [self.opt.editnotice_page]
         )
-        self.editnotice_template = self.getOption('editnotice_template')
+        self.editnotice_template = self.opt.editnotice_template
 
-    def check_disabled(self):
+    def check_disabled(self) -> None:
         """Check if the task is disabled. If so, quit."""
-        if self._treat_counter % 6 != 0:
-            return
-        if not self.site.logged_in():
-            self.site.login()
+        class_name = self.__class__.__name__
         page = pywikibot.Page(
             self.site,
-            'User:{username}/shutoff/{class_name}.json'.format(
-                username=self.site.user(), class_name=self.__class__.__name__
-            ),
+            'User:{}/shutoff/{}.json'.format(self.site.username(), class_name),
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                e = '{} disabled:\n{}'.format(self.__class__.__name__, content)
-                pywikibot.error(e)
+                pywikibot.error('{} disabled:\n{}'.format(class_name, content))
                 self.quit()
 
-    def treat_page(self):
+    def treat_page(self) -> None:
         """Process one page."""
         self.check_disabled()
         if self.current_page.isRedirectPage():
@@ -182,12 +177,11 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
         )
 
 
-def main(*args):
+def main(*args: str) -> bool:
     """
     Process command line arguments and invoke bot.
 
     @param args: command line arguments
-    @type args: list of unicode
     """
     options = {
         'subject_only': False,
@@ -234,9 +228,9 @@ def main(*args):
     for key in ('subject_only', 'talk_only', 'to_subject', 'to_talk'):
         options.pop(key, None)
     gen = pagegenerators.PreloadingGenerator(gen)
-    EditnoticeDeployer(gen, site=site, **options).run()
+    EditnoticeDeployer(generator=gen, site=site, **options).run()
     return True
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
