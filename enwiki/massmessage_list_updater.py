@@ -235,9 +235,6 @@ def get_json_from_page(page: pywikibot.Page) -> Dict[str, Any]:
     if page.isRedirectPage():
         pywikibot.error('{} is a redirect.'.format(page.title()))
         return dict()
-    if page.isEmpty():
-        pywikibot.log('{} is empty.'.format(page.title()))
-        return dict()
     try:
         return json.loads(page.get().strip())
     except ValueError:
