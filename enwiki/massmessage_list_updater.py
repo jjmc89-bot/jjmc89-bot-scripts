@@ -223,7 +223,7 @@ def make_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def get_json_from_page(page: pywikibot.Page) -> Optional[Dict[str, Any]]:
+def get_json_from_page(page: pywikibot.Page) -> Dict[str, Any]:
     """
     Return JSON from the page.
 
@@ -231,13 +231,13 @@ def get_json_from_page(page: pywikibot.Page) -> Optional[Dict[str, Any]]:
     """
     if not page.exists():
         pywikibot.error('{} does not exist.'.format(page.title()))
-        return None
+        return dict()
     if page.isRedirectPage():
         pywikibot.error('{} is a redirect.'.format(page.title()))
-        return None
+        return dict()
     if page.isEmpty():
         pywikibot.log('{} is empty.'.format(page.title()))
-        return None
+        return dict()
     try:
         return json.loads(page.get().strip())
     except ValueError:
@@ -367,8 +367,6 @@ def main(*args: str) -> None:
     options = vars(parser.parse_args(args=local_args))
     config_page = pywikibot.Page(site, options.pop('config'))
     config = get_json_from_page(config_page)
-    if not isinstance(config, dict):
-        return
     if not validate_config(config, site):
         pywikibot.error('The specified configuration is invalid.')
         return

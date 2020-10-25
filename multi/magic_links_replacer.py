@@ -17,7 +17,7 @@ The following parameters are supported:
 # License: MIT
 import json
 import re
-from typing import Any, Dict, List, Optional, Pattern, Union
+from typing import Any, Dict, List, Pattern, Union
 
 import pywikibot
 from pywikibot.bot import ExistingPageBot, NoRedirectPageBot, SingleSiteBot
@@ -30,7 +30,7 @@ docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
 _regexes = dict()  # type: Dict[str, Pattern[str]]
 
 
-def get_json_from_page(page: pywikibot.Page) -> Optional[Dict[str, Any]]:
+def get_json_from_page(page: pywikibot.Page) -> Dict[str, Any]:
     """
     Return JSON from the page.
 
@@ -38,13 +38,13 @@ def get_json_from_page(page: pywikibot.Page) -> Optional[Dict[str, Any]]:
     """
     if not page.exists():
         pywikibot.error('{} does not exist.'.format(page.title()))
-        return None
+        return dict()
     if page.isRedirectPage():
         pywikibot.error('{} is a redirect.'.format(page.title()))
-        return None
+        return dict()
     if page.isEmpty():
         pywikibot.log('{} is empty.'.format(page.title()))
-        return None
+        return dict()
     try:
         return json.loads(page.get().strip())
     except ValueError:
@@ -226,8 +226,6 @@ def main(*args: str) -> bool:
         pywikibot.bot.suggest_help(missing_parameters=['config'])
         return False
     config = get_json_from_page(pywikibot.Page(site, options.pop('config')))
-    if not isinstance(config, dict):
-        return False
     if validate_config(config):
         options.update(config)
     else:
