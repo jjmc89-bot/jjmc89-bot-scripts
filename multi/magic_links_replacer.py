@@ -182,16 +182,16 @@ class MagicLinksReplacer(SingleSiteBot, NoRedirectPageBot, ExistingPageBot):
         text = ''
         for section in split_into_sections(self.current_page.text):
             for identifier in ('ISBN', 'PMID', 'RFC'):
-                if self.getOption(identifier):
+                if self.opt[identifier]:
                     section = replaceExcept(
                         section,
                         _regexes[identifier],
-                        self.getOption(identifier),
+                        self.opt[identifier],
                         self.replace_exceptions,
                         site=self.site,
                     )
             text += section
-        self.put_current(text, summary=self.getOption('summary'))
+        self.put_current(text, summary=self.opt.summary)
 
 
 def main(*args: str) -> bool:
