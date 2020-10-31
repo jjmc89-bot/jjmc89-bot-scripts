@@ -8,6 +8,7 @@ This script processes Categories for discussion working pages.
 # Author : JJMC89
 # License: MIT
 import re
+from itertools import chain
 from typing import Any, Dict, Generator, Iterable, List, Optional, Set, Union
 
 import mwparserfromhell
@@ -25,6 +26,7 @@ SUMMARIES = {
     'redirect': '[[WP:G8|G8]]: Redirect to deleted page {}',
     'talk': '[[WP:G8|G8]]: Talk page of deleted page {}',
 }
+TEXTLINK_NAMESPACES = (118,)
 TPL = {
     'cat': ['c', 'cl', 'lc'],
     'cfd': [
@@ -92,46 +94,55 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
         super().__init__(**kwargs)
         self.opt.new_cats = sorted(self.opt.new_cats, reverse=True)
 
-    def treat_page(self) -> None:
-        """Process one page."""
+    def treat_wikilinks(self, text: str, textlinks: bool = False) -> str:
+        """Process wikilinks."""
         cats = list()
         old_cat_link = None
-        wikicode = mwparserfromhell.parse(
-            self.current_page.text, skip_style_tags=True
-        )
-        for link in wikicode.ifilter_wikilinks():
-            if link.title.strip().startswith(':'):
+        wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
+        for wikilink in wikicode.ifilter_wikilinks():
+            if wikilink.title.strip().startswith(':') != textlinks:
                 continue
             try:
-                link_page = pywikibot.Page(self.site, str(link.title))
+                link_page = pywikibot.Page(self.site, str(wikilink.title))
                 link_cat = pywikibot.Category(link_page)
             except (ValueError, pywikibot.Error):
                 continue
             cats.append(link_cat)
             if link_cat == self.opt.old_cat:
-                old_cat_link = link
+                old_cat_link = wikilink
         if not old_cat_link:
             pywikibot.log(
                 'Did not find {} in {}.'.format(
                     self.opt.old_cat, self.current_page
                 )
             )
-            return
+            return text
         new_cats = self.opt.new_cats
         if len(new_cats) == 1 and new_cats[0] not in cats:
             # Update the title to keep the sort key.
-            old_cat_link.title = new_cats[0].title()
+            prefix = ':' if textlinks else ''
+            old_cat_link.title = prefix + new_cats[0].title()
             text = str(wikicode)
         else:
             for cat in new_cats:
                 if cat not in cats:
-                    wikicode.insert_after(old_cat_link, '\n' + cat.aslink())
+                    wikicode.insert_after(
+                        old_cat_link,
+                        '\n' + cat.title(as_link=True, textlink=textlinks),
+                    )
             old_cat_regex = re.compile(
                 r'\n?' + re.escape(str(old_cat_link)), re.M
             )
             text = replaceExcept(
                 str(wikicode), old_cat_regex, '', EXCEPTIONS, site=self.site
             )
+        return text
+
+    def treat_page(self) -> None:
+        """Process one page."""
+        text = self.treat_wikilinks(self.current_page.text)
+        if self.current_page.namespace() in TEXTLINK_NAMESPACES:
+            text = self.treat_wikilinks(text, textlinks=True)
         self.put_current(
             text, summary=self.opt.summary, asynchronous=False, nocreate=True,
         )
@@ -550,7 +561,10 @@ def do_instruction(instruction: Instruction) -> None:
     cfd_page = instruction['cfd_page']
     bot_options = instruction['bot_options']
     old_cat = bot_options['old_cat']
-    bot_options['generator'] = doc_page_add_generator(old_cat.members())
+    gen = chain(
+        old_cat.members(), old_cat.backlinks(namespaces=TEXTLINK_NAMESPACES)
+    )
+    bot_options['generator'] = doc_page_add_generator(gen)
     bot_options['site'] = cfd_page.site
     cfd_link = cfd_page.title(as_link=True)
     if instruction['mode'] == 'empty':
