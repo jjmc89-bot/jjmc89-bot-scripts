@@ -4,10 +4,12 @@ python:
   - 3.6
   - 3.7 # Toolforge k8s
   - 3.8
+  - 3.9
   - nightly
   - pypy3
 jobs:
   allow_failures:
+  - python: 3.9
   - python: nightly
   - python: pypy3
   fast_finish: true
