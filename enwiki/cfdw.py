@@ -8,6 +8,7 @@ This script processes Categories for discussion working pages.
 # Author : JJMC89
 # License: MIT
 import re
+from contextlib import suppress
 from itertools import chain
 from typing import Any, Dict, Generator, Iterable, List, Optional, Set, Union
 
@@ -175,14 +176,12 @@ class CfdPage(pywikibot.Page):
             title = str(node.title).split('#')[0]
             if title:
                 page = pywikibot.Page(self.site, title)
-                try:
-                    return pywikibot.Category(page)
-                except (
+                with suppress(
                     ValueError,
                     pywikibot.InvalidTitle,
                     pywikibot.SiteDefinitionError,
                 ):
-                    pass
+                    return pywikibot.Category(page)
         return None
 
     def find_discussion(self, category: pywikibot.Category) -> 'CfdPage':
@@ -197,12 +196,18 @@ class CfdPage(pywikibot.Page):
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         for section in wikicode.get_sections(levels=[4]):
             heading = section.filter_headings()[0]
-            section_title = str(heading.title).strip()
-            discussion = self.__class__(
-                self.site, '{}#{}'.format(self.title(), section_title)
-            )
-            if category.title() == section_title:
-                return discussion
+            heading_title = heading.title.strip()
+            for node in heading.title.ifilter():
+                if not isinstance(node, Text):
+                    # Don't use headings with anything other than text.
+                    discussion = self
+                    break
+            else:
+                discussion = self.__class__(
+                    self.site, '{}#{}'.format(self.title(), heading_title)
+                )
+                if category.title() == heading_title:
+                    return discussion
             # Split approximately into close, nom, and others.
             parts = str(section).split('(UTC)')
             if len(parts) < 3:
@@ -227,7 +232,7 @@ class CfdPage(pywikibot.Page):
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         for section in wikicode.get_sections(levels=[4]):
             heading = section.filter_headings()[0]
-            if str(heading.title).strip() == self.section():
+            if heading.title.strip() == self.section():
                 break
         else:
             section = None  # Trick pylint.
@@ -254,7 +259,7 @@ class CfdPage(pywikibot.Page):
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         for section in wikicode.get_sections(levels=[4]):
             heading = section.filter_headings()[0]
-            if str(heading.title).strip() == self.section():
+            if heading.title.strip() == self.section():
                 break
         else:
             section = None  # Trick pylint.
