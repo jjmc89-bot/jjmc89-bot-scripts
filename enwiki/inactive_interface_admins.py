@@ -10,6 +10,7 @@ from typing import Optional, Set, Tuple, Union
 
 import pywikibot
 from dateutil.relativedelta import relativedelta
+from pywikibot.logentries import LogEntry
 
 
 PageSource = Union[
@@ -48,9 +49,7 @@ class User(pywikibot.User):
         super().__init__(source, title)
         self._is_active = None  # type: Optional[bool]
         self._last_edit = None  # type: Optional[UserContrib]
-        self._last_event = (
-            None
-        )  # type: Optional[pywikibot.logentries.LogEntry]
+        self._last_event = None  # type: Optional[LogEntry]
         self._has_cssjs_edit = None  # type: Optional[bool]
 
     @property
@@ -82,7 +81,7 @@ class User(pywikibot.User):
         return self._last_edit
 
     @property
-    def last_event(self) -> Optional[pywikibot.logentries.LogEntry]:
+    def last_event(self) -> Optional[LogEntry]:
         """The user's last log entry."""
         if self._last_event is None:
             self._last_event = super().last_event
