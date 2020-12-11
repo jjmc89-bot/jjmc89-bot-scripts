@@ -391,17 +391,18 @@ class CFDWPage(Page):
                     results['prefix'] = str(node).strip()
                 elif link_found and index == len(nodes):
                     results['suffix'] = str(node).strip()
-            elif isinstance(node, Wikilink):
-                link_found = True
-                page = Page.from_wikilink(node, self.site)
-                if page.is_categorypage():
-                    page = pywikibot.Category(page)
+            else:
+                page = cat_from_node(node, self.site)
+                if page:
+                    link_found = True
                     if not results['old_cat']:
                         results['old_cat'] = page
                     else:
                         results['new_cats'].append(page)
-                else:
-                    results['cfd_page'] = CfdPage(page)
+                elif isinstance(node, Wikilink):
+                    link_found = True
+                    page = CfdPage.from_wikilink(node, self.site)
+                    results['cfd_page'] = page
         return results
 
     def _check_run(self) -> None:
