@@ -10,7 +10,18 @@ This script processes Categories for discussion working pages.
 import re
 from contextlib import suppress
 from itertools import chain
-from typing import Any, Dict, Generator, Iterable, List, Optional, Set, Union
+from typing import (
+    Any,
+    Dict,
+    Generator,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Type,
+    TypeVar,
+    Union,
+)
 
 import mwparserfromhell
 import pywikibot
@@ -46,7 +57,7 @@ BotOptions = TypedDict(
         'old_cat': pywikibot.Category,
         'new_cats': List[pywikibot.Category],
         'generator': Iterable[pywikibot.Page],
-        'site': pywikibot.site.APISite,
+        'site': pywikibot.site.BaseSite,
         'summary': str,
     },
     total=False,
@@ -75,8 +86,9 @@ LineResults = TypedDict(
     },
 )
 PageSource = Union[
-    pywikibot.Page, pywikibot.site.APISite, pywikibot.page.BaseLink
+    pywikibot.Page, pywikibot.site.BaseSite, pywikibot.page.BaseLink
 ]
+PageType = TypeVar("PageType", bound="Page")
 
 
 class CfdBot(SingleSiteBot, ExistingPageBot):
@@ -104,7 +116,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
             if wikilink.title.strip().startswith(':') != textlinks:
                 continue
             try:
-                link_page = pywikibot.Page(self.site, str(wikilink.title))
+                link_page = Page.from_wikilink(wikilink, self.site)
                 link_cat = pywikibot.Category(link_page)
             except (ValueError, pywikibot.Error):
                 continue
@@ -149,7 +161,31 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
         )
 
 
-class CfdPage(pywikibot.Page):
+class Page(pywikibot.Page):
+    """Represents a MediaWiki page."""
+
+    @classmethod
+    def from_wikilink(
+        cls: Type[PageType],
+        wikilink: Any,
+        site: pywikibot.site.BaseSite,
+        default_namespace: int = 0,
+    ) -> PageType:
+        """
+        Create a Page from a wikilink.
+
+        @param wikilink: the wikilink text
+        @param site: Site with the wikilink
+        @param default_namespace: a namespace to use if the link does not
+            contain one (defaults to 0)
+        """
+        text = removeDisabledParts(str(wikilink), site=site)
+        text = text.strip(" _\r\n\t").lstrip("[").rstrip("]")
+        link = pywikibot.Link(text, site, default_namespace)
+        return cls(link)
+
+
+class CfdPage(Page):
     """Represents a CFD page."""
 
     def __init__(self, source: PageSource, title: str = '') -> None:
@@ -160,29 +196,6 @@ class CfdPage(pywikibot.Page):
             and self.namespace() == 4
         ):
             raise ValueError('{} is not a CFD page.'.format(self))
-
-    def _cat_from_node(self, node: Node) -> Optional[pywikibot.Category]:
-        """
-        Return the category from the node.
-
-        @param node: Node to get a category from
-        """
-        if isinstance(node, Template):
-            tpl = pywikibot.Page(self.site, str(node.name), ns=10)
-            if tpl in TPL['cat'] and node.has('1'):
-                title = node.get('1').strip()
-                return pywikibot.Category(self.site, title)
-        elif isinstance(node, Wikilink):
-            title = str(node.title).split('#')[0]
-            if title:
-                page = pywikibot.Page(self.site, title)
-                with suppress(
-                    ValueError,
-                    pywikibot.InvalidTitle,
-                    pywikibot.SiteDefinitionError,
-                ):
-                    return pywikibot.Category(page)
-        return None
 
     def find_discussion(self, category: pywikibot.Category) -> 'CfdPage':
         """
@@ -203,8 +216,8 @@ class CfdPage(pywikibot.Page):
                     discussion = self
                     break
             else:
-                discussion = self.__class__(
-                    self.site, '{}#{}'.format(self.title(), heading_title)
+                discussion = self.__class__.from_wikilink(
+                    '{}#{}'.format(self.title(), heading_title), self.site
                 )
                 if category.title() == heading_title:
                     return discussion
@@ -215,7 +228,7 @@ class CfdPage(pywikibot.Page):
             # Parse the nom for category links.
             nom = mwparserfromhell.parse(parts[1], skip_style_tags=True)
             for node in nom.ifilter():
-                page = self._cat_from_node(node)
+                page = cat_from_node(node, self.site)
                 if page and category == page:
                     return discussion
         return self
@@ -242,7 +255,7 @@ class CfdPage(pywikibot.Page):
             found = False
             line_wc = mwparserfromhell.parse(line, skip_style_tags=True)
             for node in line_wc.ifilter():
-                page = self._cat_from_node(node)
+                page = cat_from_node(node, self.site)
                 if page and category == page:
                     found = True
                     break
@@ -273,7 +286,7 @@ class CfdPage(pywikibot.Page):
         return ''
 
 
-class CFDWPage(pywikibot.Page):
+class CFDWPage(Page):
     """Represents a CFDW page."""
 
     MODES = ('move', 'merge', 'empty', 'retain')
@@ -380,7 +393,7 @@ class CFDWPage(pywikibot.Page):
                     results['suffix'] = str(node).strip()
             elif isinstance(node, Wikilink):
                 link_found = True
-                page = pywikibot.Page(self.site, str(node.title))
+                page = Page.from_wikilink(node, self.site)
                 if page.is_categorypage():
                     page = pywikibot.Category(page)
                     if not results['old_cat']:
@@ -437,7 +450,7 @@ def add_old_cfd(
         wikicode = mwparserfromhell.parse(page.text, skip_style_tags=True)
         for tpl in wikicode.ifilter_templates():
             try:
-                template = pywikibot.Page(page.site, str(tpl.name), ns=10)
+                template = Page.from_wikilink(tpl.name, page.site, 10)
                 if template not in TPL['old cfd'] or not tpl.has(
                     'date', ignore_empty=True
                 ):
@@ -454,6 +467,30 @@ def add_old_cfd(
     old_cfd.add('result', result)
     page.text = str(old_cfd) + '\n' + page.text
     page.save(summary=summary)
+
+
+def cat_from_node(
+    node: Node, site: pywikibot.site.BaseSite
+) -> Optional[pywikibot.Category]:
+    """
+    Return the category from the node.
+
+    @param node: Node to get a category from
+    @param site: Site the wikicode is on
+    """
+    page = None
+    with suppress(
+        ValueError, pywikibot.InvalidTitle, pywikibot.SiteDefinitionError,
+    ):
+        if isinstance(node, Template):
+            tpl = Page.from_wikilink(node.name, site, 10)
+            if tpl in TPL['cat'] and node.has('1'):
+                title = node.get('1').strip()
+                page = Page.from_wikilink(title, site, 14)
+        elif isinstance(node, Wikilink):
+            title = str(node.title).split('#')[0]
+            page = Page.from_wikilink(title, site)
+    return pywikibot.Category(page) if page else page
 
 
 def check_instruction(instruction: Instruction) -> bool:
@@ -578,7 +615,7 @@ def do_instruction(instruction: Instruction) -> None:
         )
         CfdBot(**bot_options).run()
         # Wait for the category to be registered as empty.
-        pywikibot.sleep(pywikibot.config2.put_throttle)
+        pywikibot.sleep(pywikibot.config.put_throttle)
         if old_cat.exists() and old_cat.isEmptyCategory():
             delete_page(old_cat, cfd_link)
     elif instruction['mode'] == 'merge':
@@ -604,7 +641,7 @@ def do_instruction(instruction: Instruction) -> None:
         )
         CfdBot(**bot_options).run()
         # Wait for the category to be registered as empty.
-        pywikibot.sleep(pywikibot.config2.put_throttle)
+        pywikibot.sleep(pywikibot.config.put_throttle)
         if (
             old_cat.exists()
             and old_cat.isEmptyCategory()
@@ -725,7 +762,7 @@ def remove_cfd_tpl(page: pywikibot.Page, summary: str) -> None:
     wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
     for tpl in wikicode.ifilter_templates():
         try:
-            template = pywikibot.Page(page.site, str(tpl.name), ns=10)
+            template = Page.from_wikilink(tpl.name, page.site, 10)
             if template in TPL['cfd']:
                 wikicode.remove(tpl)
         except pywikibot.InvalidTitle:
