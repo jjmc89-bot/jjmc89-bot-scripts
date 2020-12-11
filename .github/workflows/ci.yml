@@ -4,25 +4,14 @@ on:
 jobs:
   lint:
     strategy:
-      fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
         python-version: 
           - 3.5
           - 3.6
           - 3.7
           - 3.8
-        experimental: 
-          - false
-        include:
-          - os: ubuntu-latest
-            python-version: 3.9
-            experimental: true
-    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
-    continue-on-error: ${{ matrix.experimental }}
-    runs-on: ${{ matrix.os }}
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
     steps:
     - name: Chrckout
       uses: actions/checkout@v2
