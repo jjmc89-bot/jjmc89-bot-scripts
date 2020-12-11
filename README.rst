@@ -1,7 +1,7 @@
 JJMC89 bot
 ==========
-.. image:: https://github.com/JJMC89/JJMC89_bot/workflows/CI/badge.svg
-    :target: https://github.com/JJMC89/JJMC89_bot/actions?query=workflow:CI
+.. image:: https://github.com/JJMC89/JJMC89_bot/workflows/CI/badge.svg?branch=master
+    :target: https://github.com/JJMC89/JJMC89_bot/actions?query=workflow%3ACI+branch%3Amaster
 
 
 `JJMC89 bot`_, `JJMC89 bot II`_, `JJMC89 bot III`_, and `Magic links bot`_ run on Wikimedia_ projects and are hosted on `Wikimedia Toolforge`_.
