@@ -479,7 +479,6 @@ def cat_from_node(
     @param node: Node to get a category from
     @param site: Site the wikicode is on
     """
-    page = None
     with suppress(
         ValueError, pywikibot.InvalidTitle, pywikibot.SiteDefinitionError,
     ):
@@ -488,10 +487,12 @@ def cat_from_node(
             if tpl in TPL['cat'] and node.has('1'):
                 title = node.get('1').strip()
                 page = Page.from_wikilink(title, site, 14)
+                return pywikibot.Category(page)
         elif isinstance(node, Wikilink):
             title = str(node.title).split('#')[0]
             page = Page.from_wikilink(title, site)
-    return pywikibot.Category(page) if page else page
+            return pywikibot.Category(page)
+    return None
 
 
 def check_instruction(instruction: Instruction) -> bool:
