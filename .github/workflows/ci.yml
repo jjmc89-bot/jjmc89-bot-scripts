@@ -13,7 +13,7 @@ jobs:
     name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
     steps:
-    - name: Chrckout
+    - name: Checkout
       uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
