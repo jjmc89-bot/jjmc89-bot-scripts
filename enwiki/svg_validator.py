@@ -15,7 +15,7 @@ import mwparserfromhell
 import pywikibot
 import requests
 from mwparserfromhell.nodes import Template
-from pywikibot.bot import ExistingPageBot, SingleSiteBot
+from pywikibot.bot import ExistingPageBot, FollowRedirectPageBot, SingleSiteBot
 from pywikibot.comms.http import user_agent
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import removeDisabledParts
@@ -53,7 +53,7 @@ def get_redirects(
     return _redirects_cache[pages]
 
 
-class SVGValidatorBot(SingleSiteBot, ExistingPageBot):
+class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
     """Bot to validate SVGs."""
 
     def __init__(self, **kwargs: Any) -> None:
