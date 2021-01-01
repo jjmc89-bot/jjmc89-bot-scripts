@@ -16,6 +16,7 @@ The following parameters are supported:
 # License: MIT
 import json
 import re
+from contextlib import suppress
 from datetime import date
 
 import mwparserfromhell
@@ -365,14 +366,15 @@ class User(pywikibot.User):
         attempts = 0
         while not success and attempts < options.get('max_attempts'):
             attempts += 1
-            success = self.site.editpage(
-                talk_page,
-                summary=options['note_summary' + param_suffix],
-                minor=False,
-                bot=False,
-                section='new',
-                text=options['note_text' + param_suffix],
-            )
+            with suppress(pywikibot.Error):
+                success = self.site.editpage(
+                    talk_page,
+                    summary=options['note_summary' + param_suffix],
+                    minor=False,
+                    bot=False,
+                    section='new',
+                    text=options['note_text' + param_suffix],
+                )
             if not success:
                 pywikibot.log(
                     'Failed to send {note} to {username}. Attempt: '
@@ -394,10 +396,11 @@ class User(pywikibot.User):
             attempts = 0
             while not success and attempts < options.get('max_attempts'):
                 attempts += 1
-                success = self.send_email(
-                    options['email_subject' + param_suffix],
-                    options['email_text' + param_suffix],
-                )
+                with suppress(pywikibot.Error):
+                    success = self.send_email(
+                        options['email_subject' + param_suffix],
+                        options['email_text' + param_suffix],
+                    )
                 if not success:
                     pywikibot.log(
                         'Failed to send {email} to {username}. Attempt: '
