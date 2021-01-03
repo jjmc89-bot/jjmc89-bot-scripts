@@ -168,7 +168,7 @@ def main(*args: str) -> None:
     parsed_args = vars(parser.parse_args(args=script_args))
     start = parsed_args.pop('start')
     gen = None if gen_factory.gens else draftified_page_generator(site, start)
-    gen = gen_factory.getCombinedGenerator(gen=gen, preload=True)
+    gen = gen_factory.getCombinedGenerator(gen=gen)
     DfyTaggerBot(generator=gen, site=site, **parsed_args).run()
 
 
