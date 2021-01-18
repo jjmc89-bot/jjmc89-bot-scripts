@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 This script reports and notifies inactive admins.
 
@@ -18,6 +17,7 @@ import json
 import re
 from contextlib import suppress
 from datetime import date
+from functools import lru_cache
 
 import mwparserfromhell
 import pywikibot
@@ -270,16 +270,13 @@ def split_into_sections(text):
 class User(pywikibot.User):
     """Extended L{pywikibot.User}."""
 
-    def __init__(self, source, title):
+    def __init__(self, source, title=''):
         """
         Initializer for a User object.
 
         All parameters are the same as for L{pywikibot.User}.
         """
         super().__init__(source, title)
-        self._is_active = None
-        self._last_edit = None
-        self._last_event = None
         self.notifications = {
             'email': None,
             'email2': None,
@@ -298,48 +295,40 @@ class User(pywikibot.User):
         @type cutoff: datetime.date
         @rtype: bool
         """
-        if self._is_active is None:
-            if self.last_edit and self.last_edit[2].date() >= cutoff:
-                self._is_active = True
-            elif (
-                self.last_event
-                and self.last_event.timestamp().date() >= cutoff
-            ):
-                self._is_active = True
-            else:
-                self._is_active = False
-        return self._is_active
+        if self.last_edit and self.last_edit[2].date() >= cutoff:
+            return True
+        if self.last_event and self.last_event.timestamp().date() >= cutoff:
+            return True
+        return False
 
     @property
+    @lru_cache(maxsize=None)
     def last_edit(self):
         """
         The user's last edit.
 
         @rtype: tuple or None
         """
-        if self._last_edit is None:
-            self._last_edit = super().last_edit
-        return self._last_edit
+        return super().last_edit
 
     @property
+    @lru_cache(maxsize=None)
     def last_event(self):
         """
         The user's last log entry.
 
         @rtype: L{pywikibot.LogEntry} or None
         """
-        if self._last_event is None:
-            for logevent in self.site.logevents(user=self.username):
-                try:
-                    le_action = logevent.action()
-                except KeyError as e:
-                    pywikibot.log(e)
-                    continue
-                else:
-                    if le_action != 'create':
-                        self._last_event = logevent
-                        break
-        return self._last_event
+        for logevent in self.site.logevents(user=self.username):
+            try:
+                le_action = logevent.action()
+            except KeyError as e:
+                pywikibot.log(e)
+                continue
+            else:
+                if le_action != 'create':
+                    return logevent
+        return None
 
     def notify(self, options, notice_number=1):
         """

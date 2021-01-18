@@ -4,7 +4,8 @@
 # License: MIT
 import argparse
 import re
-from typing import Any, Dict, FrozenSet, Generator, Iterable, Optional, Union
+from functools import lru_cache
+from typing import Any, FrozenSet, Generator, Iterable, Optional, Union
 
 import pywikibot
 from pywikibot.bot import (
@@ -16,32 +17,24 @@ from pywikibot.bot import (
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 
 
-# Cache for get_redirects().
-_redirects_cache = (
-    dict()
-)  # type: Dict[FrozenSet[pywikibot.Page], FrozenSet[pywikibot.Page]]
-
-
+@lru_cache()
 def get_redirects(
-    pages: Iterable[pywikibot.Page],
+    pages: FrozenSet[pywikibot.Page],
 ) -> FrozenSet[pywikibot.Page]:
     """Given pages, return all possible titles."""
-    pages = frozenset(pages)
-    if pages not in _redirects_cache:
-        link_pages = set()
-        for page in pages:
-            while page.isRedirectPage():
-                try:
-                    page = page.getRedirectTarget()
-                except pywikibot.CircularRedirect:
-                    break
-            if not page.exists():
-                continue
-            link_pages.add(page)
-            for redirect in page.backlinks(filter_redirects=True):
-                link_pages.add(redirect)
-        _redirects_cache[pages] = frozenset(link_pages)
-    return _redirects_cache[pages]
+    link_pages = set()
+    for page in pages:
+        while page.isRedirectPage():
+            try:
+                page = page.getRedirectTarget()
+            except pywikibot.CircularRedirect:
+                break
+        if not page.exists():
+            continue
+        link_pages.add(page)
+        for redirect in page.backlinks(filter_redirects=True):
+            link_pages.add(redirect)
+    return frozenset(link_pages)
 
 
 def has_template(
@@ -56,13 +49,15 @@ def has_template(
     """
     if isinstance(templates, str):
         templates = [templates]
-    templates = get_redirects(
-        tpl
-        if isinstance(tpl, pywikibot.Page)
-        else pywikibot.Page(page.site, tpl, ns=10)
-        for tpl in templates
+    template_pages = get_redirects(
+        frozenset(
+            tpl
+            if isinstance(tpl, pywikibot.Page)
+            else pywikibot.Page(page.site, tpl, ns=10)
+            for tpl in templates
+        )
     )
-    return bool(templates & set(page.templates()))
+    return bool(template_pages & set(page.templates()))
 
 
 class DfyTaggerBot(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
@@ -114,7 +109,8 @@ class DfyTaggerBot(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
 
 
 def draftified_page_generator(
-    site: pywikibot.site.BaseSite, start: Optional[pywikibot.Timestamp],
+    site: pywikibot.site.BaseSite,
+    start: Optional[pywikibot.Timestamp],
 ) -> Generator[pywikibot.Page, None, None]:
     """
     Yield draftified pages based on page moves.

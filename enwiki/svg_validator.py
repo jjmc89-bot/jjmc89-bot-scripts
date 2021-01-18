@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 This validates SVGs using the W3C nu validator.
 
@@ -9,7 +8,8 @@ The following arguments are supported:
 
 &params;
 """
-from typing import Any, Dict, FrozenSet, Iterable, List
+from functools import lru_cache
+from typing import Any, FrozenSet, List
 
 import mwparserfromhell
 import pywikibot
@@ -25,32 +25,24 @@ from requests.exceptions import Timeout, RequestException
 docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
 
 
-# Cache for get_redirects().
-_redirects_cache = (
-    dict()
-)  # type: Dict[FrozenSet[pywikibot.Page], FrozenSet[pywikibot.Page]]
-
-
+@lru_cache()
 def get_redirects(
-    pages: Iterable[pywikibot.Page],
+    pages: FrozenSet[pywikibot.Page],
 ) -> FrozenSet[pywikibot.Page]:
     """Given pages, return all possible titles."""
-    pages = frozenset(pages)
-    if pages not in _redirects_cache:
-        link_pages = set()
-        for page in pages:
-            while page.isRedirectPage():
-                try:
-                    page = page.getRedirectTarget()
-                except pywikibot.CircularRedirect:
-                    break
-            if not page.exists():
-                continue
-            link_pages.add(page)
-            for redirect in page.backlinks(filter_redirects=True):
-                link_pages.add(redirect)
-        _redirects_cache[pages] = frozenset(link_pages)
-    return _redirects_cache[pages]
+    link_pages = set()
+    for page in pages:
+        while page.isRedirectPage():
+            try:
+                page = page.getRedirectTarget()
+            except pywikibot.CircularRedirect:
+                break
+        if not page.exists():
+            continue
+        link_pages.add(page)
+        for redirect in page.backlinks(filter_redirects=True):
+            link_pages.add(redirect)
+    return frozenset(link_pages)
 
 
 class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
@@ -66,10 +58,12 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
         )
         self.nu_session.params = {'level': 'error', 'out': 'json'}
         self.templates = get_redirects(
-            {
-                pywikibot.Page(self.site, 'Invalid SVG', ns=10),
-                pywikibot.Page(self.site, 'Valid SVG', ns=10),
-            }
+            frozenset(
+                {
+                    pywikibot.Page(self.site, 'Invalid SVG', ns=10),
+                    pywikibot.Page(self.site, 'Valid SVG', ns=10),
+                }
+            )
         )
 
     def teardown(self) -> None:
