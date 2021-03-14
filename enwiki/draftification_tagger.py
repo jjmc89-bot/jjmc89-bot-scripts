@@ -105,6 +105,7 @@ class DfyTaggerBot(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         self.put_current(
             self.current_page.text.strip() + self.add_text,
             summary=self.summary,
+            nocreate=True,
         )
 
 
