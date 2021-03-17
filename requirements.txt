@@ -1,4 +1,4 @@
 mwparserfromhell
 python-dateutil
-pywikibot
+pywikibot>=6
 typing-extensions
