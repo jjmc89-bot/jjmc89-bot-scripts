@@ -132,7 +132,7 @@ def main(*args: str) -> None:
     site = pywikibot.Site()
     site.login()
     gen_factory = GeneratorFactory(site)
-    script_args = [arg for arg in local_args if not gen_factory.handleArg(arg)]
+    script_args = gen_factory.handle_args(local_args)
     parser = argparse.ArgumentParser(
         description='Tag draftified articles',
         epilog=re.sub(

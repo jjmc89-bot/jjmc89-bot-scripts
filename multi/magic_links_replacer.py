@@ -205,9 +205,8 @@ def main(*args: str) -> bool:
     site = pywikibot.Site()
     site.login()
     gen_factory = GeneratorFactory(site)
-    for arg in local_args:
-        if gen_factory.handleArg(arg):
-            continue
+    script_args = gen_factory.handle_args(local_args)
+    for arg in script_args:
         arg, _, value = arg.partition(':')
         arg = arg[1:]
         if arg == 'config':

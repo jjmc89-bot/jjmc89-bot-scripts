@@ -222,9 +222,8 @@ def main(*args: str) -> None:
     site = pywikibot.Site()
     site.login()
     gen_factory = GeneratorFactory(site)
-    for arg in local_args:
-        if gen_factory.handleArg(arg):
-            continue
+    script_args = gen_factory.handle_args(local_args)
+    for arg in script_args:
         arg, _, _ = arg.partition(':')
         arg = arg[1:]
         options[arg] = True

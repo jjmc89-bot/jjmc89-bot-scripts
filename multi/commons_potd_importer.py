@@ -138,9 +138,8 @@ def main(*args: str) -> None:
     site.login()
     # Parse command line arguments
     gen_factory = GeneratorFactory(site)
-    for arg in local_args:
-        if gen_factory.handleArg(arg):
-            continue
+    script_args = gen_factory.handle_args(local_args)
+    for arg in script_args:
         if arg == '-always':
             options['always'] = True
     gen = gen_factory.getCombinedGenerator()

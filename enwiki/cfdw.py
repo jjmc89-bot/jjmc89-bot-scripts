@@ -157,7 +157,10 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
         if self.current_page.namespace() in TEXTLINK_NAMESPACES:
             text = self.treat_wikilinks(text, textlinks=True)
         self.put_current(
-            text, summary=self.opt.summary, asynchronous=False, nocreate=True,
+            text,
+            summary=self.opt.summary,
+            asynchronous=False,
+            nocreate=True,
         )
 
 
@@ -330,7 +333,8 @@ class CFDWPage(Page):
         for line in section.splitlines():
             assert self.mode is not None  # for mypy
             instruction = Instruction(
-                mode=self.mode, bot_options=BotOptions(),
+                mode=self.mode,
+                bot_options=BotOptions(),
             )
             line_results = self._parse_line(line)
             instruction['bot_options']['old_cat'] = line_results['old_cat']
@@ -380,7 +384,11 @@ class CFDWPage(Page):
     def _parse_line(self, line: str) -> LineResults:
         """Parse a line of wikitext."""
         results = LineResults(
-            cfd_page=None, old_cat=None, new_cats=list(), prefix='', suffix='',
+            cfd_page=None,
+            old_cat=None,
+            new_cats=list(),
+            prefix='',
+            suffix='',
         )
         link_found = False
         wikicode = mwparserfromhell.parse(line, skip_style_tags=True)
@@ -480,7 +488,9 @@ def cat_from_node(
     @param site: Site the wikicode is on
     """
     with suppress(
-        ValueError, pywikibot.InvalidTitle, pywikibot.SiteDefinitionError,
+        ValueError,
+        pywikibot.InvalidTitle,
+        pywikibot.SiteDefinitionError,
     ):
         if isinstance(node, Template):
             tpl = Page.from_wikilink(node.name, site, 10)
@@ -783,8 +793,7 @@ def main(*args: str) -> None:
     site = pywikibot.Site()
     site.login()
     gen_factory = GeneratorFactory(site)
-    for arg in local_args:
-        gen_factory.handleArg(arg)
+    gen_factory.handle_args(local_args)
     for key, value in TPL.items():
         TPL[key] = get_template_pages(
             [pywikibot.Page(site, tpl, ns=10) for tpl in value]
