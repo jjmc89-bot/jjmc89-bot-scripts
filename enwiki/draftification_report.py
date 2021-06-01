@@ -26,7 +26,6 @@ import pywikibot
 from dateutil.parser import parse as parse_date
 from pywikibot.pagegenerators import PrefixingPageGenerator
 
-
 BOT_START_END = re.compile(
     r'^(.*?<!--\s*bot start\s*-->).*?(<!--\s*bot end\s*-->.*)$',
     flags=re.S | re.I,
@@ -151,10 +150,10 @@ def output_move_log(page=None, start=None, end=None):
         end=end,
         reverse=True,
     ):
-        if logevent.target_ns not in (
-            2,
-            118,
-        ) or logevent.target_title.startswith('Draft:Move/'):
+        if (
+            logevent.target_ns not in (2, 118)
+            or logevent.target_title.startswith('Draft:Move/')
+        ):
             # Only want moves to Draft or User.
             # Skip page swaps.
             continue
@@ -165,7 +164,7 @@ def output_move_log(page=None, start=None, end=None):
             if current_page.isRedirectPage():
                 try:
                     redirect_target = current_page.getRedirectTarget()
-                except pywikibot.CircularRedirect:
+                except pywikibot.exceptions.CircularRedirectError:
                     pywikibot.log(
                         '{} is a circular redirect.'.format(
                             current_page.title(asLink=True)
@@ -183,8 +182,11 @@ def output_move_log(page=None, start=None, end=None):
                 creator = '[[User:{}]]'.format(
                     current_page.oldest_revision.user
                 )
-            creation = ('[[Special:PermaLink/{rev.revid}|{rev.timestamp}]]'
-                        .format(rev=current_page.oldest_revision))
+            creation = (
+                '[[Special:PermaLink/{rev.revid}|{rev.timestamp}]]'.format(
+                    rev=current_page.oldest_revision
+                )
+            )
             last_edit = '[[Special:Diff/{rev.revid}|{rev.timestamp}]]'.format(
                 rev=current_page.latest_revision
             )
