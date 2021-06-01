@@ -19,7 +19,7 @@ from pywikibot.bot import ExistingPageBot, FollowRedirectPageBot, SingleSiteBot
 from pywikibot.comms.http import user_agent
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import removeDisabledParts
-from requests.exceptions import Timeout, RequestException
+from requests.exceptions import RequestException, Timeout
 
 
 docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
@@ -35,7 +35,7 @@ def get_redirects(
         while page.isRedirectPage():
             try:
                 page = page.getRedirectTarget()
-            except pywikibot.CircularRedirect:
+            except pywikibot.exceptions.CircularRedirectError:
                 break
         if not page.exists():
             continue
@@ -204,7 +204,7 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
                     ns=10,
                 )
                 template.title()
-            except pywikibot.InvalidTitle:
+            except pywikibot.exceptions.InvalidTitleError:
                 continue
             if template in self.templates:
                 wikicode.replace(tpl, new_tpl)

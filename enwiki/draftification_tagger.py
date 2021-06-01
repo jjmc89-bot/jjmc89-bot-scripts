@@ -27,7 +27,7 @@ def get_redirects(
         while page.isRedirectPage():
             try:
                 page = page.getRedirectTarget()
-            except pywikibot.CircularRedirect:
+            except pywikibot.exceptions.CircularRedirectError:
                 break
         if not page.exists():
             continue

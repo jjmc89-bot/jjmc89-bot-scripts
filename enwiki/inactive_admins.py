@@ -45,7 +45,7 @@ def get_json_from_page(page):
     except ValueError:
         pywikibot.error('{} does not contain valid JSON.'.format(page.title()))
         raise
-    except pywikibot.PageRelatedError:
+    except pywikibot.exceptions.PageRelatedError:
         return dict()
 
 
@@ -355,7 +355,7 @@ class User(pywikibot.User):
         attempts = 0
         while not success and attempts < options.get('max_attempts'):
             attempts += 1
-            with suppress(pywikibot.Error):
+            with suppress(pywikibot.exceptions.Error):
                 success = self.site.editpage(
                     talk_page,
                     summary=options['note_summary' + param_suffix],
@@ -385,7 +385,7 @@ class User(pywikibot.User):
             attempts = 0
             while not success and attempts < options.get('max_attempts'):
                 attempts += 1
-                with suppress(pywikibot.Error):
+                with suppress(pywikibot.exceptions.Error):
                     success = self.send_email(
                         options['email_subject' + param_suffix],
                         options['email_text' + param_suffix],

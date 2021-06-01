@@ -118,7 +118,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
             try:
                 link_page = Page.from_wikilink(wikilink, self.site)
                 link_cat = pywikibot.Category(link_page)
-            except (ValueError, pywikibot.Error):
+            except (ValueError, pywikibot.exceptions.Error):
                 continue
             cats.append(link_cat)
             if link_cat == self.opt.old_cat:
@@ -322,7 +322,7 @@ class CFDWPage(Page):
                 continue
             try:
                 self._parse_section(str(section))
-            except (ValueError, pywikibot.Error):
+            except (ValueError, pywikibot.exceptions.Error):
                 pywikibot.exception(tb=True)
         self._check_run()
 
@@ -464,7 +464,7 @@ def add_old_cfd(
                     'date', ignore_empty=True
                 ):
                     continue
-            except pywikibot.InvalidTitle:
+            except pywikibot.exceptions.InvalidTitleError:
                 continue
             if tpl.get('date').value.strip() == date:
                 # Template already present.
@@ -489,8 +489,8 @@ def cat_from_node(
     """
     with suppress(
         ValueError,
-        pywikibot.InvalidTitle,
-        pywikibot.SiteDefinitionError,
+        pywikibot.exceptions.InvalidTitleError,
+        pywikibot.exceptions.SiteDefinitionError,
     ):
         if isinstance(node, Template):
             tpl = Page.from_wikilink(node.name, site, 10)
@@ -777,7 +777,7 @@ def remove_cfd_tpl(page: pywikibot.Page, summary: str) -> None:
             template = Page.from_wikilink(tpl.name, page.site, 10)
             if template in TPL['cfd']:
                 wikicode.remove(tpl)
-        except pywikibot.InvalidTitle:
+        except pywikibot.exceptions.InvalidTitleError:
             continue
     page.text = str(wikicode).strip()
     page.save(summary=summary)

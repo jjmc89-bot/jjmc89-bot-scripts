@@ -119,7 +119,7 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
                     ns=10,
                 )
                 template.title()
-            except pywikibot.InvalidTitle:
+            except pywikibot.exceptions.InvalidTitleError:
                 continue
             if template in self.templates:
                 tpl.add('1', target.title(with_ns=False))
