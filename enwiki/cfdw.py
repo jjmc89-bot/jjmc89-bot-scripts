@@ -177,9 +177,9 @@ class Page(pywikibot.Page):
         """
         Create a Page from a wikilink.
 
-        @param wikilink: the wikilink text
-        @param site: Site with the wikilink
-        @param default_namespace: a namespace to use if the link does not
+        :param wikilink: the wikilink text
+        :param site: Site with the wikilink
+        :param default_namespace: a namespace to use if the link does not
             contain one (defaults to 0)
         """
         text = removeDisabledParts(str(wikilink), site=site)
@@ -204,7 +204,7 @@ class CfdPage(Page):
         """
         Return the relevant discussion.
 
-        @param category: The category being discussed
+        :param category: The category being discussed
         """
         if self.section():
             return self
@@ -240,7 +240,7 @@ class CfdPage(Page):
         """
         Return the discussion action.
 
-        @param category: The category being discussed
+        :param category: The category being discussed
         """
         if not self.section():
             return ''
@@ -484,8 +484,8 @@ def cat_from_node(
     """
     Return the category from the node.
 
-    @param node: Node to get a category from
-    @param site: Site the wikicode is on
+    :param node: Node to get a category from
+    :param site: Site the wikicode is on
     """
     with suppress(
         ValueError,
@@ -713,7 +713,7 @@ def doc_page_add_generator(
     """
     Add documentation subpages for pages from another generator.
 
-    @param generator: Pages to iterate over
+    :param generator: Pages to iterate over
     """
     for page in generator:
         yield page
@@ -747,9 +747,9 @@ def redirect_cat(
     """
     Redirect a category to another category.
 
-    @param cat: Category to redirect
-    @param target: Category redirect target
-    @param summary: Edit summary
+    :param cat: Category to redirect
+    :param target: Category redirect target
+    :param summary: Edit summary
     """
     tpl = Template('Category redirect')
     tpl.add('1', target.title(with_ns=False))
@@ -761,8 +761,8 @@ def remove_cfd_tpl(page: pywikibot.Page, summary: str) -> None:
     """
     Remove the CfD template from the page.
 
-    @param page: Page to edit
-    @param summary: Edit summary
+    :param page: Page to edit
+    :param summary: Edit summary
     """
     text = re.sub(
         r'<!--\s*BEGIN CFD TEMPLATE\s*-->.*?'
@@ -787,7 +787,7 @@ def main(*args: str) -> None:
     """
     Process command line arguments and invoke bot.
 
-    @param args: command line arguments
+    :param args: command line arguments
     """
     local_args = pywikibot.handle_args(args)
     site = pywikibot.Site()

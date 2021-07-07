@@ -36,10 +36,10 @@ def validate_options(options, site):
     """
     Validate the options and return bool.
 
-    @param options: options to validate
-    @type options: dict
+    :param options: options to validate
+    :type options: dict
 
-    @rtype: bool
+    :rtype: bool
     """
     pywikibot.log('Options:')
     required_keys = ['end', 'page', 'start']
@@ -77,10 +77,10 @@ def get_xfds(pages):
     """
     Return a set of XfDs for the pages.
 
-    @param pages: Pages to get XfDs for
-    @type pages: iterable of L{pywikibot.Page}
+    :param pages: Pages to get XfDs for
+    :type pages: iterable of pywikibot.Page
 
-    @rtype: set
+    :rtype: set
     """
     xfds = set()
     for page in pages:
@@ -98,10 +98,10 @@ def iterable_to_wikitext(items):
     """
     Convert iterable to wikitext.
 
-    @param items: Items to iterate
-    @type items: iterable
+    :param items: Items to iterate
+    :type items: iterable
 
-    @rtype: str
+    :rtype: str
     """
     if len(items) == 1:
         return '{}'.format(next(iter(items)))
@@ -115,12 +115,12 @@ def save_bot_start_end(save_text, page, summary):
     """
     Writes the text to the given page.
 
-    @param save_text: Text to save
-    @type save_text: str
-    @param page: Page to save to
-    @type page: L{pywikibot.Page}
-    @param summary: Edit summary
-    @type summary: str
+    :param save_text: Text to save
+    :type save_text: str
+    :param page: Page to save to
+    :type page: pywikibot.Page
+    :param summary: Edit summary
+    :type summary: str
     """
     save_text = save_text.strip()
     if page.exists():
@@ -139,8 +139,8 @@ def output_move_log(page=None, start=None, end=None):
     """
     Writes move logevents to a page.
 
-    @param page: The page to output to
-    @type page: L{pywikibot.Page}
+    :param page: The page to output to
+    :type page: pywikibot.Page
     """
     text = ''
     for logevent in page.site.logevents(
@@ -235,8 +235,8 @@ def main(*args):
     """
     Process command line arguments and invoke bot.
 
-    @param args: command line arguments
-    @type args: list of unicode
+    :param args: command line arguments
+    :type args: list of unicode
     """
     options = {'end': date.today() - timedelta(days=1)}
     # Process global arguments

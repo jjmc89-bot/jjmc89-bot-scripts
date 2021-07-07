@@ -34,7 +34,7 @@ def get_json_from_page(page: pywikibot.Page) -> Dict[str, Any]:
     """
     Return JSON from the page.
 
-    @param page: Page to read
+    :param page: Page to read
     """
     if not page.exists():
         pywikibot.error('{} does not exist.'.format(page.title()))
@@ -53,7 +53,7 @@ def validate_config(config: Dict[str, Any]) -> bool:
     """
     Validate the config and return bool.
 
-    @param config: config to validate
+    :param config: config to validate
     """
     pywikibot.log('Config:')
     for key, value in config.items():
@@ -122,7 +122,7 @@ def split_into_sections(text: str) -> List[str]:
     """
     Splits wikitext into sections based on any level wiki heading.
 
-    @param text: Text to split
+    :param text: Text to split
     """
     headings_regex = re.compile(
         r'^={1,6}.*?={1,6}(?: *<!--.*?-->)?\s*$', flags=re.M
@@ -198,7 +198,7 @@ def main(*args: str) -> bool:
     """
     Process command line arguments and invoke bot.
 
-    @param args: command line arguments
+    :param args: command line arguments
     """
     options = {}
     local_args = pywikibot.handle_args(args)

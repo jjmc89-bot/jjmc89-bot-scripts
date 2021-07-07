@@ -227,7 +227,7 @@ def get_json_from_page(page: pywikibot.Page) -> Dict[str, Any]:
     """
     Return JSON from the page.
 
-    @param page: Page to read
+    :param page: Page to read
     """
     if not page.exists():
         pywikibot.error('{} does not exist.'.format(page.title()))
@@ -248,8 +248,8 @@ def validate_config(
     """
     Validate the configuration and return bool.
 
-    @param config: configuration to validate
-    @param site: site used in the validation
+    :param config: configuration to validate
+    :param site: site used in the validation
     """
     pywikibot.log('config:')
     for title, page_config in config.items():
@@ -354,7 +354,7 @@ def main(*args: str) -> None:
     """
     Process command line arguments and invoke bot.
 
-    @param args: command line arguments
+    :param args: command line arguments
     """
     local_args = pywikibot.handle_args(args, do_help=False)
     site = pywikibot.Site()

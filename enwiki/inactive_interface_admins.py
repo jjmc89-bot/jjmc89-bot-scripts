@@ -25,7 +25,7 @@ def get_inactive_users(
     """
     Get a set of inactive interface admins.
 
-    @param site: site to work on
+    :param site: site to work on
     """
     users = set()
     if not site:
@@ -38,7 +38,7 @@ def get_inactive_users(
 
 
 class User(pywikibot.User):
-    """Extended L{pywikibot.User}."""
+    """Extended pywikibot.User."""
 
     @property
     def is_active(self) -> bool:
@@ -120,7 +120,7 @@ def main(*args: str) -> None:
     """
     Process command line arguments and invoke bot.
 
-    @param args: command line arguments
+    :param args: command line arguments
     """
     pywikibot.handle_args(args)
     site = pywikibot.Site()

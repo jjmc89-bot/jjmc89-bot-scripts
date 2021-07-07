@@ -109,8 +109,8 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
 
         Returns a list of validation error messages.
 
-        @raises RuntimeError: validation is indeterminate
-        @raises AssertionError: 1) response root does not have the messages key
+        :raises RuntimeError: validation is indeterminate
+        :raises AssertionError: 1) response root does not have the messages key
             with a list or 2) request URL does not match the response URL
         """
         url = self.current_page.get_file_url()

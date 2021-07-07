@@ -44,8 +44,8 @@ def has_template(
     """
     Return True if the page has one of the templates. False otherwise.
 
-    @param page: page to check
-    @param templates: templates to check
+    :param page: page to check
+    :param templates: templates to check
     """
     if isinstance(templates, str):
         templates = [templates]
@@ -116,7 +116,7 @@ def draftified_page_generator(
     """
     Yield draftified pages based on page moves.
 
-    @param site: site to yield page moves from
+    :param site: site to yield page moves from
     """
     gen = site.logevents(
         logtype='move', namespace=0, start=start, reverse=True

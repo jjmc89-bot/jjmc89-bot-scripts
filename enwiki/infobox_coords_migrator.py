@@ -48,9 +48,9 @@ def validate_config(config):
     """
     Validate the configuration and return bool.
 
-    @param config: configuration to validate
-    @type config: dict
-    @rtype: bool
+    :param config: configuration to validate
+    :type config: dict
+    :rtype: bool
     """
     if not isinstance(config, dict):
         return False
@@ -144,9 +144,9 @@ class InfoboxCoordinatesParametersMigrator(
         """
         Constructor.
 
-        @param generator: the page generator that determines on which
+        :param generator: the page generator that determines on which
             pages to work
-        @type generator: generator
+        :type generator: generator
         """
         self.availableOptions.update({
             'coordinatesSets': None,
@@ -203,11 +203,11 @@ class InfoboxCoordinatesParametersMigrator(
         Determine template spacing and return a tuple of spaces before the pipe
         and spaces before the =
 
-        @param templateText: template text to parse
-        @type templateText: str
-        @param parameterName: parameter name
-        @type parameterName: str
-        @rtype: tuple
+        :param templateText: template text to parse
+        :type templateText: str
+        :param parameterName: parameter name
+        :type parameterName: str
+        :rtype: tuple
         """
         wikicode = mwparserfromhell.parse(
             templateText.strip(),
@@ -365,8 +365,8 @@ def main(*args):
     """
     Process command line arguments and invoke bot.
 
-    @param args: command line arguments
-    @type args: list of unicode
+    :param args: command line arguments
+    :type args: list of unicode
     """
     options = {}
     # Process global arguments

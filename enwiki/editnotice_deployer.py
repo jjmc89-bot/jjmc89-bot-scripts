@@ -42,7 +42,7 @@ def get_template_titles(
     """
     Given an iterable of templates, return a set of pages.
 
-    @param templates: iterable of templates (L{pywikibot.Page})
+    :param templates: iterable of templates
     """
     titles = set()
     for template in templates:
@@ -62,7 +62,7 @@ def validate_options(
     """
     Validate the options and return bool.
 
-    @param options: options to validate
+    :param options: options to validate
     """
     pywikibot.log('Options:')
     required_keys = ['editnotice_template']
@@ -189,7 +189,7 @@ def main(*args: str) -> bool:
     """
     Process command line arguments and invoke bot.
 
-    @param args: command line arguments
+    :param args: command line arguments
     """
     options = {
         'subject_only': False,

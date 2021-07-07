@@ -31,7 +31,7 @@ def get_template_pages(
     """
     Given an iterable of templates, return a set of pages.
 
-    @param templates: iterable of templates (L{pywikibot.Page})
+    :param templates: iterable of templates
     """
     pages = set()
     for template in templates:
@@ -131,7 +131,7 @@ def main(*args: str) -> None:
     """
     Process command line arguments and invoke bot.
 
-    @param args: command line arguments
+    :param args: command line arguments
     """
     options = {}
     local_args = pywikibot.handle_args(args)

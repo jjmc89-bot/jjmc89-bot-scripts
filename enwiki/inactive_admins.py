@@ -29,10 +29,10 @@ def get_json_from_page(page):
     """
     Return JSON from the page.
 
-    @param page: Page to read
-    @type page: L{pywikibot.Page}
+    :param page: Page to read
+    :type page: pywikibot.Page
 
-    @rtype: dict
+    :rtype: dict
     """
     if page.isRedirectPage():
         pywikibot.log('{} is a redirect.'.format(page.title()))
@@ -53,10 +53,10 @@ def validate_options(options):
     """
     Validate the options and return bool.
 
-    @param options: options to validate
-    @type options: dict
+    :param options: options to validate
+    :type options: dict
 
-    @rtype: bool
+    :rtype: bool
     """
     pywikibot.log('Options:')
     notice_keys = [
@@ -108,14 +108,14 @@ def get_inactive_users(cutoff, exclusions, group=None, site=None):
     """
     Get a set of inactive users.
 
-    @param exclusions: List of users to exclude
-    @type exclusions: list
-    @param site: site to work on
-    @type site: L{pywikibot.Site}
-    @param group: only include users that are members of this group
-    @type group: str
+    :param exclusions: List of users to exclude
+    :type exclusions: list
+    :param site: site to work on
+    :type site: pywikibot.APISite
+    :param group: only include users that are members of this group
+    :type group: str
 
-    @rtype: set
+    :rtype: set
     """
     users = set()
     if not site:
@@ -133,10 +133,10 @@ def create_section(options, site=None):
     """
     Create a section of inactive admins and notify them.
 
-    @param options: Bot options
-    @type options: dict
+    :param options: Bot options
+    :type options: dict
 
-    @rtype: str
+    :rtype: str
     """
     inactive_sysops = get_inactive_users(
         options['date'] + relativedelta(years=-1),
@@ -188,12 +188,12 @@ def update_section(text, options, site=None):
     Active admins are removed and second notifications sent one week
     before the date in the section.
 
-    @param text: Text of the section
-    @type text: str
-    @param options: Bot options
-    @type options: dict
+    :param text: Text of the section
+    :type text: str
+    :param options: Bot options
+    :type options: dict
 
-    @rtype: str
+    :rtype: str
     """
     if not site:
         site = pywikibot.Site()
@@ -248,10 +248,10 @@ def split_into_sections(text):
     """
     Splits wikitext into sections based on any level wiki heading.
 
-    @param text: Text to split
-    @type text: str
+    :param text: Text to split
+    :type text: str
 
-    @rtype: list
+    :rtype: list
     """
     headings_regex = re.compile(
         r'^={1,6}.*?={1,6}(?: *<!--.*?-->)?\s*$', flags=re.M
@@ -268,13 +268,13 @@ def split_into_sections(text):
 
 
 class User(pywikibot.User):
-    """Extended L{pywikibot.User}."""
+    """Extended pywikibot.User."""
 
     def __init__(self, source, title=''):
         """
         Initializer for a User object.
 
-        All parameters are the same as for L{pywikibot.User}.
+        All parameters are the same as for pywikibot.User.
         """
         super().__init__(source, title)
         self.notifications = {
@@ -291,9 +291,9 @@ class User(pywikibot.User):
         True if the user is active.
         A user is active if they have an edit or log entry since the cutoff.
 
-        @param cutoff: Cutoff for user activity
-        @type cutoff: datetime.date
-        @rtype: bool
+        :param cutoff: Cutoff for user activity
+        :type cutoff: datetime.date
+        :rtype: bool
         """
         if self.last_edit and self.last_edit[2].date() >= cutoff:
             return True
@@ -307,7 +307,7 @@ class User(pywikibot.User):
         """
         The user's last edit.
 
-        @rtype: tuple or None
+        :rtype: tuple or None
         """
         return super().last_edit
 
@@ -317,7 +317,7 @@ class User(pywikibot.User):
         """
         The user's last log entry.
 
-        @rtype: L{pywikibot.LogEntry} or None
+        :rtype: pywikibot.LogEntry or None
         """
         for logevent in self.site.logevents(user=self.username):
             try:
@@ -334,10 +334,10 @@ class User(pywikibot.User):
         """
         Notify the user.
 
-        @param options: Bot options
-        @type options: dict
-        @param notice_number: Notice number
-        @type notice_number: int
+        :param options: Bot options
+        :type options: dict
+        :param notice_number: Notice number
+        :type notice_number: int
         """
         param_suffix = '' if notice_number == 1 else str(notice_number)
         if (
@@ -414,8 +414,8 @@ def main(*args):
     """
     Process command line arguments and invoke bot.
 
-    @param args: command line arguments
-    @type args: list of unicode
+    :param args: command line arguments
+    :type args: list of unicode
     """
     options = {
         'date': date.today() + relativedelta(months=1),
