@@ -499,7 +499,7 @@ def cat_from_node(
                 page = Page.from_wikilink(title, site, 14)
                 return pywikibot.Category(page)
         elif isinstance(node, Wikilink):
-            title = str(node.title).split('#')[0]
+            title = str(node.title).split('#', maxsplit=1)[0]
             page = Page.from_wikilink(title, site)
             return pywikibot.Category(page)
     return None
