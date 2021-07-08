@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Update page with Wikimedia Commons picture of the day
+Update page with Wikimedia Commons picture of the day.
 
 The following parameters are supported:
 
@@ -20,7 +19,9 @@ from pywikibot.bot import ExistingPageBot, MultipleSitesBot
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 
 
-docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
+docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
+    '&params;': parameterHelp
+}
 
 
 def get_template_titles(

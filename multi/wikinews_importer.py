@@ -3,7 +3,7 @@
 ##########################################################################################
 # Task             : Wikinews Importer
 #                    see https://en.wikipedia.org/wiki/User:Wikinews_Importer_Bot
-# Original author  : Misza13 / Misza (https://meta.wikimedia.org/wiki/User:Misza13 / 
+# Original author  : Misza13 / Misza (https://meta.wikimedia.org/wiki/User:Misza13 /
 #                    https://wikitech.wikimedia.org/wiki/User:Misza)
 # Original source  : wikinews-importer.py in wikinews-importer on Wikimedia Tool Labs
 #                    (https://tools.wmflabs.org/?tool=wikinews-importer)
@@ -11,14 +11,15 @@
 ##########################################################################################
 # flake8: noqa
 # pylint: disable=all
-import sys
 import re
+import sys
 import traceback
-import simplejson
-import pywikibot
-from pywikibot.data import api
-from xml.dom.minidom import parseString as minidom_parseString
 from xml.dom import Node
+from xml.dom.minidom import parseString as minidom_parseString
+
+import pywikibot
+import simplejson
+from pywikibot.data import api
 
 
 MONTHS = [u'January',u'February',u'March',u'April',u'May',u'June',u'July',u'August',u'September',u'October',u'November',u'December',

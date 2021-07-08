@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 This script fixes double (or more) category redirects.
 
@@ -22,7 +21,9 @@ from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import removeDisabledParts
 
 
-docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
+docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
+    '&params;': parameterHelp
+}
 
 
 def get_template_pages(

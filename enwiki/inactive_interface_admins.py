@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-This script reports inactive interface admins.
-"""
+"""Report inactive interface admins."""
 # Author : JJMC89
 # License: MIT
 from functools import lru_cache
@@ -43,7 +41,7 @@ class User(pywikibot.User):
     @property
     def is_active(self) -> bool:
         """
-        True if the user is active, False otherwise.
+        Return True if the user is active, False otherwise.
 
         A user is active if they have both
          1) a CSS/JS edit in the last 6 months
@@ -61,20 +59,20 @@ class User(pywikibot.User):
     @property
     @lru_cache()
     def last_edit(self) -> Optional[UserContrib]:
-        """The user's last edit."""
+        """Return the user's last edit."""
         return super().last_edit
 
     @property
     @lru_cache()
     def last_event(self) -> Optional[LogEntry]:
-        """The user's last log entry."""
+        """Return the user's last log entry."""
         return super().last_event
 
     @property
     @lru_cache()
     def has_cssjs_edit(self) -> Optional[bool]:
         """
-        True if the user has edited a CSS/JS page in the last 6 months.
+        Return True if the user has edited a CSS/JS page in the last 6 months.
 
         None if the user has not been an interface-admin for 6 months.
         False otherwise.

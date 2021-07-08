@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 This script processes Categories for discussion working pages.
 
@@ -32,7 +31,9 @@ from pywikibot.textlib import removeDisabledParts, replaceExcept
 from typing_extensions import TypedDict
 
 
-docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
+docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
+    '&params;': parameterHelp
+}
 EXCEPTIONS = ('comment', 'math', 'nowiki', 'pre', 'source')
 SUMMARIES = {
     'redirect': '[[WP:G8|G8]]: Redirect to deleted page {}',
@@ -95,7 +96,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
     """Bot to update categories."""
 
     def __init__(self, **kwargs: Any) -> None:
-        """Initializer."""
+        """Initialize."""
         self.available_options.update(  # pylint: disable=no-member
             {
                 'always': True,
@@ -109,7 +110,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
 
     def treat_wikilinks(self, text: str, textlinks: bool = False) -> str:
         """Process wikilinks."""
-        cats = list()
+        cats = []
         old_cat_link = None
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         for wikilink in wikicode.ifilter_wikilinks():
@@ -192,7 +193,7 @@ class CfdPage(Page):
     """Represents a CFD page."""
 
     def __init__(self, source: PageSource, title: str = '') -> None:
-        """Initializer."""
+        """Initialize."""
         super().__init__(source, title)
         if not (
             self.title(with_ns=False).startswith('Categories for discussion/')
@@ -295,7 +296,7 @@ class CFDWPage(Page):
     MODES = ('move', 'merge', 'empty', 'retain')
 
     def __init__(self, source: PageSource, title: str = '') -> None:
-        """Initializer."""
+        """Initialize."""
         super().__init__(source, title)
         if not (
             self.title(with_ns=False).startswith(
@@ -305,7 +306,7 @@ class CFDWPage(Page):
         ):
             raise ValueError('{} is not a CFDW page.'.format(self))
         self.mode = None  # type: Optional[str]
-        self.instructions = list()  # type: List[Instruction]
+        self.instructions = []  # type: List[Instruction]
 
     def parse(self) -> None:
         """Parse the page."""
@@ -415,7 +416,7 @@ class CFDWPage(Page):
 
     def _check_run(self) -> None:
         """Check and run the instructions."""
-        instructions = list()
+        instructions = []
         seen = set()
         skip = set()
         # Collect categories and skips.
@@ -431,7 +432,7 @@ class CFDWPage(Page):
             for new_cat in instruction['bot_options']['new_cats']:
                 seen.add(new_cat)
         # Only action instructions that shouldn't be skipped.
-        self.instructions = list()
+        self.instructions = []
         for instruction in instructions:
             old_cat = instruction['bot_options']['old_cat']
             cats = {old_cat}

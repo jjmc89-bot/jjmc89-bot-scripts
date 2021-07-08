@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-This script reports and notifies inactive admins.
-
+Reports and notifies inactive admins.
 
 The following parameters are required:
 
@@ -39,14 +38,14 @@ def get_json_from_page(page):
         page = page.getRedirectTarget()
     if not page.exists():
         pywikibot.log('{} does not exist.'.format(page.title()))
-        return dict()
+        return {}
     try:
         return json.loads(page.get().strip())
     except ValueError:
         pywikibot.error('{} does not contain valid JSON.'.format(page.title()))
         raise
     except pywikibot.exceptions.PageRelatedError:
-        return dict()
+        return {}
 
 
 def validate_options(options):
@@ -70,7 +69,7 @@ def validate_options(options):
         'note_text2',
     ]
     required_keys = notice_keys + ['date', 'exclusions']
-    has_keys = list()
+    has_keys = []
     result = True
     for key, value in options.items():
         pywikibot.log('-{} = {}'.format(key, value))
@@ -185,6 +184,7 @@ def create_section(options, site=None):
 def update_section(text, options, site=None):
     """
     Update the specified section.
+
     Active admins are removed and second notifications sent one week
     before the date in the section.
 
@@ -246,7 +246,7 @@ def update_section(text, options, site=None):
 
 def split_into_sections(text):
     """
-    Splits wikitext into sections based on any level wiki heading.
+    Split wikitext into sections based on any level wiki heading.
 
     :param text: Text to split
     :type text: str
@@ -256,7 +256,7 @@ def split_into_sections(text):
     headings_regex = re.compile(
         r'^={1,6}.*?={1,6}(?: *<!--.*?-->)?\s*$', flags=re.M
     )
-    sections = list()
+    sections = []
     last_match_start = 0
     for match in headings_regex.finditer(text):
         match_start = match.start()
@@ -268,11 +268,11 @@ def split_into_sections(text):
 
 
 class User(pywikibot.User):
-    """Extended pywikibot.User."""
+    """Extend pywikibot.User."""
 
     def __init__(self, source, title=''):
         """
-        Initializer for a User object.
+        Initialize.
 
         All parameters are the same as for pywikibot.User.
         """
@@ -288,7 +288,8 @@ class User(pywikibot.User):
 
     def is_active(self, cutoff=date.today() + relativedelta(years=-1)):
         """
-        True if the user is active.
+        Return True if the user is active.
+
         A user is active if they have an edit or log entry since the cutoff.
 
         :param cutoff: Cutoff for user activity
@@ -305,7 +306,7 @@ class User(pywikibot.User):
     @lru_cache(maxsize=None)
     def last_edit(self):
         """
-        The user's last edit.
+        Return the user's last edit.
 
         :rtype: tuple or None
         """
@@ -315,7 +316,7 @@ class User(pywikibot.User):
     @lru_cache(maxsize=None)
     def last_event(self):
         """
-        The user's last log entry.
+        Return the user's last log entry.
 
         :rtype: pywikibot.LogEntry or None
         """
@@ -419,7 +420,7 @@ def main(*args):
     """
     options = {
         'date': date.today() + relativedelta(months=1),
-        'exclusions': list(),
+        'exclusions': [],
         'max_attempts': 3,
     }
     # Process global arguments

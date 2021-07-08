@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 This script deploys editnotices.
 
@@ -31,7 +30,7 @@ from pywikibot import pagegenerators
 from pywikibot.bot import CurrentPageBot, SingleSiteBot
 
 
-docuReplacements = {  # pylint: disable=invalid-name
+docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
     '&params;': pagegenerators.parameterHelp
 }
 
@@ -66,7 +65,7 @@ def validate_options(
     """
     pywikibot.log('Options:')
     required_keys = ['editnotice_template']
-    has_keys = list()
+    has_keys = []
     for key, value in options.items():
         pywikibot.log('-{} = {}'.format(key, value))
         if key in required_keys:
@@ -121,8 +120,11 @@ def talk_page_generator(
 def editnotice_page_generator(
     generator: Iterable[pywikibot.Page],
 ) -> Generator[pywikibot.Page, None, None]:
-    """Yield editnotice pages for existing, non-redirect pages from another
-    generator."""
+    """
+    Yield editnotice pages from another generator.
+
+    Only for existing, non-redirect pages in the other generator
+    """
     for page in generator:
         if page.exists() and not page.isRedirectPage():
             title = page.title(withSection=False)
@@ -135,7 +137,7 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
     """Bot to deploy editnotices."""
 
     def __init__(self, **kwargs) -> None:
-        """Initializer."""
+        """Initialize."""
         self.available_options.update(  # pylint: disable=no-member
             {'editnotice_page': None, 'editnotice_template': None}
         )
@@ -146,6 +148,7 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
         self.editnotice_template = self.opt.editnotice_template
 
     def skip_page(self, page: pywikibot.Page) -> bool:
+        """Skip non-exitent pages with deleted revisions."""
         if not page.exists() and page.has_deleted_revisions():
             pywikibot.warning(
                 '{} has deleted revisions. Skipping.'.format(page)

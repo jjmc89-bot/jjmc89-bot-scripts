@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-This validates SVGs using the W3C nu validator.
+Validate SVGs using the W3C nu validator.
 
 The following arguments are supported:
 
@@ -22,7 +22,9 @@ from pywikibot.textlib import removeDisabledParts
 from requests.exceptions import RequestException, Timeout
 
 
-docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
+docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
+    '&params;': parameterHelp
+}
 
 
 @lru_cache()
@@ -46,10 +48,10 @@ def get_redirects(
 
 
 class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
-    """Bot to validate SVGs."""
+    """SVG validation bot."""
 
     def __init__(self, **kwargs: Any) -> None:
-        """Initializer."""
+        """Initialize."""
         super().__init__(**kwargs)
         self.nu_session = requests.Session()
         self.nu_session.headers['user-agent'] = user_agent(
@@ -146,8 +148,8 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
         assert (
             'url' not in data or data['url'] == url
         ), 'Query for {} returned data on {}.'.format(url, data['url'])
-        errors = list()
-        warnings = list()
+        errors = []
+        warnings = []
         for message in data['messages']:
             if not isinstance(message, dict):
                 pywikibot.error('Message is not an object.')

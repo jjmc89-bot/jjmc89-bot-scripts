@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-This scripts generates a tabular report of draftifications over a specified
-date range.
+Generate a tabular report of draftifications over a specified date range.
 
 The following arguments are required:
 
@@ -26,6 +24,7 @@ import pywikibot
 from dateutil.parser import parse as parse_date
 from pywikibot.pagegenerators import PrefixingPageGenerator
 
+
 BOT_START_END = re.compile(
     r'^(.*?<!--\s*bot start\s*-->).*?(<!--\s*bot end\s*-->.*)$',
     flags=re.S | re.I,
@@ -43,7 +42,7 @@ def validate_options(options, site):
     """
     pywikibot.log('Options:')
     required_keys = ['end', 'page', 'start']
-    has_keys = list()
+    has_keys = []
     result = True
     if 'start' not in options:
         options['start'] = options['end']
@@ -113,7 +112,7 @@ def iterable_to_wikitext(items):
 
 def save_bot_start_end(save_text, page, summary):
     """
-    Writes the text to the given page.
+    Write the text to the given page.
 
     :param save_text: Text to save
     :type save_text: str
@@ -137,7 +136,7 @@ def save_bot_start_end(save_text, page, summary):
 
 def output_move_log(page=None, start=None, end=None):
     """
-    Writes move logevents to a page.
+    Write move logevents to a page.
 
     :param page: The page to output to
     :type page: pywikibot.Page

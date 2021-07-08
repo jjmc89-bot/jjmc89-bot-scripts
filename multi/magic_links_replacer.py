@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 This script replaces magic links.
 
@@ -25,9 +24,11 @@ from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import replaceExcept
 
 
-docuReplacements = {'&params;': parameterHelp}  # pylint: disable=invalid-name
+docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
+    '&params;': parameterHelp
+}
 # For _create_regexes().
-_regexes = dict()  # type: Dict[str, Pattern[str]]
+_regexes = {}  # type: Dict[str, Pattern[str]]
 
 
 def get_json_from_page(page: pywikibot.Page) -> Dict[str, Any]:
@@ -38,10 +39,10 @@ def get_json_from_page(page: pywikibot.Page) -> Dict[str, Any]:
     """
     if not page.exists():
         pywikibot.error('{} does not exist.'.format(page.title()))
-        return dict()
+        return {}
     if page.isRedirectPage():
         pywikibot.error('{} is a redirect.'.format(page.title()))
-        return dict()
+        return {}
     try:
         return json.loads(page.get().strip())
     except ValueError:
@@ -120,14 +121,14 @@ def _create_regexes() -> None:
 
 def split_into_sections(text: str) -> List[str]:
     """
-    Splits wikitext into sections based on any level wiki heading.
+    Split wikitext into sections based on any level wiki heading.
 
     :param text: Text to split
     """
     headings_regex = re.compile(
         r'^={1,6}.*?={1,6}(?: *<!--.*?-->)?\s*$', flags=re.M
     )
-    sections = list()
+    sections = []
     last_match_start = 0
     for match in headings_regex.finditer(text):
         match_start = match.start()

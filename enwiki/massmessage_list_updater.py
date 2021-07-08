@@ -159,7 +159,7 @@ class UserGroupsMassMessageListUpdater(
         if added_count or removed_count or renamed_count:
             new_page_json = OrderedDict()
             new_page_json['description'] = page_json['description']
-            new_page_json['targets'] = list()
+            new_page_json['targets'] = []
             for page in sorted(
                 page_dict.pop('>nonusers') | set(page_dict.values())
             ):
@@ -231,10 +231,10 @@ def get_json_from_page(page: pywikibot.Page) -> Dict[str, Any]:
     """
     if not page.exists():
         pywikibot.error('{} does not exist.'.format(page.title()))
-        return dict()
+        return {}
     if page.isRedirectPage():
         pywikibot.error('{} is a redirect.'.format(page.title()))
-        return dict()
+        return {}
     try:
         return json.loads(page.get().strip())
     except ValueError:
@@ -256,7 +256,7 @@ def validate_config(
         pywikibot.log('-{} = {}'.format(title, page_config))
         page_config['page'] = pywikibot.Page(site, title)
         required_keys = ['enabled', 'group', 'page']
-        has_keys = list()
+        has_keys = []
         for key, value in page_config.items():
             if key in required_keys:
                 has_keys.append(key)
@@ -286,7 +286,7 @@ def get_renames(
     site: pywikibot.site.APISite,
 ) -> List[Rename]:
     """Retrun a sorted list of reenames."""
-    renames = list()
+    renames = []
     rename_events = rename_site.logevents(
         logtype=logtype, start=start, end=end, reverse=True
     )
@@ -313,7 +313,7 @@ def get_group_changes(
     meta: Optional[pywikibot.site.APISite],
 ) -> List[GroupChange]:
     """Return a sorted list of group canges."""
-    group_changes = list()
+    group_changes = []
     rights_events = site.logevents(
         logtype='rights', start=start, end=end, reverse=True
     )
