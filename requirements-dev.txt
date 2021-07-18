@@ -1,3 +1,2 @@
-# pre-commit==2.13.0
-pylint==2.9.3; python_version >= '3.6'
-pylint==2.6.2; python_version == '3.5'
+pre-commit==2.13.0
+pylint==2.9.3

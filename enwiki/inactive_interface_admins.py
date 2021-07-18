@@ -84,32 +84,30 @@ class User(pywikibot.User):
         for page, _, _, summary in self.contributions(total=None, **kwa):
             if not (
                 page.content_model not in ('css', 'javascript')
-                or page.title().startswith('{}/'.format(self.title()))
+                or page.title().startswith(f'{self.title()}/')
                 or 'while renaming the user' in summary
             ):
                 return True
-        pywikibot.log('{}: No CSS/JS edit'.format(self.username))
+        pywikibot.log(f'{self!r}: No CSS/JS edit')
         got_group = kwa['end']
         rights_events = sorted(
             chain(
                 self.site.logevents(logtype='rights', page=self),
                 pywikibot.Site('meta', 'meta').logevents(
                     logtype='rights',
-                    page='{}@{}'.format(self.title(), self.site.dbName()),
+                    page=f'{self.title()}@{self.site.dbName()}',
                 ),
             ),
             key=lambda logevent: logevent.timestamp(),
             reverse=True,
         )
         for logevent in rights_events:
-            added_groups = set(logevent.newgroups) - set(
-                logevent.oldgroups
-            )
+            added_groups = set(logevent.newgroups) - set(logevent.oldgroups)
             if 'interface-admin' in added_groups:
                 got_group = logevent.timestamp()
                 break
         if kwa['end'] < got_group:
-            pywikibot.log('{}: Not iadmin for 6 mo.'.format(self.username))
+            pywikibot.log(f'{self!r}: Not iadmin for 6 mo.')
             return None
         return False
 
@@ -126,12 +124,13 @@ def main(*args: str) -> None:
     users = get_inactive_users(site=site)
     if not users:
         return
-    heading = 'Inactive interface administrators {}'.format(
-        site.server_time().date().isoformat()
+    heading = (
+        'Inactive interface administrators '
+        f'{site.server_time().date().isoformat()}'
     )
     text = 'The following interface administrator(s) are inactive:'
     for user in sorted(users):
-        text += '\n* {{{{admin|1={}}}}}'.format(user.username)
+        text += f'\n* {{{{admin|1={user.username}}}}}'
     text += '\n~~~~'
     pywikibot.Page(
         site, "Wikipedia:Interface administrators' noticeboard"

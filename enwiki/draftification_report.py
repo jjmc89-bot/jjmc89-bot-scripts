@@ -47,7 +47,7 @@ def validate_options(options, site):
     if 'start' not in options:
         options['start'] = options['end']
     for key, value in options.items():
-        pywikibot.log('-{} = {}'.format(key, value))
+        pywikibot.log(f'-{key} = {value}')
         if key in required_keys:
             has_keys.append(key)
         if key in 'end' 'start':
@@ -55,14 +55,14 @@ def validate_options(options, site):
                 try:
                     options[key] = parse_date(value).date()
                 except ValueError as e:
-                    pywikibot.log('Invalid date: {}'.format(e))
+                    pywikibot.log(f'Invalid date: {e}')
                     result = False
         elif key == 'page':
             if not isinstance(value, str):
                 pywikibot.log('Must be a string.')
                 result = False
             options[key] = pywikibot.Page(site, value)
-        pywikibot.log('\u2192{} = {}'.format(key, options[key]))
+        pywikibot.log(f'\u2192{key} = {options[key]}')
     if sorted(has_keys) != sorted(required_keys):
         pywikibot.log('Missing one more required keys.')
         result = False
@@ -103,10 +103,10 @@ def iterable_to_wikitext(items):
     :rtype: str
     """
     if len(items) == 1:
-        return '{}'.format(next(iter(items)))
+        return f'{next(iter(items))}'
     text = ''
     for item in items:
-        text += '\n* {}'.format(item)
+        text += f'\n* {item}'
     return text
 
 
@@ -124,14 +124,12 @@ def save_bot_start_end(save_text, page, summary):
     save_text = save_text.strip()
     if page.exists():
         if BOT_START_END.match(page.text):
-            page.text = BOT_START_END.sub(
-                r'\1\n{}\2'.format(save_text), page.text
-            )
+            page.text = BOT_START_END.sub(fr'\1\n{save_text}\2', page.text)
         else:
             page.text = save_text
         page.save(summary=summary, minor=False, botflag=False)
     else:
-        pywikibot.error('{} does not exist. Skipping.'.format(page.title()))
+        pywikibot.error(f'{page!r} does not exist. Skipping.')
 
 
 def output_move_log(page=None, start=None, end=None):
@@ -164,11 +162,7 @@ def output_move_log(page=None, start=None, end=None):
                 try:
                     redirect_target = current_page.getRedirectTarget()
                 except pywikibot.exceptions.CircularRedirectError:
-                    pywikibot.log(
-                        '{} is a circular redirect.'.format(
-                            current_page.title(asLink=True)
-                        )
-                    )
+                    pywikibot.log(f'{current_page!r} is a circular redirect.')
                 else:
                     if redirect_target.exists() and (
                         redirect_target.namespace() in (0, 2, 118)
@@ -178,9 +172,7 @@ def output_move_log(page=None, start=None, end=None):
             current_page = logevent.page()
         if current_page:
             if current_page.oldest_revision.user:
-                creator = '[[User:{}]]'.format(
-                    current_page.oldest_revision.user
-                )
+                creator = f'[[User:{current_page.oldest_revision.user}]]'
             creation = (
                 '[[Special:PermaLink/{rev.revid}|{rev.timestamp}]]'.format(
                     rev=current_page.oldest_revision
@@ -212,18 +204,14 @@ def output_move_log(page=None, start=None, end=None):
             )
         )
     if text:
-        if start.date() == end.date():
-            caption = 'Report for {}'.format(start.date().isoformat())
-        else:
-            caption = 'Report for {} to {}'.format(
-                start.date().isoformat(), end.date().isoformat()
-            )
+        caption = f'Report for {start.date().isoformat()}'
+        if start.date() != end.date():
+            caption += f' to {end.date().isoformat()}'
         caption += '; Last updated: ~~~~~'
         text = (
-            '\n{{| class="wikitable sortable plainlinks"\n|+ {caption}'
+            f'\n{{| class="wikitable sortable plainlinks"\n|+ {caption}'
             '\n! Page !! Target !! Mover !! Move date/time !! Move summary !! '
-            'Creator !! Creation !! Editors !! Last edit !! Notes{body}\n|}}'
-            .format(caption=caption, body=text)
+            f'Creator !! Creation !! Editors !! Last edit !! Notes{text}\n|}}'
         )
     else:
         text = 'None'
@@ -249,7 +237,7 @@ def main(*args):
         if arg in 'end' 'page' 'start':
             if not value:
                 value = pywikibot.input(
-                    'Please enter a value for {}'.format(arg), default=None
+                    f'Please enter a value for {arg}', default=None
                 )
             options[arg] = value
         else:
