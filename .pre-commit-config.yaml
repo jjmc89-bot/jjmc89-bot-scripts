@@ -29,6 +29,8 @@ repos:
       - id: mixed-line-ending
       - id: name-tests-test
       - id: pretty-format-json
+      - id: requirements-txt-fixer
+      - id: sort-simple-yaml
       - id: trailing-whitespace
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.1.10
