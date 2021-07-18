@@ -265,7 +265,7 @@ def validate_config(
                     return False
             elif key == 'group':
                 if isinstance(value, str):
-                    page_config[key] = set([value])
+                    page_config[key] = {value}
                 else:
                     return False
             elif key == 'page':

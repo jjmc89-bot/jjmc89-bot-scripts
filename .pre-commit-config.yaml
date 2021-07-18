@@ -22,6 +22,9 @@ repos:
       - id: destroyed-symlinks
       - id: end-of-file-fixer
       - id: fix-byte-order-marker
+      - id: fix-encoding-pragma
+        args:
+          - --remove
       - id: forbid-new-submodules
       - id: mixed-line-ending
       - id: name-tests-test
@@ -32,6 +35,12 @@ repos:
     hooks:
       - id: remove-crlf
       - id: remove-tabs
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.21.0
+    hooks:
+      - id: pyupgrade
+        args:
+          - --py3-plus
   - repo: https://github.com/PyCQA/isort
     rev: 5.9.2
     hooks:
@@ -45,6 +54,13 @@ repos:
           - flake8-docstrings
           - flake8-typing-imports
           - pep8-naming
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.0
+    hooks:
+      - id: bandit
+        args:
+          - --skip
+          - B101
   - repo: https://github.com/PyCQA/flake8
     rev: 3.9.2
     hooks:
