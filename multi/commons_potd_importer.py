@@ -54,7 +54,7 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
         # T266084
         # date = self.commons.server_time().date().isoformat()
         date = datetime.utcnow().date().isoformat()
-        self.potd_title = 'Template:Potd/{}'.format(date)
+        self.potd_title = f'Template:Potd/{date}'
         potd_tpl = pywikibot.Page(self.commons, self.potd_title)
         potd_fn_titles = get_template_titles(
             [pywikibot.Page(self.commons, 'Template:Potd filename')]
@@ -83,7 +83,7 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
         summary = 'Updating Commons picture of the day, '
         caption = ''
         for lang in {site.lang, 'en'}:
-            caption_title = '{} ({})'.format(self.potd_title, lang)
+            caption_title = f'{self.potd_title} ({lang})'
             caption_page = pywikibot.Page(self.commons, caption_title)
             if not caption_page.exists():
                 continue
@@ -106,22 +106,17 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
                     title = wikilink.title.strip()
                     prefix = ':c' + ('' if title.startswith(':') else ':')
                     wikilink.title = prefix + title
-                summary += '[[:c:{}|caption attribution]]'.format(
-                    caption_title
-                )
+                summary += f'[[:c:{caption_title}|caption attribution]]'
                 caption = str(caption_wikicode)
                 break
         else:
             summary += 'failed to get a caption'
         text = (
             '<includeonly>{{{{#switch:{{{{{{1|}}}}}}\n'
-            '|caption={caption}\n'
-            '|#default={file}\n'
-            '}}}}</includeonly><noinclude>{{{{{doc}}}}}</noinclude>'.format(
-                caption=caption,
-                file=self.potd,
-                doc=doc_tpl.title(with_ns=False),
-            )
+            f'|caption={caption}\n'
+            f'|#default={self.potd}\n'
+            '}}}}</includeonly><noinclude>'
+            f'{{{{{doc_tpl.title(with_ns=False)}}}}}</noinclude>'
         )
         self.put_current(text, summary=summary, minor=False)
 

@@ -24,26 +24,26 @@ from pywikibot.pagegenerators import PreloadingGenerator
 from typing_extensions import TypedDict
 
 
-GroupChange = TypedDict(
-    'GroupChange',
-    {
-        'user': pywikibot.User,
-        'added': Set[str],
-        'removed': Set[str],
-        'timestamp': pywikibot.Timestamp,
-    },
-)
 PageDict = Dict[
     Union[str, pywikibot.User], Union[pywikibot.Page, Set[pywikibot.Page]]
 ]
-Rename = TypedDict(
-    'Rename',
-    {
-        'olduser': pywikibot.User,
-        'newuser': pywikibot.User,
-        'timestamp': pywikibot.Timestamp,
-    },
-)
+
+
+class GroupChange(TypedDict):
+    """Group change."""
+
+    user: pywikibot.User
+    added: Set[str]
+    removed: Set[str]
+    timestamp: pywikibot.Timestamp
+
+
+class Rename(TypedDict):
+    """Rename."""
+
+    olduser: pywikibot.User
+    newuser: pywikibot.User
+    timestamp: pywikibot.Timestamp
 
 
 class UserGroupsMassMessageListUpdater(
@@ -69,12 +69,12 @@ class UserGroupsMassMessageListUpdater(
         class_name = self.__class__.__name__
         page = pywikibot.Page(
             self.site,
-            'User:{}/shutoff/{}.json'.format(self.site.username(), class_name),
+            f'User:{self.site.username()}/shutoff/{class_name}.json',
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                pywikibot.error('{} disabled:\n{}'.format(class_name, content))
+                pywikibot.error(f'{class_name} disabled:\n{content}')
                 self.quit()
 
     def treat_page(self) -> None:
@@ -109,29 +109,21 @@ class UserGroupsMassMessageListUpdater(
                 newpage = pywikibot.Page(
                     self.site,
                     re.sub(
-                        r':{}\b'.format(re.escape(user.title(with_ns=False))),
-                        ':{}'.format(newuser.title(with_ns=False)),
+                        fr':{re.escape(user.title(with_ns=False))}\b',
+                        f':{newuser.title(with_ns=False)}',
                         page.title(),
                     ),
                 )
                 pywikibot.log(
-                    '{} renamed to {} ({} to {})'.format(
-                        user.title(),
-                        newuser.title(),
-                        page.title(),
-                        newpage.title(),
-                    )
+                    f'{user.title()} renamed to {newuser.title()} '
+                    f'({page.title()} to {newpage.title()})'
                 )
                 user = newuser
                 page = newpage
                 renamed_count += 1
             if page_config.get('required', None):
                 if not page_config['group'] & set(user.groups()):
-                    pywikibot.log(
-                        'Removed {}, not in required group'.format(
-                            user.title()
-                        )
-                    )
+                    pywikibot.log(f'Removed {user}, not in required group')
                     removed_count += 1
                     continue
             page_dict[user] = page
@@ -145,14 +137,14 @@ class UserGroupsMassMessageListUpdater(
                 and 'bot' not in user.groups()
                 and user not in page_dict
             ):
-                pywikibot.log('Added {}'.format(user.title()))
+                pywikibot.log(f'Added {user.title()}')
                 page_dict[user] = user.toggleTalkPage()
                 added_count += 1
             if page_config.get('remove', None) and (
                 page_config['group'] & change['removed']
             ):
                 if page_dict.pop(user, None):
-                    pywikibot.log('Removed {}'.format(user.title()))
+                    pywikibot.log(f'Removed {user.title()}')
                     removed_count += 1
 
         # Build JSON and save.
@@ -165,11 +157,16 @@ class UserGroupsMassMessageListUpdater(
             ):
                 new_page_json['targets'].append({'title': page.title()})
             text = json.dumps(new_page_json, ensure_ascii=False, indent=4)
-            summary = 'Update MassMessage list: {} added, {} removed'.format(
-                added_count, removed_count
-            )
+            if added_count + removed_count + renamed_count == 0:
+                return
+            summary_parts = []
+            if added_count > 0:
+                summary_parts.append(f'{added_count} added')
+            if removed_count > 0:
+                summary_parts.append(f'{removed_count} removed')
             if renamed_count > 0:
-                summary += ', {} renamed'.format(renamed_count)
+                summary_parts.append(f'{renamed_count} renamed')
+            summary = f"Update MassMessage list: {','.join(summary_parts)}"
             self.put_current(text, summary=summary, minor=False)
 
 
@@ -178,13 +175,17 @@ def make_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description='Update user groups MassMessage lists',
         epilog=re.sub(
-            r'\n\n?-help +.+?(\n\n-|\s*$)', r'\1', _GLOBAL_HELP, flags=re.S,
+            r'\n\n?-help +.+?(\n\n-|\s*$)',
+            r'\1',
+            _GLOBAL_HELP,
+            flags=re.S,
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         allow_abbrev=False,
     )
     parser.add_argument(
-        'config', help='Page title that has the JSON config (object)',
+        'config',
+        help='Page title that has the JSON config (object)',
     )
     parser.add_argument(
         '--always',
@@ -230,15 +231,15 @@ def get_json_from_page(page: pywikibot.Page) -> Dict[str, Any]:
     :param page: Page to read
     """
     if not page.exists():
-        pywikibot.error('{} does not exist.'.format(page.title()))
+        pywikibot.error(f'{page!r} does not exist.')
         return {}
     if page.isRedirectPage():
-        pywikibot.error('{} is a redirect.'.format(page.title()))
+        pywikibot.error(f'{page!r} is a redirect.')
         return {}
     try:
         return json.loads(page.get().strip())
     except ValueError:
-        pywikibot.error('{} does not contain valid JSON.'.format(page.title()))
+        pywikibot.error(f'{page!r} does not contain valid JSON.')
         raise
 
 
@@ -253,7 +254,7 @@ def validate_config(
     """
     pywikibot.log('config:')
     for title, page_config in config.items():
-        pywikibot.log('-{} = {}'.format(title, page_config))
+        pywikibot.log(f'-{title} = {page_config}')
         page_config['page'] = pywikibot.Page(site, title)
         required_keys = ['enabled', 'group', 'page']
         has_keys = []
@@ -337,7 +338,7 @@ def get_group_changes(
                     user=pywikibot.User(
                         site,
                         re.sub(
-                            r'{}$'.format(site.suffix),
+                            fr'{site.suffix}$',
                             '',
                             log_event.page().title(),
                         ),
@@ -359,7 +360,7 @@ def main(*args: str) -> None:
     local_args = pywikibot.handle_args(args, do_help=False)
     site = pywikibot.Site()
     site.login()
-    site.suffix = '@{}'.format(site.dbName())
+    site.suffix = f'@{site.dbName()}'
     parser = make_arg_parser()
     options = vars(parser.parse_args(args=local_args))
     config_page = pywikibot.Page(site, options.pop('config'))

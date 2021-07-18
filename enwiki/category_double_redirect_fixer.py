@@ -72,10 +72,10 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
         if super().skip_page(page):
             return True
         if not isinstance(page, pywikibot.Category):
-            pywikibot.error('{} is not a category.'.format(page))
+            pywikibot.error(f'{page!r} is not a category.')
             return True
         if not page.isCategoryRedirect():
-            pywikibot.error('{} is not a category redirect'.format(page))
+            pywikibot.error(f'{page!r} is not a category redirect')
             return True
         target = page.getCategoryRedirectTarget()
         if not target.isCategoryRedirect():
@@ -87,12 +87,12 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
         class_name = self.__class__.__name__
         page = pywikibot.Page(
             self.site,
-            'User:{}/shutoff/{}.json'.format(self.site.username(), class_name),
+            f'User:{self.site.username()}/shutoff/{class_name}.json',
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                pywikibot.error('{} disabled:\n{}'.format(class_name, content))
+                pywikibot.error(f'{class_name} disabled:\n{content}')
                 self.quit()
 
     def treat_page(self) -> None:
@@ -104,8 +104,8 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
             target = target.getCategoryRedirectTarget()
             if target in seen:
                 pywikibot.error(
-                    'Skipping {} due to possible circular redirect at {}.'
-                    .format(self.current_page, target)
+                    f'Skipping {self.current_page!r} due to possible circular'
+                    f' redirect at {target!r}.'
                 )
                 return
             seen.add(target)
@@ -146,7 +146,7 @@ def main(*args: str) -> None:
         if arg == 'summary':
             if not value:
                 value = pywikibot.input(
-                    'Please enter a value for {}'.format(arg), default=None
+                    f'Please enter a value for {arg}', default=None
                 )
             options[arg] = value
         else:

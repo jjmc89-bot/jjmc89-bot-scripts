@@ -73,16 +73,16 @@ class DfyTaggerBot(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         )
         super().__init__(**kwargs)
         template = self.opt.template
-        self.add_text = '\n\n{{{{subst:{tpl}}}}}'.format(tpl=template)
+        self.add_text = f'\n\n{{{{subst:{template}}}}}'
         self.summary = self.opt.summary.format(tpl=template)
 
     def skip_page(self, page: pywikibot.Page) -> bool:
         """Skip non-drafts and drafts with the template."""
         if page.namespace() != 118:
-            pywikibot.warning('{} is not a draft.'.format(page))
+            pywikibot.warning(f'{page!r} is not a draft.')
             return True
         if has_template(page, self.opt.template):
-            pywikibot.warning('{} already has the template.'.format(page))
+            pywikibot.warning(f'{page!r} already has the template.')
             return True
         return super().skip_page(page)
 
@@ -91,12 +91,12 @@ class DfyTaggerBot(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         class_name = self.__class__.__name__
         page = pywikibot.Page(
             self.site,
-            'User:{}/shutoff/{}.json'.format(self.site.username(), class_name),
+            f'User:{self.site.username()}/shutoff/{class_name}.json',
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                pywikibot.error('{} disabled:\n{}'.format(class_name, content))
+                pywikibot.error(f'{class_name} disabled:\n{content}')
                 self.quit()
 
     def treat_page(self) -> None:
