@@ -67,7 +67,7 @@ def validate_options(
     required_keys = ['editnotice_template']
     has_keys = []
     for key, value in options.items():
-        pywikibot.log('-{} = {}'.format(key, value))
+        pywikibot.log(f'-{key} = {value}')
         if key in required_keys:
             has_keys.append(key)
         if key == 'editnotice_template':
@@ -127,8 +127,8 @@ def editnotice_page_generator(
     """
     for page in generator:
         if page.exists() and not page.isRedirectPage():
-            title = page.title(withSection=False)
-            editnotice_title = 'Template:Editnotices/Page/{}'.format(title)
+            title = page.title(with_section=False)
+            editnotice_title = f'Template:Editnotices/Page/{title}'
             editnotice_page = pywikibot.Page(page.site, editnotice_title)
             yield editnotice_page
 
@@ -150,9 +150,7 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
     def skip_page(self, page: pywikibot.Page) -> bool:
         """Skip non-exitent pages with deleted revisions."""
         if not page.exists() and page.has_deleted_revisions():
-            pywikibot.warning(
-                '{} has deleted revisions. Skipping.'.format(page)
-            )
+            pywikibot.warning(f'{page!r} has deleted revisions. Skipping.')
             return True
         return super().skip_page(page)
 
@@ -161,12 +159,12 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
         class_name = self.__class__.__name__
         page = pywikibot.Page(
             self.site,
-            'User:{}/shutoff/{}.json'.format(self.site.username(), class_name),
+            f'User:{self.site.username()}/shutoff/{class_name}.json',
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                pywikibot.error('{} disabled:\n{}'.format(class_name, content))
+                pywikibot.error(f'{class_name} disabled:\n{content}')
                 self.quit()
 
     def treat_page(self) -> None:
@@ -213,7 +211,7 @@ def main(*args: str) -> bool:
         if arg == 'editnotice_template':
             if not value:
                 value = pywikibot.input(
-                    'Please enter a value for {}'.format(arg), default=None
+                    f'Please enter a value for {arg}', default=None
                 )
             options[arg] = value
         else:

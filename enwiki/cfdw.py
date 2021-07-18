@@ -52,44 +52,43 @@ TPL = {
     'old cfd': ['Old CfD'],
 }  # type: Dict[str, Iterable[Union[str, pywikibot.Page]]]
 
-BotOptions = TypedDict(
-    'BotOptions',
-    {
-        'old_cat': pywikibot.Category,
-        'new_cats': List[pywikibot.Category],
-        'generator': Iterable[pywikibot.Page],
-        'site': pywikibot.site.BaseSite,
-        'summary': str,
-    },
-    total=False,
-)
-Instruction = TypedDict(
-    'Instruction',
-    {
-        'mode': str,
-        'bot_options': BotOptions,
-        'cfd_page': 'CfdPage',
-        'action': str,
-        'noredirect': bool,
-        'redirect': bool,
-        'result': str,
-    },
-    total=False,
-)
-LineResults = TypedDict(
-    'LineResults',
-    {
-        'cfd_page': Optional['CfdPage'],
-        'new_cats': List[pywikibot.Category],
-        'old_cat': Optional[pywikibot.Category],
-        'prefix': str,
-        'suffix': str,
-    },
-)
+
 PageSource = Union[
     pywikibot.Page, pywikibot.site.BaseSite, pywikibot.page.BaseLink
 ]
 PageType = TypeVar("PageType", bound="Page")
+
+
+class BotOptions(TypedDict, total=False):
+    """Bot optsions."""
+
+    old_cat: pywikibot.Category
+    new_cats: List[pywikibot.Category]
+    generator: Iterable[pywikibot.Page]
+    site: pywikibot.site.BaseSite
+    summary: str
+
+
+class Instruction(TypedDict, total=False):
+    """Instruction."""
+
+    mode: str
+    bot_options: BotOptions
+    cfd_page: 'CfdPage'
+    action: str
+    noredirect: bool
+    redirect: bool
+    result: str
+
+
+class LineResults(TypedDict):
+    """Line results."""
+
+    cfd_page: Optional['CfdPage']
+    new_cats: List[pywikibot.Category]
+    old_cat: Optional[pywikibot.Category]
+    prefix: str
+    suffix: str
 
 
 class CfdBot(SingleSiteBot, ExistingPageBot):
@@ -126,9 +125,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
                 old_cat_link = wikilink
         if not old_cat_link:
             pywikibot.log(
-                'Did not find {} in {}.'.format(
-                    self.opt.old_cat, self.current_page
-                )
+                f'Did not find {self.opt.old_cat!r} in {self.current_page!r}.'
             )
             return text
         new_cats = self.opt.new_cats
@@ -199,7 +196,7 @@ class CfdPage(Page):
             self.title(with_ns=False).startswith('Categories for discussion/')
             and self.namespace() == 4
         ):
-            raise ValueError('{} is not a CFD page.'.format(self))
+            raise ValueError(f'{self!r} is not a CFD page.')
 
     def find_discussion(self, category: pywikibot.Category) -> 'CfdPage':
         """
@@ -221,7 +218,7 @@ class CfdPage(Page):
                     break
             else:
                 discussion = self.__class__.from_wikilink(
-                    '{}#{}'.format(self.title(), heading_title), self.site
+                    f'{self.title()}#{heading_title}', self.site
                 )
                 if category.title() == heading_title:
                     return discussion
@@ -304,7 +301,7 @@ class CFDWPage(Page):
             )
             and self.namespace() == 4
         ):
-            raise ValueError('{} is not a CFDW page.'.format(self))
+            raise ValueError(f'{self!r} is not a CFDW page.')
         self.mode = None  # type: Optional[str]
         self.instructions = []  # type: List[Instruction]
 
@@ -349,7 +346,7 @@ class CFDWPage(Page):
             prefix = line_results['prefix'] + cfd_prefix
             suffix = line_results['suffix'] or cfd_suffix
             if 'NO BOT' in prefix:
-                pywikibot.log('Bot disabled for: {}'.format(line))
+                pywikibot.log(f'Bot disabled for: {line}')
                 continue
             cfd = cfd_page.find_discussion(line_results['old_cat'])
             instruction['cfd_page'] = cfd
@@ -439,8 +436,8 @@ class CFDWPage(Page):
             cats.update(instruction['bot_options']['new_cats'])
             if cats & skip:
                 pywikibot.warning(
-                    '{} is involved in multiple instructions. Skipping: '
-                    '{}.'.format(old_cat, instruction)
+                    f'{old_cat!r} is involved in multiple instructions. '
+                    f'Skipping: {instruction!r}.'
                 )
             elif check_instruction(instruction):
                 self.instructions.append(instruction)
@@ -509,82 +506,52 @@ def cat_from_node(
 def check_instruction(instruction: Instruction) -> bool:
     """Check if the instruction can be performeed."""
     bot_options = instruction['bot_options']
-    if bot_options['old_cat'] in bot_options['new_cats']:
-        pywikibot.error(
-            '{} is also a {} target.'.format(
-                bot_options['old_cat'], instruction['mode']
-            )
-        )
+    old_cat = bot_options['old_cat']
+    new_cats = bot_options['new_cats']
+    if old_cat in new_cats:
+        pywikibot.error(f"{old_cat!r} is also a {instruction['mode']} target.")
         return False
     if instruction['mode'] == 'empty':
-        if bot_options['new_cats']:
-            pywikibot.error(
-                'empty mode has new categories for {}.'.format(
-                    bot_options['old_cat']
-                )
-            )
+        if new_cats:
+            pywikibot.error(f'empty mode has new categories for {old_cat!r}.')
             return False
     elif instruction['mode'] == 'merge':
-        if not bot_options['new_cats']:
+        if not new_cats:
             pywikibot.error(
-                'merge mode has no new categories for {}.'.format(
-                    bot_options['old_cat']
-                )
+                f'merge mode has no new categories for {old_cat!r}.'
             )
             return False
-        for new_cat in bot_options['new_cats']:
+        for new_cat in new_cats:
             if not new_cat.exists():
-                pywikibot.error('{} does not exist.'.format(new_cat))
+                pywikibot.error(f'{new_cat!r} does not exist.')
                 return False
             if new_cat.isCategoryRedirect() or new_cat.isRedirectPage():
-                pywikibot.error('{} is a redirect.'.format(new_cat))
+                pywikibot.error(f'{new_cat!r} is a redirect.')
                 return False
     elif instruction['mode'] == 'move':
-        if len(bot_options['new_cats']) != 1:
-            pywikibot.error(
-                'move mode has {} new categories.'.format(
-                    len(bot_options['new_cats'])
-                )
-            )
+        if len(new_cats) != 1:
+            pywikibot.error(f'move mode has {len(new_cats)} new categories.')
             return False
         if (
-            bot_options['old_cat'].isCategoryRedirect()
-            or bot_options['old_cat'].isRedirectPage()
-        ) and not bot_options['new_cats'][0].exists():
-            pywikibot.error(
-                'No target for move to {}.'.format(bot_options['new_cats'][0])
-            )
+            old_cat.isCategoryRedirect() or old_cat.isRedirectPage()
+        ) and not new_cats[0].exists():
+            pywikibot.error(f'No target for move to {new_cats[0]!r}.')
             return False
-        if (
-            bot_options['new_cats'][0].isCategoryRedirect()
-            or bot_options['new_cats'][0].isRedirectPage()
-        ):
-            pywikibot.error(
-                '{} is a redirect.'.format(bot_options['new_cats'][0])
-            )
+        if new_cats[0].isCategoryRedirect() or new_cats[0].isRedirectPage():
+            pywikibot.error(f'{new_cats[0]!r} is a redirect.')
             return False
     elif instruction['mode'] == 'retain':
-        if not bot_options['old_cat'].exists():
-            pywikibot.error(
-                '{} does not exist.'.format(bot_options['old_cat'])
-            )
+        if not old_cat.exists():
+            pywikibot.error(f'{old_cat!r} does not exist.')
             return False
-        if bot_options['new_cats']:
-            pywikibot.error(
-                'retain mode has new categories for {}.'.format(
-                    bot_options['old_cat']
-                )
-            )
+        if new_cats:
+            pywikibot.error(f'retain mode has new categories for {old_cat!r}.')
             return False
         if not instruction['action'] or not instruction['result']:
-            pywikibot.error(
-                'Missing action or result for {}.'.format(
-                    bot_options['old_cat']
-                )
-            )
+            pywikibot.error(f'Missing action or result for {old_cat!r}.')
             return False
     else:
-        pywikibot.error('Unknown mode: {}.'.format(instruction['mode']))
+        pywikibot.error(f"Unknown mode: {instruction['mode']}.")
         return False
     return True
 
@@ -623,8 +590,9 @@ def do_instruction(instruction: Instruction) -> None:
     bot_options['site'] = cfd_page.site
     cfd_link = cfd_page.title(as_link=True)
     if instruction['mode'] == 'empty':
-        bot_options['summary'] = 'Removing {old_cat} per {cfd}'.format(
-            old_cat=old_cat.title(as_link=True, textlink=True), cfd=cfd_link
+        bot_options['summary'] = (
+            f'Removing {old_cat.title(as_link=True, textlink=True)} per '
+            f'{cfd_link}'
         )
         CfdBot(**bot_options).run()
         # Wait for the category to be registered as empty.
@@ -633,24 +601,22 @@ def do_instruction(instruction: Instruction) -> None:
             delete_page(old_cat, cfd_link)
     elif instruction['mode'] == 'merge':
         redirect = False
-        if len(bot_options['new_cats']) == 1:
+        n_new_cats = len(bot_options['new_cats'])
+        if n_new_cats == 1:
             new_cats = bot_options['new_cats'][0].title(
                 as_link=True, textlink=True
             )
             redirect = instruction['redirect']
-        elif len(bot_options['new_cats']) == 2:
+        elif n_new_cats == 2:
             new_cats = ' and '.join(
                 cat.title(as_link=True, textlink=True)
                 for cat in bot_options['new_cats']
             )
         else:
-            new_cats = '{} categories'.format(len(bot_options['new_cats']))
-        bot_options[
-            'summary'
-        ] = 'Merging {old_cat} to {new_cats} per {cfd}'.format(
-            old_cat=old_cat.title(as_link=True, textlink=True),
-            new_cats=new_cats,
-            cfd=cfd_link,
+            new_cats = '{n_new_cats} categories'
+        bot_options['summary'] = (
+            f'Merging {old_cat.title(as_link=True, textlink=True)} to '
+            f'{new_cats} per {cfd_link}'
         )
         CfdBot(**bot_options).run()
         # Wait for the category to be registered as empty.
@@ -664,9 +630,7 @@ def do_instruction(instruction: Instruction) -> None:
                 redirect_cat(
                     old_cat,
                     bot_options['new_cats'][0],
-                    'Merged to {new_cats} per {cfd}'.format(
-                        new_cats=new_cats, cfd=cfd_link
-                    ),
+                    f'Merged to {new_cats} per {cfd_link}',
                 )
             else:
                 delete_page(old_cat, cfd_link)
@@ -684,20 +648,14 @@ def do_instruction(instruction: Instruction) -> None:
                 noredirect=instruction['noredirect'],
             )
             remove_cfd_tpl(bot_options['new_cats'][0], 'Category moved')
-        bot_options[
-            'summary'
-        ] = 'Moving {old_cat} to {new_cat} per {cfd}'.format(
-            old_cat=old_cat.title(as_link=True, textlink=True),
-            new_cat=bot_options['new_cats'][0].title(
-                as_link=True, textlink=True
-            ),
-            cfd=cfd_link,
+        bot_options['summary'] = (
+            f"Moving {old_cat.title(as_link=True, textlink=True)} to "
+            f"{bot_options['new_cats'][0].title(as_link=True, textlink=True)}"
+            f" per {cfd_link}"
         )
         CfdBot(**bot_options).run()
     elif instruction['mode'] == 'retain':
-        summary = '{cfd} closed as {result}'.format(
-            cfd=cfd_link, result=instruction['result']
-        )
+        summary = f"{cfd_link} closed as {instruction['result']}"
         remove_cfd_tpl(old_cat, summary)
         add_old_cfd(
             old_cat.toggleTalkPage(),

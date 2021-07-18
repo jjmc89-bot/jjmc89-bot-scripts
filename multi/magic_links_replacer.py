@@ -38,15 +38,15 @@ def get_json_from_page(page: pywikibot.Page) -> Dict[str, Any]:
     :param page: Page to read
     """
     if not page.exists():
-        pywikibot.error('{} does not exist.'.format(page.title()))
+        pywikibot.error(f'{page!r} does not exist.')
         return {}
     if page.isRedirectPage():
-        pywikibot.error('{} is a redirect.'.format(page.title()))
+        pywikibot.error(f'{page!r} is a redirect.')
         return {}
     try:
         return json.loads(page.get().strip())
     except ValueError:
-        pywikibot.error('{} does not contain valid JSON.'.format(page.title()))
+        pywikibot.error(f'{page!r} does not contain valid JSON.')
         raise
 
 
@@ -58,7 +58,7 @@ def validate_config(config: Dict[str, Any]) -> bool:
     """
     pywikibot.log('Config:')
     for key, value in config.items():
-        pywikibot.log('-{} = {}'.format(key, value))
+        pywikibot.log(f'-{key} = {value}')
         if key in ('ISBN', 'PMID', 'RFC', 'summary'):
             if not isinstance(value, str):
                 return False
@@ -71,8 +71,8 @@ def validate_config(config: Dict[str, Any]) -> bool:
 def _create_regexes() -> None:
     """Fill (and possibly overwrite) _regexes with default regexes."""
     space = r'(?:[^\S\n]|&nbsp;|&\#0*160;|&\#[Xx]0*[Aa]0;)'
-    spaces = r'{space}+'.format(space=space)
-    space_dash = r'(?:-|{space})'.format(space=space)
+    spaces = fr'{space}+'
+    space_dash = fr'(?:-|{space})'
     tags = [
         'gallery',
         'math',
@@ -87,32 +87,24 @@ def _create_regexes() -> None:
     url = r'''(?:[a-z][\w-]+://[^\]\s<>"]*[^\]\s\.:;,<>"\|\)`!{}'?«»“”‘’])'''
     _regexes.update(
         {
-            'bare_url': re.compile(r'\b({})'.format(url), flags=re.I),
-            'bracket_url': re.compile(
-                r'(\[{}[^\]]*\])'.format(url), flags=re.I
-            ),
+            'bare_url': re.compile(fr'\b({url})', flags=re.I),
+            'bracket_url': re.compile(fr'(\[{url}[^\]]*\])', flags=re.I),
             'ISBN': re.compile(
-                r'\bISBN(?P<separator>{spaces})(?P<value>(?:97[89]{space_dash}'
-                r'?)?(?:[0-9]{space_dash}?){{9}}[0-9Xx])\b'.format(
-                    spaces=spaces, space_dash=space_dash
-                )
+                fr'\bISBN(?P<separator>{spaces})(?P<value>(?:97[89]'
+                fr'{space_dash}?)?(?:[0-9]{space_dash}?){{9}}[0-9Xx])\b'
             ),
             'PMID': re.compile(
-                r'\bPMID(?P<separator>{spaces})(?P<value>[0-9]+)\b'.format(
-                    spaces=spaces
-                )
+                fr'\bPMID(?P<separator>{spaces})(?P<value>[0-9]+)\b'
             ),
             'RFC': re.compile(
-                r'\bRFC(?P<separator>{spaces})(?P<value>[0-9]+)\b'.format(
-                    spaces=spaces
-                )
+                fr'\bRFC(?P<separator>{spaces})(?P<value>[0-9]+)\b'
             ),
             'tags': re.compile(
                 r'''(<\/?\w+(?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|'''
                 r'''[^>\s]+))?)*\s*\/?>)'''
             ),
             'tags_content': re.compile(
-                r'(<(?P<tag>{})\b.*?</(?P=tag)>)'.format(r'|'.join(tags)),
+                fr"(<(?P<tag>{r'|'.join(tags)})\b.*?</(?P=tag)>)",
                 flags=re.I | re.M,
             ),
         }
@@ -169,12 +161,12 @@ class MagicLinksReplacer(SingleSiteBot, NoRedirectPageBot, ExistingPageBot):
         class_name = self.__class__.__name__
         page = pywikibot.Page(
             self.site,
-            'User:{}/shutoff/{}'.format(self.site.username(), class_name),
+            f'User:{self.site.username()}/shutoff/{class_name}',
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                pywikibot.error('{} disabled:\n{}'.format(class_name, content))
+                pywikibot.error(f'{class_name} disabled:\n{content}')
                 self.quit()
 
     def treat_page(self) -> None:
@@ -213,7 +205,7 @@ def main(*args: str) -> bool:
         if arg == 'config':
             if not value:
                 value = pywikibot.input(
-                    'Please enter a value for {}'.format(arg), default=None
+                    f'Please enter a value for {arg}', default=None
                 )
             options[arg] = value
         else:

@@ -94,14 +94,12 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
             self.site.login()
         page = pywikibot.Page(
             self.site,
-            'User:{username}/shutoff/{class_name}.json'.format(
-                username=self.site.user(), class_name=self.__class__.__name__
-            ),
+            f'User:{self.site.user()}/shutoff/{self.__class__.__name__}.json',
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                e = '{} disabled:\n{}'.format(self.__class__.__name__, content)
+                e = f'{self.__class__.__name__} disabled:\n{content}'
                 pywikibot.error(e)
                 self.quit()
 
@@ -147,7 +145,7 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
         ), 'Response missing required messages key.'
         assert (
             'url' not in data or data['url'] == url
-        ), 'Query for {} returned data on {}.'.format(url, data['url'])
+        ), f"Query for {url} returned data on {data['url']}."
         errors = []
         warnings = []
         for message in data['messages']:
