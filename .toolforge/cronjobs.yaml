@@ -1,0 +1,75 @@
+- name: cat-dbl-redir-fixer
+  command: jobs/cat-dbl-redir-fixer.sh
+  image: tf-python37
+  no-filelog: true
+  schedule: '6 6 * * 6'
+- name: cfdw
+  command: jobs/cfdw.sh
+  image: tf-python37
+  no-filelog: true
+  schedule: '17 * * * *'
+- name: cfdwl
+  command: jobs/cfdwl.sh
+  image: tf-python37
+  no-filelog: true
+  schedule: '47 * * * *'
+- name: commons-potd-importer
+  command: jobs/commons-potd-importer.sh
+  image: tf-python37
+  no-filelog: true
+  schedule: '7 0 * * *'
+- name: dfy-daily
+  command: jobs/dfy-daily.sh
+  image: tf-python37
+  no-filelog: true
+  schedule: '17 1 * * *'
+- name: dfy-monthly
+  command: jobs/dfy-monthly.sh
+  image: tf-python37
+  no-filelog: true
+  schedule: '37 1 1 * *'
+- name: dfy-tagger
+  command: jobs/dfy-tagger.sh
+  image: tf-python37
+  no-filelog: true
+  schedule: '*/5 * * * *'
+- name: dfy-weekly
+  command: jobs/dfy-weekly.sh
+  image: tf-python37
+  no-filelog: true
+  schedule: '27 1 * * 0'
+- name: inactive-admins
+  command: jobs/inactive-admins.sh
+  image: tf-python37
+  no-filelog: true
+  schedule: '0 0 * * *'
+- name: inactive-interface-admins
+  command: jobs/inactive-interface-admins.sh
+  image: tf-python37
+  no-filelog: true
+  schedule: '18 23 28 * *'
+- name: infotalk-editnotice
+  command: jobs/infotalk-editnotice.sh
+  image: tf-python37
+  no-filelog: true
+  schedule: '7 19 * * *'
+- name: massmessage-list-updater
+  command: jobs/massmessage-list-updater.sh
+  image: tf-python37
+  no-filelog: true
+  schedule: '0 0 * * *'
+- name: mlr-daily
+  command: jobs/mlr-daily.sh
+  image: tf-python37
+  no-filelog: true
+  schedule: '16 16 * * *'
+- name: svg-validator-daily
+  command: jobs/svg-validator-daily.sh
+  image: tf-python37
+  no-filelog: true
+  schedule: '2 2 * * *'
+- name: svg-validator-monthly
+  command: jobs/svg-validator-monthly.sh
+  image: tf-python37
+  no-filelog: true
+  schedule: '3 3 28 * *'
