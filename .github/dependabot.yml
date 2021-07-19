@@ -7,4 +7,12 @@ updates:
     commit-message:
       prefix: 'ci:'
     labels:
-      - 'ci'
+      - "ci"
+  - package-ecosystem: 'pip'
+    directory: '/'
+    schedule:
+      interval: 'daily'
+    commit-message:
+      prefix: 'build:'
+    labels:
+      - 'dependencies'
