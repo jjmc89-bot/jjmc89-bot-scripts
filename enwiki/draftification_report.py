@@ -89,7 +89,7 @@ def get_xfds(pages):
             prefix = 'Miscellany for deletion/'
         prefix += page.title()
         gen = PrefixingPageGenerator(prefix, namespace=4, site=page.site)
-        xfds = xfds.union([xfd_page.title(asLink=True) for xfd_page in gen])
+        xfds = xfds.union([xfd_page.title(as_link=True) for xfd_page in gen])
     return xfds
 
 
@@ -191,8 +191,8 @@ def output_move_log(page=None, start=None, end=None):
             '{log[timestamp]} || <nowiki>{log[comment]}</nowiki> || '
             '{creator} || {creation} || {editors} || {last_edit} || {notes}'
             .format(
-                page=logevent.page().title(asLink=True, textlink=True),
-                target=logevent.target_page.title(asLink=True, textlink=True),
+                page=logevent.page().title(as_link=True, textlink=True),
+                target=logevent.target_page.title(as_link=True, textlink=True),
                 log=logevent.data,
                 creator=creator,
                 creation=creation,
