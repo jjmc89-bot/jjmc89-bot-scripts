@@ -112,10 +112,10 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
         else:
             summary += 'failed to get a caption'
         text = (
-            '<includeonly>{{{{#switch:{{{{{{1|}}}}}}\n'
+            '<includeonly>{{#switch:{{{1|}}}\n'
             f'|caption={caption}\n'
             f'|#default={self.potd}\n'
-            '}}}}</includeonly><noinclude>'
+            '}}</includeonly><noinclude>'
             f'{{{{{doc_tpl.title(with_ns=False)}}}}}</noinclude>'
         )
         self.put_current(text, summary=summary, minor=False)
