@@ -532,13 +532,21 @@ def check_instruction(instruction: Instruction) -> bool:
         if len(new_cats) != 1:
             pywikibot.error(f'move mode has {len(new_cats)} new categories.')
             return False
+        new_cat = new_cats[0]
+        if (
+            new_cat.exists()
+            and old_cat.exists()
+            and not old_cat.isCategoryRedirect()
+        ):
+            pywikibot.error(f'{new_cat!r} already exists.')
+            return False
         if (
             old_cat.isCategoryRedirect() or old_cat.isRedirectPage()
-        ) and not new_cats[0].exists():
+        ) and not new_cat.exists():
             pywikibot.error(f'No target for move to {new_cats[0]!r}.')
             return False
-        if new_cats[0].isCategoryRedirect() or new_cats[0].isRedirectPage():
-            pywikibot.error(f'{new_cats[0]!r} is a redirect.')
+        if new_cat.isCategoryRedirect() or new_cat.isRedirectPage():
+            pywikibot.error(f'{new_cat!r} is a redirect.')
             return False
     elif instruction['mode'] == 'retain':
         if not old_cat.exists():
