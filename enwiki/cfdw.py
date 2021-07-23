@@ -17,6 +17,7 @@ from typing import (
     List,
     Optional,
     Set,
+    Tuple,
     Type,
     TypeVar,
     Union,
@@ -94,16 +95,15 @@ class LineResults(TypedDict):
 class CfdBot(SingleSiteBot, ExistingPageBot):
     """Bot to update categories."""
 
+    update_options = {
+        'always': True,
+        'new_cats': [],
+        'old_cat': None,
+        'summary': None,
+    }
+
     def __init__(self, **kwargs: Any) -> None:
         """Initialize."""
-        self.available_options.update(  # pylint: disable=no-member
-            {
-                'always': True,
-                'new_cats': list(),
-                'old_cat': None,
-                'summary': None,
-            }
-        )
         super().__init__(**kwargs)
         self.opt.new_cats = sorted(self.opt.new_cats, reverse=True)
 
@@ -132,17 +132,17 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
         if len(new_cats) == 1 and new_cats[0] not in cats:
             # Update the title to keep the sort key.
             prefix = ':' if textlinks else ''
-            old_cat_link.title = prefix + new_cats[0].title()
+            old_cat_link.title = f'{prefix}{new_cats[0].title()}'
             text = str(wikicode)
         else:
             for cat in new_cats:
                 if cat not in cats:
                     wikicode.insert_after(
                         old_cat_link,
-                        '\n' + cat.title(as_link=True, textlink=textlinks),
+                        f'\n{cat.title(as_link=True, textlink=textlinks)}',
                     )
             old_cat_regex = re.compile(
-                r'\n?' + re.escape(str(old_cat_link)), re.M
+                fr'\n?{re.escape(str(old_cat_link))}', re.M
             )
             text = replaceExcept(
                 str(wikicode), old_cat_regex, '', EXCEPTIONS, site=self.site
@@ -168,7 +168,7 @@ class Page(pywikibot.Page):
     @classmethod
     def from_wikilink(
         cls: Type[PageType],
-        wikilink: Any,
+        wikilink: object,
         site: pywikibot.site.BaseSite,
         default_namespace: int = 0,
     ) -> PageType:
@@ -234,14 +234,17 @@ class CfdPage(Page):
                     return discussion
         return self
 
-    def get_action(self, category: pywikibot.Category) -> str:
+    def get_result_action(
+        self, category: pywikibot.Category
+    ) -> Tuple[str, str]:
         """
-        Return the discussion action.
+        Return the discussion result and action.
 
         :param category: The category being discussed
         """
+        result = action = ''
         if not self.section():
-            return ''
+            return result, action
         text = removeDisabledParts(self.text, tags=EXCEPTIONS, site=self.site)
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         for section in wikicode.get_sections(levels=[4]):
@@ -250,41 +253,22 @@ class CfdPage(Page):
                 break
         else:
             section = None  # Trick pylint.
-            return ''
-        # Parse the discussion for category links and action.
-        for line in str(section).splitlines():
-            found = False
-            line_wc = mwparserfromhell.parse(line, skip_style_tags=True)
-            for node in line_wc.ifilter():
-                page = cat_from_node(node, self.site)
-                if page and category == page:
-                    found = True
-                    break
-            matches = re.findall(r"'''Propose (.+?)'''", line)
-            if found and matches:
-                return matches[0]
-        return ''
-
-    def get_result(self) -> str:
-        """Return the discussion result."""
-        if not self.section():
-            return ''
-        text = removeDisabledParts(self.text, tags=EXCEPTIONS, site=self.site)
-        wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
-        for section in wikicode.get_sections(levels=[4]):
-            heading = section.filter_headings()[0]
-            if heading.title.strip() == self.section():
-                break
-        else:
-            section = None  # Trick pylint.
-            return ''
+            return result, action
         for line in str(section).splitlines():
             matches = re.findall(
                 r"''The result of the discussion was:''\s+'''(.+?)'''", line
             )
             if matches:
-                return matches[0]
-        return ''
+                result = matches[0]
+            line_wc = mwparserfromhell.parse(line, skip_style_tags=True)
+            for node in line_wc.ifilter():
+                page = cat_from_node(node, self.site)
+                if page and category == page:
+                    matches = re.findall(r"'''Propose (.+?)'''", line)
+                    if matches:
+                        action = matches[0]
+                    break
+        return result, action
 
 
 class CFDWPage(Page):
@@ -343,7 +327,7 @@ class CFDWPage(Page):
             cfd_page = line_results['cfd_page'] or cfd_page
             if not (cfd_page and instruction['bot_options']['old_cat']):
                 continue
-            prefix = line_results['prefix'] + cfd_prefix
+            prefix = f"{line_results['prefix']} {cfd_prefix}"
             suffix = line_results['suffix'] or cfd_suffix
             if 'NO BOT' in prefix:
                 pywikibot.log(f'Bot disabled for: {line}')
@@ -362,21 +346,19 @@ class CFDWPage(Page):
                     r'\b(not )(\w+)\b', suffix, flags=re.I
                 )
                 if nc_matches:
-                    instruction['result'] = nc_matches[0][0]
-                    instruction['action'] = nc_matches[0][1]
+                    result, action = nc_matches[0]
                 elif not_matches:
-                    instruction['result'] = ''.join(not_matches[0])
-                    instruction['action'] = re.sub(
-                        r'ed$', 'e', not_matches[0][1]
-                    )
+                    result = ''.join(not_matches[0])
+                    action = re.sub(r'ed$', 'e', not_matches[0][1])
                 elif 'keep' in suffix.lower():
-                    instruction['result'] = 'keep'
-                    instruction['action'] = 'delete'
+                    result = 'keep'
+                    action = 'delete'
                 else:
-                    instruction['result'] = cfd.get_result()
-                    instruction['action'] = cfd.get_action(
+                    result, action = cfd.get_result_action(
                         instruction['bot_options']['old_cat']
                     )
+                instruction['result'] = result
+                instruction['action'] = action
             self.instructions.append(instruction)
 
     def _parse_line(self, line: str) -> LineResults:
@@ -453,26 +435,27 @@ def add_old_cfd(
 ) -> None:
     """Add {{Old CfD}} to the talk page."""
     date = cfd_page.title(with_section=False).rpartition('/')[2]
-    if page.exists():
-        wikicode = mwparserfromhell.parse(page.text, skip_style_tags=True)
-        for tpl in wikicode.ifilter_templates():
-            try:
-                template = Page.from_wikilink(tpl.name, page.site, 10)
-                if template not in TPL['old cfd'] or not tpl.has(
-                    'date', ignore_empty=True
-                ):
-                    continue
-            except pywikibot.exceptions.InvalidTitleError:
+    wikicode = mwparserfromhell.parse(page.text, skip_style_tags=True)
+    for tpl in wikicode.ifilter_templates():
+        try:
+            template = Page.from_wikilink(tpl.name, page.site, 10)
+            if template not in TPL['old cfd'] or not tpl.has(
+                'date', ignore_empty=True
+            ):
                 continue
-            if tpl.get('date').value.strip() == date:
-                # Template already present.
-                return
+        except pywikibot.exceptions.InvalidTitleError:
+            continue
+        if tpl.get('date').value.strip() == date:
+            # Template already present.
+            return
+    wikicode.insert(0, '\n')
     old_cfd = Template('Old CfD')
     old_cfd.add('action', action)
     old_cfd.add('date', date)
     old_cfd.add('section', cfd_page.section())
     old_cfd.add('result', result)
-    page.text = str(old_cfd) + '\n' + page.text
+    wikicode.insert(0, old_cfd)
+    page.text = str(wikicode)
     page.save(summary=summary)
 
 
@@ -680,8 +663,8 @@ def doc_page_add_generator(
         yield page
         if not page.namespace().subpages:
             continue
-        for doc_subpage in page.site.doc_subpage:
-            doc_page = pywikibot.Page(page.site, page.title() + doc_subpage)
+        for subpage in page.site.doc_subpage:
+            doc_page = pywikibot.Page(page.site, f'{page.title()}{subpage}')
             if doc_page.exists():
                 yield doc_page
 
