@@ -643,13 +643,7 @@ def do_instruction(instruction: Instruction) -> None:
             else:
                 delete_page(old_cat, cfd_link)
     elif instruction['mode'] == 'move':
-        if (
-            old_cat.exists()
-            and not old_cat.isCategoryRedirect()
-            and not old_cat.isRedirectPage()
-            and not bot_options['new_cats'][0].exists()
-        ):
-            # Remove the last condition once merging is supported.
+        with suppress(pywikibot.exceptions.Error):
             old_cat.move(
                 bot_options['new_cats'][0].title(),
                 reason=cfd_link,
