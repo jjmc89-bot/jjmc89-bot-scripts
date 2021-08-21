@@ -55,8 +55,8 @@ class UserGroupsMassMessageListUpdater(
         """Initialize."""
         self.available_options.update(  # pylint: disable=no-member
             {
-                'config': dict(),
-                'group_changes': list(),
+                'config': {},
+                'group_changes': [],
                 'renames': [
                     {'olduser': None, 'newuser': None, 'timestamp': None}
                 ],

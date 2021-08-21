@@ -82,7 +82,7 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
         doc_tpl = pywikibot.Page(site, 'Documentation', ns=10)
         summary = 'Updating Commons picture of the day, '
         caption = ''
-        for lang in {site.lang, 'en'}:
+        for lang in (site.lang, 'en'):
             caption_title = f'{self.potd_title} ({lang})'
             caption_page = pywikibot.Page(self.commons, caption_title)
             if not caption_page.exists():
