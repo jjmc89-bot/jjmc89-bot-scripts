@@ -366,7 +366,7 @@ class CFDWPage(Page):
         results = LineResults(
             cfd_page=None,
             old_cat=None,
-            new_cats=list(),
+            new_cats=[],
             prefix='',
             suffix='',
         )
