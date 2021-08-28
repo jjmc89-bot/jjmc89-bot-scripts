@@ -1,6 +1,10 @@
 ci:
   autoupdate_commit_msg: 'chore: pre-commit.ci autoupdate'
 repos:
+  - repo: meta
+    hooks:
+      - id: check-hooks-apply
+      - id: check-useless-excludes
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
     hooks:
@@ -10,13 +14,9 @@ repos:
       - id: check-case-conflict
       - id: check-docstring-first
       - id: check-executables-have-shebangs
-      - id: check-json
       - id: check-merge-conflict
       - id: check-shebang-scripts-are-executable
-      - id: check-symlinks
-      - id: check-toml
       - id: check-vcs-permalinks
-      - id: check-xml
       - id: check-yaml
       - id: debug-statements
       - id: destroyed-symlinks
@@ -27,10 +27,7 @@ repos:
           - --remove
       - id: forbid-new-submodules
       - id: mixed-line-ending
-      - id: name-tests-test
-      - id: pretty-format-json
       - id: requirements-txt-fixer
-      - id: sort-simple-yaml
       - id: trailing-whitespace
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.1.10
