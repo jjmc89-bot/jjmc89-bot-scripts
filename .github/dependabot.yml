@@ -5,7 +5,7 @@ updates:
     schedule:
       interval: 'daily'
     commit-message:
-      prefix: 'ci:'
+      prefix: 'chore:'
     labels:
       - "ci"
   - package-ecosystem: 'pip'
@@ -13,6 +13,6 @@ updates:
     schedule:
       interval: 'daily'
     commit-message:
-      prefix: 'build:'
+      prefix: 'chore:'
     labels:
       - 'dependencies'
