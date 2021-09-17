@@ -187,8 +187,9 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
             n_errors = len(errors)
             new_tpl = Template('Invalid SVG')
             new_tpl.add('1', n_errors)
-            summary = 'W3C invalid SVG: {} error{}'.format(
-                n_errors, 's' if n_errors > 1 else ''
+            summary = (
+                f"W3C invalid SVG: {n_errors} "
+                f"error{'s' if n_errors > 1 else ''}"
             )
         else:
             new_tpl = Template('Valid SVG')
