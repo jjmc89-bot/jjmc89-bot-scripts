@@ -3,16 +3,12 @@ updates:
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
-      interval: 'daily'
-    commit-message:
-      prefix: 'chore:'
+      interval: 'weekly'
     labels:
       - "ci"
   - package-ecosystem: 'pip'
     directory: '/'
     schedule:
-      interval: 'daily'
-    commit-message:
-      prefix: 'chore:'
+      interval: 'weekly'
     labels:
       - 'dependencies'
