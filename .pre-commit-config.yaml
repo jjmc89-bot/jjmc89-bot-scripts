@@ -1,12 +1,10 @@
-ci:
-  autoupdate_commit_msg: 'chore: pre-commit.ci autoupdate'
 repos:
   - repo: meta
     hooks:
       - id: check-hooks-apply
       - id: check-useless-excludes
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.1.0
     hooks:
       - id: check-added-large-files
       - id: check-ast
@@ -25,7 +23,6 @@ repos:
       - id: fix-encoding-pragma
         args:
           - --remove
-      - id: forbid-new-submodules
       - id: mixed-line-ending
       - id: requirements-txt-fixer
       - id: trailing-whitespace
