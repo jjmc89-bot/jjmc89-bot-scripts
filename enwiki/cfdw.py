@@ -554,6 +554,9 @@ def delete_page(page: pywikibot.Page, summary: str) -> None:
         return
     page_link = page.title(as_link=True)
     for redirect in page.backlinks(filter_redirects=True):
+        if redirect.getRedirectTarget() != page:
+            # workaround for #89
+            continue
         redirect.delete(
             reason=SUMMARIES['redirect'].format(page_link), prompt=False
         )
@@ -564,6 +567,9 @@ def delete_page(page: pywikibot.Page, summary: str) -> None:
         )
         talk_link = talk_page.title(as_link=True)
         for redirect in talk_page.backlinks(filter_redirects=True):
+            if redirect.getRedirectTarget() != talk_page:
+                # workaround for #89
+                continue
             redirect.delete(
                 reason=SUMMARIES['redirect'].format(talk_link), prompt=False
             )
