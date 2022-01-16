@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This script fixes double (or more) category redirects.
 
@@ -12,7 +12,9 @@ The following parameters are supported:
 """
 # Author : JJMC89
 # License: MIT
-from typing import Any, Iterable, Set
+from __future__ import annotations
+
+from typing import Any, Iterable
 
 import mwparserfromhell
 import pywikibot
@@ -22,13 +24,13 @@ from pywikibot.textlib import removeDisabledParts
 
 
 docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
-    '&params;': parameterHelp
+    "&params;": parameterHelp
 }
 
 
 def get_template_pages(
     templates: Iterable[pywikibot.Page],
-) -> Set[pywikibot.Page]:
+) -> set[pywikibot.Page]:
     """
     Given an iterable of templates, return a set of pages.
 
@@ -52,11 +54,11 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
     def __init__(self, **kwargs: Any) -> None:
         """Initialize."""
         self.available_options.update(  # pylint: disable=no-member
-            {'summary': 'Fix double redirect'}
+            {"summary": "Fix double redirect"}
         )
         super().__init__(**kwargs)
         self.templates = get_template_pages(
-            [pywikibot.Page(self.site, 'Category redirect', ns=10)]
+            [pywikibot.Page(self.site, "Category redirect", ns=10)]
         )
 
     def init_page(self, item: Any) -> pywikibot.Page:
@@ -72,10 +74,10 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
         if super().skip_page(page):
             return True
         if not isinstance(page, pywikibot.Category):
-            pywikibot.error(f'{page!r} is not a category.')
+            pywikibot.error(f"{page!r} is not a category.")
             return True
         if not page.isCategoryRedirect():
-            pywikibot.error(f'{page!r} is not a category redirect')
+            pywikibot.error(f"{page!r} is not a category redirect")
             return True
         target = page.getCategoryRedirectTarget()
         if not target.isCategoryRedirect():
@@ -87,12 +89,12 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
         class_name = self.__class__.__name__
         page = pywikibot.Page(
             self.site,
-            f'User:{self.site.username()}/shutoff/{class_name}.json',
+            f"User:{self.site.username()}/shutoff/{class_name}.json",
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                pywikibot.error(f'{class_name} disabled:\n{content}')
+                pywikibot.error(f"{class_name} disabled:\n{content}")
                 self.quit()
 
     def treat_page(self) -> None:
@@ -104,8 +106,8 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
             target = target.getCategoryRedirectTarget()
             if target in seen:
                 pywikibot.error(
-                    f'Skipping {self.current_page!r} due to possible circular'
-                    f' redirect at {target!r}.'
+                    f"Skipping {self.current_page!r} due to possible circular"
+                    f" redirect at {target!r}."
                 )
                 return
             seen.add(target)
@@ -123,7 +125,7 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
             except pywikibot.exceptions.InvalidTitleError:
                 continue
             if template in self.templates:
-                tpl.add('1', target.title(with_ns=False))
+                tpl.add("1", target.title(with_ns=False))
                 break
         self.put_current(str(wikicode), summary=self.opt.summary)
 
@@ -141,12 +143,12 @@ def main(*args: str) -> None:
     gen_factory = GeneratorFactory(site)
     script_args = gen_factory.handle_args(local_args)
     for arg in script_args:
-        arg, _, value = arg.partition(':')
+        arg, _, value = arg.partition(":")
         arg = arg[1:]
-        if arg == 'summary':
+        if arg == "summary":
             if not value:
                 value = pywikibot.input(
-                    f'Please enter a value for {arg}', default=None
+                    f"Please enter a value for {arg}", default=None
                 )
             options[arg] = value
         else:
@@ -155,5 +157,5 @@ def main(*args: str) -> None:
     CategoryDoubleRedirectFixerBot(generator=gen, site=site, **options).run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

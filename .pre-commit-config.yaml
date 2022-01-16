@@ -26,6 +26,15 @@ repos:
       - id: mixed-line-ending
       - id: requirements-txt-fixer
       - id: trailing-whitespace
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.9.0
+    hooks:
+      - id: python-check-blanket-noqa
+      - id: python-check-blanket-type-ignore
+      - id: python-check-mock-methods
+      - id: python-no-eval
+      - id: python-no-log-warn
+      - id: python-use-type-annotations
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.1.10
     hooks:
@@ -50,6 +59,19 @@ repos:
           - flake8-docstrings
           - flake8-typing-imports
           - pep8-naming
+  - repo: https://github.com/fsouza/autoflake8
+    rev: v0.2.2
+    hooks:
+      - id: autoflake8
+  - repo: https://github.com/psf/black
+    rev: 21.12b0
+    hooks:
+      - id: black
+        args:
+          - --line-length
+          - '79'
+          - --target-version
+          - py37
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.1
     hooks:
@@ -69,3 +91,11 @@ repos:
           - flake8-docstrings
           - flake8-typing-imports
           - pep8-naming
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.931
+    hooks:
+      - id: mypy
+        args: []
+        additional_dependencies:
+          - types-python-dateutil
+          - types-requests

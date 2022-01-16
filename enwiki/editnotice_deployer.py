@@ -22,7 +22,9 @@ The following parameters are supported:
 """
 # Author : JJMC89
 # License: MIT
-from typing import Any, Dict, Generator, Iterable, Set
+from __future__ import annotations
+
+from typing import Any, Generator, Iterable
 
 import mwparserfromhell
 import pywikibot
@@ -31,13 +33,13 @@ from pywikibot.bot import CurrentPageBot, SingleSiteBot
 
 
 docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
-    '&params;': pagegenerators.parameterHelp
+    "&params;": pagegenerators.parameterHelp
 }
 
 
 def get_template_titles(
     templates: Iterable[pywikibot.Page],
-) -> Set[pywikibot.Page]:
+) -> set[pywikibot.Page]:
     """
     Given an iterable of templates, return a set of pages.
 
@@ -56,35 +58,36 @@ def get_template_titles(
 
 
 def validate_options(
-    options: Dict[str, Any], site: pywikibot.site.APISite
+    options: dict[str, Any], site: pywikibot.site.APISite
 ) -> bool:
     """
     Validate the options and return bool.
 
     :param options: options to validate
     """
-    pywikibot.log('Options:')
-    required_keys = ['editnotice_template']
+    pywikibot.log("Options:")
+    required_keys = ["editnotice_template"]
     has_keys = []
     for key, value in options.items():
-        pywikibot.log(f'-{key} = {value}')
+        pywikibot.log(f"-{key} = {value}")
         if key in required_keys:
             has_keys.append(key)
-        if key == 'editnotice_template':
+        if key == "editnotice_template":
             if not isinstance(key, str):
                 return False
-            options[key] = '{{' + value + '}}'
+            options[key] = "{{" + value + "}}"
             editnotice_page = pywikibot.Page(site, value, ns=10)
             if not editnotice_page.exists():
                 return False
     if sorted(has_keys) != sorted(required_keys):
         return False
-    options['editnotice_page'] = editnotice_page
+    options["editnotice_page"] = editnotice_page
     return True
 
 
 def page_with_subject_page_generator(
-    generator: Iterable[pywikibot.Page], return_subject_only=False
+    generator: Iterable[pywikibot.Page],
+    return_subject_only: bool = False,
 ) -> Generator[pywikibot.Page, None, None]:
     """
     Yield pages and associated subject pages from another generator.
@@ -128,7 +131,7 @@ def editnotice_page_generator(
     for page in generator:
         if page.exists() and not page.isRedirectPage():
             title = page.title(with_section=False)
-            editnotice_title = f'Template:Editnotices/Page/{title}'
+            editnotice_title = f"Template:Editnotices/Page/{title}"
             editnotice_page = pywikibot.Page(page.site, editnotice_title)
             yield editnotice_page
 
@@ -136,11 +139,14 @@ def editnotice_page_generator(
 class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
     """Bot to deploy editnotices."""
 
-    def __init__(self, **kwargs) -> None:
+    update_options = {
+        "always": False,
+        "editnotice_page": None,
+        "editnotice_template": None,
+    }
+
+    def __init__(self, **kwargs: Any) -> None:
         """Initialize."""
-        self.available_options.update(  # pylint: disable=no-member
-            {'editnotice_page': None, 'editnotice_template': None}
-        )
         super().__init__(**kwargs)
         self.editnotice_page_titles = get_template_titles(
             [self.opt.editnotice_page]
@@ -150,7 +156,7 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
     def skip_page(self, page: pywikibot.Page) -> bool:
         """Skip non-exitent pages with deleted revisions."""
         if not page.exists() and page.has_deleted_revisions():
-            pywikibot.warning(f'{page!r} has deleted revisions. Skipping.')
+            pywikibot.warning(f"{page!r} has deleted revisions. Skipping.")
             return True
         return super().skip_page(page)
 
@@ -159,19 +165,19 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
         class_name = self.__class__.__name__
         page = pywikibot.Page(
             self.site,
-            f'User:{self.site.username()}/shutoff/{class_name}.json',
+            f"User:{self.site.username()}/shutoff/{class_name}.json",
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                pywikibot.error(f'{class_name} disabled:\n{content}')
+                pywikibot.error(f"{class_name} disabled:\n{content}")
                 self.quit()
 
     def treat_page(self) -> None:
         """Process one page."""
         self.check_disabled()
         if self.current_page.isRedirectPage():
-            text = ''
+            text = ""
         else:
             text = self.current_page.text
             wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
@@ -180,8 +186,8 @@ class EditnoticeDeployer(SingleSiteBot, CurrentPageBot):
                 if tpl.name.matches(self.editnotice_page_titles):
                     return
         self.put_current(
-            '\n'.join((self.editnotice_template, text)),
-            summary='Deploying editnotice: ' + self.editnotice_template,
+            "\n".join((self.editnotice_template, text)),
+            summary="Deploying editnotice: " + self.editnotice_template,
             minor=False,
         )
 
@@ -193,10 +199,10 @@ def main(*args: str) -> bool:
     :param args: command line arguments
     """
     options = {
-        'subject_only': False,
-        'talk_only': False,
-        'to_subject': False,
-        'to_talk': False,
+        "subject_only": False,
+        "talk_only": False,
+        "to_subject": False,
+        "to_talk": False,
     }
     # Process global arguments
     local_args = pywikibot.handle_args(args)
@@ -206,39 +212,39 @@ def main(*args: str) -> bool:
     gen_factory = pagegenerators.GeneratorFactory(site)
     script_args = gen_factory.handle_args(local_args)
     for arg in script_args:
-        arg, _, value = arg.partition(':')
+        arg, _, value = arg.partition(":")
         arg = arg[1:]
-        if arg == 'editnotice_template':
+        if arg == "editnotice_template":
             if not value:
                 value = pywikibot.input(
-                    f'Please enter a value for {arg}', default=None
+                    f"Please enter a value for {arg}", default=None
                 )
             options[arg] = value
         else:
             options[arg] = True
     if not validate_options(options, site):
-        pywikibot.error('Invalid options.')
+        pywikibot.error("Invalid options.")
         return False
     gen = gen_factory.getCombinedGenerator()
-    if options['to_subject']:
+    if options["to_subject"]:
         gen = page_with_subject_page_generator(
-            gen, return_subject_only=options['subject_only']
+            gen, return_subject_only=options["subject_only"]
         )
-    elif options['to_talk']:
+    elif options["to_talk"]:
         gen = pagegenerators.PageWithTalkPageGenerator(
-            gen, return_talk_only=options['talk_only']
+            gen, return_talk_only=options["talk_only"]
         )
-    elif options['subject_only']:
+    elif options["subject_only"]:
         gen = subject_page_generator(gen)
-    elif options['talk_only']:
+    elif options["talk_only"]:
         gen = talk_page_generator(gen)
     gen = editnotice_page_generator(gen)
-    for key in ('subject_only', 'talk_only', 'to_subject', 'to_talk'):
+    for key in ("subject_only", "talk_only", "to_subject", "to_talk"):
         options.pop(key, None)
     gen = pagegenerators.PreloadingGenerator(gen)
     EditnoticeDeployer(generator=gen, site=site, **options).run()
     return True
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

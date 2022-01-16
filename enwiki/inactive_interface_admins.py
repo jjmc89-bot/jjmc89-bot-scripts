@@ -2,9 +2,10 @@
 """Report inactive interface admins."""
 # Author : JJMC89
 # License: MIT
-from functools import lru_cache
+from __future__ import annotations
+
 from itertools import chain
-from typing import Optional, Set, Tuple, Union
+from typing import Tuple, Union
 
 import pywikibot
 from dateutil.relativedelta import relativedelta
@@ -17,9 +18,12 @@ PageSource = Union[
 UserContrib = Tuple[pywikibot.Page, int, pywikibot.Timestamp, str]
 
 
+_unchecked = object()
+
+
 def get_inactive_users(
     site: pywikibot.site.APISite = None,
-) -> Set[pywikibot.User]:
+) -> set[pywikibot.User]:
     """
     Get a set of inactive interface admins.
 
@@ -28,8 +32,8 @@ def get_inactive_users(
     users = set()
     if not site:
         site = pywikibot.Site()
-    for user_dict in site.allusers(group='interface-admin'):
-        user = User(site, user_dict['name'])
+    for user_dict in site.allusers(group="interface-admin"):
+        user = User(site, user_dict["name"])
         if not user.is_active:
             users.add(user)
     return users
@@ -37,6 +41,13 @@ def get_inactive_users(
 
 class User(pywikibot.User):
     """Extended pywikibot.User."""
+
+    def __init__(self, source: PageSource, title: str = "") -> None:
+        """Initialize."""
+        super().__init__(source, title)
+        self._has_cssjs_edit: object = _unchecked
+        self._last_edit = None
+        self._last_event = None
 
     @property
     def is_active(self) -> bool:
@@ -57,45 +68,49 @@ class User(pywikibot.User):
         return False
 
     @property
-    @lru_cache()
-    def last_edit(self) -> Optional[UserContrib]:
+    def last_edit(self) -> UserContrib | None:
         """Return the user's last edit."""
-        return super().last_edit
+        if self._last_edit is None:
+            self._last_edit = super().last_edit
+        return self._last_edit
 
     @property
-    @lru_cache()
-    def last_event(self) -> Optional[LogEntry]:
+    def last_event(self) -> LogEntry | None:
         """Return the user's last log entry."""
-        return super().last_event
+        if self._last_event is None:
+            self._last_event = super().last_event
+        return self._last_event
 
     @property
-    @lru_cache()
-    def has_cssjs_edit(self) -> Optional[bool]:
+    def has_cssjs_edit(self) -> bool | None:
         """
         Return True if the user has edited a CSS/JS page in the last 6 months.
 
         None if the user has not been an interface-admin for 6 months.
         False otherwise.
         """
+        if isinstance(self._has_cssjs_edit, (bool, type(None))):
+            return self._has_cssjs_edit
         kwa = dict(
             namespaces=(2, 8),
             end=self.site.server_time() + relativedelta(months=-6),
         )
         for page, _, _, summary in self.contributions(total=None, **kwa):
             if not (
-                page.content_model not in ('css', 'javascript')
-                or page.title().startswith(f'{self.title()}/')
-                or 'while renaming the user' in summary
+                page.content_model not in ("css", "javascript")
+                or page.title().startswith(f"{self.title()}/")
+                or "while renaming the user" in summary
             ):
-                return True
-        pywikibot.log(f'{self!r}: No CSS/JS edit')
-        got_group = kwa['end']
+                self._has_cssjs_edit = True
+                return self._has_cssjs_edit
+        pywikibot.log(f"{self!r}: No CSS/JS edit")
+        got_group = kwa["end"]
         rights_events = sorted(
             chain(
-                self.site.logevents(logtype='rights', page=self),
-                pywikibot.Site('meta', 'meta').logevents(
-                    logtype='rights',
-                    page=f'{self.title()}@{self.site.dbName()}',
+                self.site.logevents(logtype="rights", page=self),
+                pywikibot.Site("meta", "meta").logevents(
+                    logtype="rights",
+                    page=f"{self.title()}@{self.site.dbName()}",
                 ),
             ),
             key=lambda logevent: logevent.timestamp(),
@@ -103,13 +118,15 @@ class User(pywikibot.User):
         )
         for logevent in rights_events:
             added_groups = set(logevent.newgroups) - set(logevent.oldgroups)
-            if 'interface-admin' in added_groups:
+            if "interface-admin" in added_groups:
                 got_group = logevent.timestamp()
                 break
-        if kwa['end'] < got_group:
-            pywikibot.log(f'{self!r}: Not iadmin for 6 mo.')
-            return None
-        return False
+        if kwa["end"] < got_group:
+            pywikibot.log(f"{self!r}: Not iadmin for 6 mo.")
+            self._has_cssjs_edit = None
+            return self._has_cssjs_edit
+        self._has_cssjs_edit = False
+        return self._has_cssjs_edit
 
 
 def main(*args: str) -> None:
@@ -125,17 +142,17 @@ def main(*args: str) -> None:
     if not users:
         return
     heading = (
-        'Inactive interface administrators '
-        f'{site.server_time().date().isoformat()}'
+        "Inactive interface administrators "
+        f"{site.server_time().date().isoformat()}"
     )
-    text = 'The following interface administrator(s) are inactive:'
+    text = "The following interface administrator(s) are inactive:"
     for user in sorted(users):
-        text += f'\n* {{{{admin|1={user.username}}}}}'
-    text += '\n~~~~'
+        text += f"\n* {{{{admin|1={user.username}}}}}"
+    text += "\n~~~~"
     pywikibot.Page(
         site, "Wikipedia:Interface administrators' noticeboard"
-    ).save(text=text, section='new', summary=heading, botflag=False)
+    ).save(text=text, section="new", summary=heading, botflag=False)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

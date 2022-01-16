@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Validate SVGs using the W3C nu validator.
 
@@ -8,8 +8,10 @@ The following arguments are supported:
 
 &params;
 """
+from __future__ import annotations
+
 from functools import lru_cache
-from typing import Any, FrozenSet, List
+from typing import Any
 
 import mwparserfromhell
 import pywikibot
@@ -23,14 +25,14 @@ from requests.exceptions import RequestException, Timeout
 
 
 docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
-    '&params;': parameterHelp
+    "&params;": parameterHelp
 }
 
 
 @lru_cache()
 def get_redirects(
-    pages: FrozenSet[pywikibot.Page],
-) -> FrozenSet[pywikibot.Page]:
+    pages: frozenset[pywikibot.Page],
+) -> frozenset[pywikibot.Page]:
     """Given pages, return all possible titles."""
     link_pages = set()
     for page in pages:
@@ -54,16 +56,16 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
         """Initialize."""
         super().__init__(**kwargs)
         self.nu_session = requests.Session()
-        self.nu_session.headers['user-agent'] = user_agent(
-            kwargs['site'],
-            '{script_product} ({script_comments}) {http_backend} {python}',
+        self.nu_session.headers["user-agent"] = user_agent(
+            kwargs["site"],
+            "{script_product} ({script_comments}) {http_backend} {python}",
         )
-        self.nu_session.params = {'level': 'error', 'out': 'json'}
+        self.nu_session.params = {"level": "error", "out": "json"}
         self.templates = get_redirects(
             frozenset(
                 {
-                    pywikibot.Page(self.site, 'Invalid SVG', ns=10),
-                    pywikibot.Page(self.site, 'Valid SVG', ns=10),
+                    pywikibot.Page(self.site, "Invalid SVG", ns=10),
+                    pywikibot.Page(self.site, "Valid SVG", ns=10),
                 }
             )
         )
@@ -84,7 +86,7 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
         """Sikp the page if it is not an SVG."""
         if not isinstance(page, pywikibot.FilePage) or not page.title(
             with_ns=False
-        ).lower().endswith('.svg'):
+        ).lower().endswith(".svg"):
             return True
         return super().skip_page(page)
 
@@ -94,16 +96,16 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
             self.site.login()
         page = pywikibot.Page(
             self.site,
-            f'User:{self.site.user()}/shutoff/{self.__class__.__name__}.json',
+            f"User:{self.site.user()}/shutoff/{self.__class__.__name__}.json",
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                e = f'{self.__class__.__name__} disabled:\n{content}'
+                e = f"{self.__class__.__name__} disabled:\n{content}"
                 pywikibot.error(e)
                 self.quit()
 
-    def validate_svg(self) -> List[str]:
+    def validate_svg(self) -> list[str]:
         """
         Validate a SVG using the W3C Nu validator.
 
@@ -114,15 +116,15 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
             with a list or 2) request URL does not match the response URL
         """
         url = self.current_page.get_file_url()
-        _logger = 'w3c-nu'
+        _logger = "w3c-nu"
         retries = 0
         retry_wait = pywikibot.config.retry_wait
         # API docs: https://github.com/validator/validator/wiki
         while True:
             try:
                 response = self.nu_session.get(
-                    url='https://validator.w3.org/nu/',
-                    params={'doc': url},
+                    url="https://validator.w3.org/nu/",
+                    params={"doc": url},
                     timeout=pywikibot.config.socket_timeout,
                 )
             except Timeout:
@@ -140,37 +142,37 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
         response.raise_for_status()
         pywikibot.debug(response.text, _logger)
         data = response.json()
-        assert 'messages' in data and isinstance(
-            data['messages'], list
-        ), 'Response missing required messages key.'
+        assert "messages" in data and isinstance(
+            data["messages"], list
+        ), "Response missing required messages key."
         assert (
-            'url' not in data or data['url'] == url
+            "url" not in data or data["url"] == url
         ), f"Query for {url} returned data on {data['url']}."
         errors = []
         warnings = []
-        for message in data['messages']:
+        for message in data["messages"]:
             if not isinstance(message, dict):
-                pywikibot.error('Message is not an object.')
+                pywikibot.error("Message is not an object.")
                 continue
-            if 'type' not in message:
-                pywikibot.error('Message missing required type key.')
+            if "type" not in message:
+                pywikibot.error("Message missing required type key.")
                 continue
-            if message['type'] not in ('non-document-error', 'error', 'info'):
+            if message["type"] not in ("non-document-error", "error", "info"):
                 pywikibot.error(
-                    'Unknown message type: {type}.'.format_map(message)
+                    "Unknown message type: {type}.".format_map(message)
                 )
                 continue
-            message.setdefault('message', '')
-            message.setdefault('subType', 'none')
-            if message['type'] == 'non-document-error':
+            message.setdefault("message", "")
+            message.setdefault("subType", "none")
+            if message["type"] == "non-document-error":
                 raise RuntimeError(
-                    'Validation indeterminate. {type}/'
-                    '{subType}: {message}'.format_map(message)
+                    "Validation indeterminate. {type}/"
+                    "{subType}: {message}".format_map(message)
                 )
-            if message['type'] == 'error':
-                errors.append(message['message'])
-            elif message['subType'] == 'warning':
-                warnings.append(message['message'])
+            if message["type"] == "error":
+                errors.append(message["message"])
+            elif message["subType"] == "warning":
+                warnings.append(message["message"])
             else:
                 pywikibot.debug(str(message), _logger)
         return errors
@@ -185,15 +187,15 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
             return
         if errors:
             n_errors = len(errors)
-            new_tpl = Template('Invalid SVG')
-            new_tpl.add('1', n_errors)
+            new_tpl = Template("Invalid SVG")
+            new_tpl.add("1", n_errors)
             summary = (
                 f"W3C invalid SVG: {n_errors} "
                 f"error{'s' if n_errors > 1 else ''}"
             )
         else:
-            new_tpl = Template('Valid SVG')
-            summary = 'W3C valid SVG'
+            new_tpl = Template("Valid SVG")
+            summary = "W3C valid SVG"
         wikicode = mwparserfromhell.parse(
             self.current_page.text, skip_style_tags=True
         )
@@ -211,7 +213,7 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
                 wikicode.replace(tpl, new_tpl)
                 break
         else:
-            wikicode.insert(0, '\n')
+            wikicode.insert(0, "\n")
             wikicode.insert(0, new_tpl)
         self.put_current(str(wikicode), summary=summary, minor=not errors)
 
@@ -225,12 +227,12 @@ def main(*args: str) -> None:
     gen_factory = GeneratorFactory(site)
     script_args = gen_factory.handle_args(local_args)
     for arg in script_args:
-        arg, _, _ = arg.partition(':')
+        arg, _, _ = arg.partition(":")
         arg = arg[1:]
         options[arg] = True
     gen = gen_factory.getCombinedGenerator(preload=True)
     SVGValidatorBot(generator=gen, site=site, **options).run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -2,10 +2,12 @@
 """Tag draftified articles."""
 # Author : JJMC89
 # License: MIT
+from __future__ import annotations
+
 import argparse
 import re
 from functools import lru_cache
-from typing import Any, FrozenSet, Generator, Iterable, Optional, Union
+from typing import Any, Generator, Iterable
 
 import pywikibot
 from pywikibot.bot import (
@@ -19,8 +21,8 @@ from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 
 @lru_cache()
 def get_redirects(
-    pages: FrozenSet[pywikibot.Page],
-) -> FrozenSet[pywikibot.Page]:
+    pages: frozenset[pywikibot.Page],
+) -> frozenset[pywikibot.Page]:
     """Given pages, return all possible titles."""
     link_pages = set()
     for page in pages:
@@ -39,7 +41,7 @@ def get_redirects(
 
 def has_template(
     page: pywikibot.Page,
-    templates: Union[str, Iterable[Union[pywikibot.Page, str]]],
+    templates: str | Iterable[pywikibot.Page | str],
 ) -> bool:
     """
     Return True if the page has one of the templates. False otherwise.
@@ -67,22 +69,22 @@ class DfyTaggerBot(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         """Initialize."""
         self.available_options.update(  # pylint: disable=no-member
             {
-                'summary': 'Add {{{{{tpl}}}}}',
-                'template': 'drafts moved from mainspace',
+                "summary": "Add {{{{{tpl}}}}}",
+                "template": "drafts moved from mainspace",
             }
         )
         super().__init__(**kwargs)
         template = self.opt.template
-        self.add_text = f'\n\n{{{{subst:{template}}}}}'
+        self.add_text = f"\n\n{{{{subst:{template}}}}}"
         self.summary = self.opt.summary.format(tpl=template)
 
     def skip_page(self, page: pywikibot.Page) -> bool:
         """Skip non-drafts and drafts with the template."""
         if page.namespace() != 118:
-            pywikibot.warning(f'{page!r} is not a draft.')
+            pywikibot.warning(f"{page!r} is not a draft.")
             return True
         if has_template(page, self.opt.template):
-            pywikibot.warning(f'{page!r} already has the template.')
+            pywikibot.warning(f"{page!r} already has the template.")
             return True
         return super().skip_page(page)
 
@@ -91,12 +93,12 @@ class DfyTaggerBot(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         class_name = self.__class__.__name__
         page = pywikibot.Page(
             self.site,
-            f'User:{self.site.username()}/shutoff/{class_name}.json',
+            f"User:{self.site.username()}/shutoff/{class_name}.json",
         )
         if page.exists():
             content = page.get(force=True).strip()
             if content:
-                pywikibot.error(f'{class_name} disabled:\n{content}')
+                pywikibot.error(f"{class_name} disabled:\n{content}")
                 self.quit()
 
     def treat_page(self) -> None:
@@ -111,7 +113,7 @@ class DfyTaggerBot(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
 
 def draftified_page_generator(
     site: pywikibot.site.BaseSite,
-    start: Optional[pywikibot.Timestamp],
+    start: pywikibot.Timestamp | None,
 ) -> Generator[pywikibot.Page, None, None]:
     """
     Yield draftified pages based on page moves.
@@ -119,7 +121,7 @@ def draftified_page_generator(
     :param site: site to yield page moves from
     """
     gen = site.logevents(
-        logtype='move', namespace=0, start=start, reverse=True
+        logtype="move", namespace=0, start=start, reverse=True
     )
     for move in gen:
         if move.target_ns == 118:
@@ -134,10 +136,10 @@ def main(*args: str) -> None:
     gen_factory = GeneratorFactory(site)
     script_args = gen_factory.handle_args(local_args)
     parser = argparse.ArgumentParser(
-        description='Tag draftified articles',
+        description="Tag draftified articles",
         epilog=re.sub(
-            r'\n\n?-help +.+?(\n\n-|\s*$)',
-            r'\1',
+            r"\n\n?-help +.+?(\n\n-|\s*$)",
+            r"\1",
             _GLOBAL_HELP + parameterHelp,
             flags=re.S,
         ),
@@ -145,29 +147,29 @@ def main(*args: str) -> None:
         allow_abbrev=False,
     )
     parser.add_argument(
-        '--always',
-        '-a',
-        action='store_true',
-        help='Do not prompt to save changes',
+        "--always",
+        "-a",
+        action="store_true",
+        help="Do not prompt to save changes",
     )
     parser.add_argument(
-        '--start',
+        "--start",
         type=pywikibot.Timestamp.fromISOformat,
-        help='Timestamp to start from',
-        metavar='%Y-%m-%dT%H:%M:%SZ',
+        help="Timestamp to start from",
+        metavar="%Y-%m-%dT%H:%M:%SZ",
     )
     parser.add_argument(
-        '--summary', help='Edit aummary for the bot', default=argparse.SUPPRESS
+        "--summary", help="Edit aummary for the bot", default=argparse.SUPPRESS
     )
     parser.add_argument(
-        '--template', help='Template to add', default=argparse.SUPPRESS
+        "--template", help="Template to add", default=argparse.SUPPRESS
     )
     parsed_args = vars(parser.parse_args(args=script_args))
-    start = parsed_args.pop('start')
+    start = parsed_args.pop("start")
     gen = None if gen_factory.gens else draftified_page_generator(site, start)
     gen = gen_factory.getCombinedGenerator(gen=gen)
     DfyTaggerBot(generator=gen, site=site, **parsed_args).run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

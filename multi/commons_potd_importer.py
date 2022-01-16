@@ -10,8 +10,10 @@ The following parameters are supported:
 """
 # Author : JJMC89
 # License: MIT
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Any, Iterable, Set
+from typing import Any, Iterable
 
 import mwparserfromhell
 import pywikibot
@@ -20,13 +22,13 @@ from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 
 
 docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
-    '&params;': parameterHelp
+    "&params;": parameterHelp
 }
 
 
 def get_template_titles(
     templates: Iterable[pywikibot.Page],
-) -> Set[pywikibot.Page]:
+) -> set[pywikibot.Page]:
     """
     Given an iterable of templates, return a set of pages.
 
@@ -50,26 +52,26 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
     def __init__(self, **kwargs: Any) -> None:
         """Iniitialize."""
         super().__init__(**kwargs)
-        self.commons = pywikibot.Site('commons', 'commons')
+        self.commons = pywikibot.Site("commons", "commons")
         # T266084
         # date = self.commons.server_time().date().isoformat()
         date = datetime.utcnow().date().isoformat()
-        self.potd_title = f'Template:Potd/{date}'
+        self.potd_title = f"Template:Potd/{date}"
         potd_tpl = pywikibot.Page(self.commons, self.potd_title)
         potd_fn_titles = get_template_titles(
-            [pywikibot.Page(self.commons, 'Template:Potd filename')]
+            [pywikibot.Page(self.commons, "Template:Potd filename")]
         )
         wikicode = mwparserfromhell.parse(potd_tpl.text, skip_style_tags=True)
         for tpl in wikicode.ifilter_templates():
             if tpl.name.matches(potd_fn_titles) and tpl.has(
-                '1', ignore_empty=True
+                "1", ignore_empty=True
             ):
-                self.potd = tpl.get('1').value.strip()
+                self.potd = tpl.get("1").value.strip()
                 break
         else:
-            raise ValueError('Failed to find the POTD.')
+            raise ValueError("Failed to find the POTD.")
         self.potd_desc_titles = get_template_titles(
-            [pywikibot.Page(self.commons, 'Template:Potd description')]
+            [pywikibot.Page(self.commons, "Template:Potd description")]
         )
         # T242081, T243701
         # repo = self.commons.data_repository
@@ -79,11 +81,11 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
         """Process one page."""
         site = self.current_page.site
         # doc_tpl = self.DOC_ITEM.getSitelink(site)
-        doc_tpl = pywikibot.Page(site, 'Documentation', ns=10)
-        summary = 'Updating Commons picture of the day, '
-        caption = ''
-        for lang in (site.lang, 'en'):
-            caption_title = f'{self.potd_title} ({lang})'
+        doc_tpl = pywikibot.Page(site, "Documentation", ns=10)
+        summary = "Updating Commons picture of the day, "
+        caption = ""
+        for lang in (site.lang, "en"):
+            caption_title = f"{self.potd_title} ({lang})"
             caption_page = pywikibot.Page(self.commons, caption_title)
             if not caption_page.exists():
                 continue
@@ -92,9 +94,9 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
             )
             for tpl in wikicode.ifilter_templates():
                 if tpl.name.matches(self.potd_desc_titles) and tpl.has(
-                    '1', ignore_empty=True
+                    "1", ignore_empty=True
                 ):
-                    caption = tpl.get('1').value.strip()
+                    caption = tpl.get("1").value.strip()
             if caption:
                 # Remove templates, etc.
                 caption = self.commons.expand_text(caption)
@@ -104,19 +106,19 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
                 )
                 for wikilink in caption_wikicode.ifilter_wikilinks():
                     title = wikilink.title.strip()
-                    prefix = ':c' + ('' if title.startswith(':') else ':')
+                    prefix = ":c" + ("" if title.startswith(":") else ":")
                     wikilink.title = prefix + title
-                summary += f'[[:c:{caption_title}|caption attribution]]'
+                summary += f"[[:c:{caption_title}|caption attribution]]"
                 caption = str(caption_wikicode)
                 break
         else:
-            summary += 'failed to get a caption'
+            summary += "failed to get a caption"
         text = (
-            '<includeonly>{{#switch:{{{1|}}}\n'
-            f'|caption={caption}\n'
-            f'|#default={self.potd}\n'
-            '}}</includeonly><noinclude>'
-            f'{{{{{doc_tpl.title(with_ns=False)}}}}}</noinclude>'
+            "<includeonly>{{#switch:{{{1|}}}\n"
+            f"|caption={caption}\n"
+            f"|#default={self.potd}\n"
+            "}}</includeonly><noinclude>"
+            f"{{{{{doc_tpl.title(with_ns=False)}}}}}</noinclude>"
         )
         self.put_current(text, summary=summary, minor=False)
 
@@ -136,11 +138,11 @@ def main(*args: str) -> None:
     gen_factory = GeneratorFactory(site)
     script_args = gen_factory.handle_args(local_args)
     for arg in script_args:
-        if arg == '-always':
-            options['always'] = True
+        if arg == "-always":
+            options["always"] = True
     gen = gen_factory.getCombinedGenerator()
     CommonsPotdImporter(generator=gen, **options).run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
