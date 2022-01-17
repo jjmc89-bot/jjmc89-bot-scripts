@@ -60,7 +60,7 @@ repos:
           - flake8-typing-imports
           - pep8-naming
   - repo: https://github.com/fsouza/autoflake8
-    rev: v0.2.2
+    rev: v0.3.0
     hooks:
       - id: autoflake8
   - repo: https://github.com/psf/black
