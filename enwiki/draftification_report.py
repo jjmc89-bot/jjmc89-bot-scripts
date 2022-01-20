@@ -1,30 +1,15 @@
 #!/usr/bin/env python3
-"""
-Generate a tabular report of draftifications over a specified date range.
-
-The following arguments are required:
-
--page             The page to output the report to.
-
-The following arguments are supported:
-
--end              The end date of the range for the report.
-                  If -end is not provided, it will be yesterday.
-
--start            The start date of the range for the report.
-                  If -start is not provided, it will be the same as -end.
-"""
-# Author : JJMC89
-# License: MIT
+"""Generate a tabular report of draftifications over a specified range."""
 from __future__ import annotations
 
+import argparse
 import datetime
 import re
-from datetime import date, timedelta
-from typing import Any
+from datetime import date, time, timedelta
+from typing import Collection, Iterable
 
 import pywikibot
-from dateutil.parser import parse as parse_date
+from pywikibot.bot import _GLOBAL_HELP
 from pywikibot.pagegenerators import PrefixingPageGenerator
 
 
@@ -34,56 +19,8 @@ BOT_START_END = re.compile(
 )
 
 
-def validate_options(options, site):
-    """
-    Validate the options and return bool.
-
-    :param options: options to validate
-    :type options: dict
-
-    :rtype: bool
-    """
-    pywikibot.log("Options:")
-    required_keys = ["end", "page", "start"]
-    has_keys = []
-    result = True
-    if "start" not in options:
-        options["start"] = options["end"]
-    for key, value in options.items():
-        pywikibot.log(f"-{key} = {value}")
-        if key in required_keys:
-            has_keys.append(key)
-        if key in "end" "start":
-            if not isinstance(value, date):
-                try:
-                    options[key] = parse_date(value).date()
-                except ValueError as e:
-                    pywikibot.log(f"Invalid date: {e}")
-                    result = False
-        elif key == "page":
-            if not isinstance(value, str):
-                pywikibot.log("Must be a string.")
-                result = False
-            options[key] = pywikibot.Page(site, value)
-        pywikibot.log(f"\u2192{key} = {options[key]}")
-    if sorted(has_keys) != sorted(required_keys):
-        pywikibot.log("Missing one more required keys.")
-        result = False
-    if options["end"] < options["start"]:
-        pywikibot.log("end cannot be before start.")
-        result = False
-    return result
-
-
-def get_xfds(pages):
-    """
-    Return a set of XfDs for the pages.
-
-    :param pages: Pages to get XfDs for
-    :type pages: iterable of pywikibot.Page
-
-    :rtype: set
-    """
+def get_xfds(pages: Iterable[pywikibot.Page]) -> set[str]:
+    """Return a set of XfDs for the pages."""
     xfds: set[str] = set()
     for page in pages:
         if page.namespace() == page.site.namespaces.MAIN:
@@ -92,19 +29,12 @@ def get_xfds(pages):
             prefix = "Miscellany for deletion/"
         prefix += page.title()
         gen = PrefixingPageGenerator(prefix, namespace=4, site=page.site)
-        xfds = xfds.union([xfd_page.title(as_link=True) for xfd_page in gen])
+        xfds = xfds.union(xfd_page.title(as_link=True) for xfd_page in gen)
     return xfds
 
 
-def iterable_to_wikitext(items):
-    """
-    Convert iterable to wikitext.
-
-    :param items: Items to iterate
-    :type items: iterable
-
-    :rtype: str
-    """
+def iterable_to_wikitext(items: Collection[object]) -> str:
+    """Convert iterable to wikitext."""
     if len(items) == 1:
         return f"{next(iter(items))}"
     text = ""
@@ -113,17 +43,10 @@ def iterable_to_wikitext(items):
     return text
 
 
-def save_bot_start_end(save_text, page, summary):
-    """
-    Write the text to the given page.
-
-    :param save_text: Text to save
-    :type save_text: str
-    :param page: Page to save to
-    :type page: pywikibot.Page
-    :param summary: Edit summary
-    :type summary: str
-    """
+def save_bot_start_end(
+    save_text: str, page: pywikibot.Page, summary: str
+) -> None:
+    """Write the text to the given page."""
     save_text = save_text.strip()
     if page.exists():
         if BOT_START_END.match(page.text):
@@ -135,13 +58,13 @@ def save_bot_start_end(save_text, page, summary):
         pywikibot.error(f"{page!r} does not exist. Skipping.")
 
 
-def output_move_log(page=None, start=None, end=None):
-    """
-    Write move logevents to a page.
-
-    :param page: The page to output to
-    :type page: pywikibot.Page
-    """
+def output_move_log(
+    page: pywikibot.Page,
+    *,
+    start: datetime.datetime,
+    end: datetime.datetime,
+) -> None:
+    """Write move logevents to a page."""
     text = ""
     for logevent in page.site.logevents(
         logtype="move",
@@ -225,42 +148,47 @@ def output_move_log(page=None, start=None, end=None):
     save_bot_start_end(text, page, "Updating draftification report")
 
 
-def main(*args):
+def main(*args: str) -> int:
     """
     Process command line arguments and invoke bot.
 
     :param args: command line arguments
-    :type args: list of unicode
     """
-    options: dict[str, Any] = {"end": date.today() - timedelta(days=1)}
-    # Process global arguments
-    local_args = pywikibot.handle_args(args)
+    local_args = pywikibot.handle_args(args, do_help=False)
     site = pywikibot.Site()
-    site.login()
-    # Parse command line arguments
-    for arg in local_args:
-        arg, _, value = arg.partition(":")
-        arg = arg[1:]
-        if arg in ("end", "page", "start"):
-            if not value:
-                value = pywikibot.input(
-                    f"Please enter a value for {arg}", default=None
-                )
-            options[arg] = value
-        else:
-            options[arg] = True
-    if not validate_options(options, site):
-        pywikibot.error("Invalid options.")
-        return False
-
-    # Output logs
-    output_move_log(
-        page=options["page"],
-        start=datetime.datetime.combine(options["start"], datetime.time.min),
-        end=datetime.datetime.combine(options["end"], datetime.time.max),
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        epilog=re.sub(
+            r"\n\n?-help +.+?(\n\n-|\s*$)", r"\1", _GLOBAL_HELP, flags=re.S
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        allow_abbrev=False,
     )
-    return True
+    parser.add_argument("page", help="page to output the report to")
+    yesterday = date.today() - timedelta(days=1)
+    parser.add_argument(
+        "--start",
+        default=datetime.datetime.combine(yesterday, time.min),
+        type=pywikibot.Timestamp.fromISOformat,
+        help="start timestamp of the range for the report",
+        metavar="%Y-%m-%dT%H:%M:%SZ",
+    )
+    parser.add_argument(
+        "--end",
+        default=datetime.datetime.combine(yesterday, time.max),
+        type=pywikibot.Timestamp.fromISOformat,
+        help="end timestamp of the range for the report",
+        metavar="%Y-%m-%dT%H:%M:%SZ",
+    )
+    parsed_args = parser.parse_args(args=local_args)
+    site.login()
+    output_move_log(
+        page=pywikibot.Page(site, parsed_args.page),
+        start=parsed_args.start,
+        end=parsed_args.end,
+    )
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
