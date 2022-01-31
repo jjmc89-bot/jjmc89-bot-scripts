@@ -132,7 +132,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
                         f"\n{cat.title(as_link=True, textlink=textlinks)}",
                     )
             old_cat_regex = re.compile(
-                fr"\n?{re.escape(str(old_cat_link))}", re.M
+                rf"\n?{re.escape(str(old_cat_link))}", re.M
             )
             text = replaceExcept(
                 str(wikicode), old_cat_regex, "", EXCEPTIONS, site=self.site

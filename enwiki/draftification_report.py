@@ -50,7 +50,7 @@ def save_bot_start_end(
     save_text = save_text.strip()
     if page.exists():
         if BOT_START_END.match(page.text):
-            page.text = BOT_START_END.sub(fr"\1\n{save_text}\2", page.text)
+            page.text = BOT_START_END.sub(rf"\1\n{save_text}\2", page.text)
         else:
             page.text = save_text
         page.save(summary=summary, minor=False, botflag=False)
@@ -73,14 +73,10 @@ def output_move_log(
         end=end,
         reverse=True,
     ):
-        if (
-            logevent.target_ns
-            not in (
-                2,
-                118,
-            )
-            or logevent.target_title.startswith("Draft:Move/")
-        ):
+        if logevent.target_ns not in (
+            2,
+            118,
+        ) or logevent.target_title.startswith("Draft:Move/"):
             # Only want moves to Draft or User.
             # Skip page swaps.
             continue

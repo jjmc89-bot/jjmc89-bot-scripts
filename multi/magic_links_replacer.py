@@ -73,8 +73,8 @@ def validate_config(config: dict[str, Any]) -> bool:
 def _create_regexes() -> None:
     """Fill (and possibly overwrite) _regexes with default regexes."""
     space = r"(?:[^\S\n]|&nbsp;|&\#0*160;|&\#[Xx]0*[Aa]0;)"
-    spaces = fr"{space}+"
-    space_dash = fr"(?:-|{space})"
+    spaces = rf"{space}+"
+    space_dash = rf"(?:-|{space})"
     tags = [
         "gallery",
         "math",
@@ -89,24 +89,24 @@ def _create_regexes() -> None:
     url = r"""(?:[a-z][\w-]+://[^\]\s<>"]*[^\]\s\.:;,<>"\|\)`!{}'?«»“”‘’])"""
     _regexes.update(
         {
-            "bare_url": re.compile(fr"\b({url})", flags=re.I),
-            "bracket_url": re.compile(fr"(\[{url}[^\]]*\])", flags=re.I),
+            "bare_url": re.compile(rf"\b({url})", flags=re.I),
+            "bracket_url": re.compile(rf"(\[{url}[^\]]*\])", flags=re.I),
             "ISBN": re.compile(
-                fr"\bISBN(?P<separator>{spaces})(?P<value>(?:97[89]"
-                fr"{space_dash}?)?(?:[0-9]{space_dash}?){{9}}[0-9Xx])\b"
+                rf"\bISBN(?P<separator>{spaces})(?P<value>(?:97[89]"
+                rf"{space_dash}?)?(?:[0-9]{space_dash}?){{9}}[0-9Xx])\b"
             ),
             "PMID": re.compile(
-                fr"\bPMID(?P<separator>{spaces})(?P<value>[0-9]+)\b"
+                rf"\bPMID(?P<separator>{spaces})(?P<value>[0-9]+)\b"
             ),
             "RFC": re.compile(
-                fr"\bRFC(?P<separator>{spaces})(?P<value>[0-9]+)\b"
+                rf"\bRFC(?P<separator>{spaces})(?P<value>[0-9]+)\b"
             ),
             "tags": re.compile(
                 r"""(<\/?\w+(?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|"""
                 r"""[^>\s]+))?)*\s*\/?>)"""
             ),
             "tags_content": re.compile(
-                fr"(<(?P<tag>{r'|'.join(tags)})\b.*?</(?P=tag)>)",
+                rf"(<(?P<tag>{r'|'.join(tags)})\b.*?</(?P=tag)>)",
                 flags=re.I | re.M,
             ),
         }

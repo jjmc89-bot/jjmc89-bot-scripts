@@ -111,7 +111,7 @@ class UserGroupsMassMessageListUpdater(
                 newpage = pywikibot.Page(
                     self.site,
                     re.sub(
-                        fr":{re.escape(user.title(with_ns=False))}\b",
+                        rf":{re.escape(user.title(with_ns=False))}\b",
                         f":{newuser.title(with_ns=False)}",
                         page.title(),
                     ),
@@ -340,7 +340,7 @@ def get_group_changes(
                     user=pywikibot.User(
                         site,
                         re.sub(
-                            fr"{site.suffix}$",
+                            rf"{site.suffix}$",
                             "",
                             log_event.page().title(),
                         ),
