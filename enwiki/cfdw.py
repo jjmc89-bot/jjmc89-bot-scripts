@@ -600,7 +600,7 @@ def do_instruction(instruction: Instruction) -> None:
                 for cat in bot_options["new_cats"]
             )
         else:
-            new_cats = "{n_new_cats} categories"
+            new_cats = f"{n_new_cats} categories"
         bot_options["summary"] = (
             f"Merging {old_cat.title(as_link=True, textlink=True)} to "
             f"{new_cats} per {cfd_link}"
