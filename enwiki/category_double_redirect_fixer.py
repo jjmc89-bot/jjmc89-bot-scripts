@@ -43,7 +43,7 @@ def get_template_pages(
         if not template.exists():
             continue
         pages.add(template)
-        for tpl in template.backlinks(filter_redirects=True):
+        for tpl in template.redirects():
             pages.add(tpl)
     return pages
 

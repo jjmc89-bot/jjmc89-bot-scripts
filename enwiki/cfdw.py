@@ -543,10 +543,7 @@ def delete_page(page: pywikibot.Page, summary: str) -> None:
     if page.exists():
         return
     page_link = page.title(as_link=True)
-    for redirect in page.backlinks(filter_redirects=True):
-        if redirect.getRedirectTarget() != page:
-            # workaround for #89
-            continue
+    for redirect in page.redirects():
         redirect.delete(
             reason=SUMMARIES["redirect"].format(page_link), prompt=False
         )
@@ -556,10 +553,7 @@ def delete_page(page: pywikibot.Page, summary: str) -> None:
             reason=SUMMARIES["talk"].format(page_link), prompt=False
         )
         talk_link = talk_page.title(as_link=True)
-        for redirect in talk_page.backlinks(filter_redirects=True):
-            if redirect.getRedirectTarget() != talk_page:
-                # workaround for #89
-                continue
+        for redirect in talk_page.redirects():
             redirect.delete(
                 reason=SUMMARIES["redirect"].format(talk_link), prompt=False
             )
@@ -676,7 +670,7 @@ def get_template_pages(
         if not template.exists():
             continue
         pages.add(template)
-        for tpl in template.backlinks(filter_redirects=True):
+        for tpl in template.redirects():
             pages.add(tpl)
     return pages
 
