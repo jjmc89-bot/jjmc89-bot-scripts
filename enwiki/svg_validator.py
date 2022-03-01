@@ -44,7 +44,7 @@ def get_redirects(
         if not page.exists():
             continue
         link_pages.add(page)
-        for redirect in page.backlinks(filter_redirects=True):
+        for redirect in page.redirects():
             link_pages.add(redirect)
     return frozenset(link_pages)
 

@@ -52,7 +52,7 @@ def get_template_titles(
         if not template.exists():
             continue
         titles.add(template.title(with_ns=template.namespace() != 10))
-        for tpl in template.backlinks(filter_redirects=True):
+        for tpl in template.redirects():
             titles.add(tpl.title(with_ns=tpl.namespace() != 10))
     return titles
 
