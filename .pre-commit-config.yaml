@@ -73,7 +73,7 @@ repos:
           - --target-version
           - py37
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.3
+    rev: 1.7.4
     hooks:
       - id: bandit
         args:
