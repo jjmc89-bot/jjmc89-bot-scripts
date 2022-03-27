@@ -1,20 +1,15 @@
-#!/usr/bin/env python3
 """Report inactive interface admins."""
-# Author : JJMC89
-# License: MIT
 from __future__ import annotations
 
 from itertools import chain
-from typing import Tuple, Union
+from typing import Tuple
 
 import pywikibot
 from dateutil.relativedelta import relativedelta
 from pywikibot.logentries import LogEntry
+from pywikibot.page import PageSourceType
 
 
-PageSource = Union[
-    pywikibot.Page, pywikibot.site.BaseSite, pywikibot.page.BaseLink
-]
 UserContrib = Tuple[pywikibot.Page, int, pywikibot.Timestamp, str]
 
 
@@ -42,7 +37,7 @@ def get_inactive_users(
 class User(pywikibot.User):
     """Extended pywikibot.User."""
 
-    def __init__(self, source: PageSource, title: str = "") -> None:
+    def __init__(self, source: PageSourceType, title: str = "") -> None:
         """Initialize."""
         super().__init__(source, title)
         self._has_cssjs_edit: object = _unchecked
@@ -129,7 +124,7 @@ class User(pywikibot.User):
         return self._has_cssjs_edit
 
 
-def main(*args: str) -> None:
+def main(*args: str) -> int:
     """
     Process command line arguments and invoke bot.
 
@@ -140,7 +135,7 @@ def main(*args: str) -> None:
     site.login()
     users = get_inactive_users(site=site)
     if not users:
-        return
+        return 0
     heading = (
         "Inactive interface administrators "
         f"{site.server_time().date().isoformat()}"
@@ -152,7 +147,8 @@ def main(*args: str) -> None:
     pywikibot.Page(
         site, "Wikipedia:Interface administrators' noticeboard"
     ).save(text=text, section="new", summary=heading, botflag=False)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

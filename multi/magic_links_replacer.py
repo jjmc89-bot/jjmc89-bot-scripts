@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 This script replaces magic links.
 
@@ -12,8 +11,6 @@ The following parameters are supported:
 
 &params;
 """
-# Author : JJMC89
-# License: MIT
 from __future__ import annotations
 
 import json
@@ -189,7 +186,7 @@ class MagicLinksReplacer(SingleSiteBot, NoRedirectPageBot, ExistingPageBot):
         self.put_current(text, summary=self.opt.summary)
 
 
-def main(*args: str) -> bool:
+def main(*args: str) -> int:
     """
     Process command line arguments and invoke bot.
 
@@ -215,16 +212,16 @@ def main(*args: str) -> bool:
     gen = gen_factory.getCombinedGenerator(preload=True)
     if "config" not in options:
         pywikibot.bot.suggest_help(missing_parameters=["config"])
-        return False
+        return 1
     config = get_json_from_page(pywikibot.Page(site, options.pop("config")))
     if validate_config(config):
         options.update(config)
     else:
         pywikibot.error("Invalid config.")
-        return False
+        return 1
     MagicLinksReplacer(generator=gen, site=site, **options).run()
-    return True
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

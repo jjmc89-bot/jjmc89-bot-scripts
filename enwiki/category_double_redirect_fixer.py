@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 This script fixes double (or more) category redirects.
 
@@ -10,17 +9,16 @@ The following parameters are supported:
 
 &params;
 """
-# Author : JJMC89
-# License: MIT
 from __future__ import annotations
 
-from typing import Any, Iterable
+from typing import Any
 
 import mwparserfromhell
 import pywikibot
 from pywikibot.bot import ExistingPageBot, SingleSiteBot
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import removeDisabledParts
+from pywikibot_extensions.page import get_redirects
 
 
 docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
@@ -28,37 +26,21 @@ docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
 }
 
 
-def get_template_pages(
-    templates: Iterable[pywikibot.Page],
-) -> set[pywikibot.Page]:
-    """
-    Given an iterable of templates, return a set of pages.
-
-    :param templates: iterable of templates
-    """
-    pages = set()
-    for template in templates:
-        if template.isRedirectPage():
-            template = template.getRedirectTarget()
-        if not template.exists():
-            continue
-        pages.add(template)
-        for tpl in template.redirects():
-            pages.add(tpl)
-    return pages
-
-
 class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
     """Bot to fix double (or more) category redirects."""
 
+    update_options = {
+        "summary": "Fix double redirect",
+    }
+
     def __init__(self, **kwargs: Any) -> None:
         """Initialize."""
-        self.available_options.update(  # pylint: disable=no-member
-            {"summary": "Fix double redirect"}
-        )
         super().__init__(**kwargs)
-        self.templates = get_template_pages(
-            [pywikibot.Page(self.site, "Category redirect", ns=10)]
+        self.templates = get_redirects(
+            frozenset(
+                (pywikibot.Page(self.site, "Category redirect", ns=10),)
+            ),
+            namespaces=10,
         )
 
     def init_page(self, item: Any) -> pywikibot.Page:
@@ -130,7 +112,7 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
         self.put_current(str(wikicode), summary=self.opt.summary)
 
 
-def main(*args: str) -> None:
+def main(*args: str) -> int:
     """
     Process command line arguments and invoke bot.
 
@@ -155,7 +137,8 @@ def main(*args: str) -> None:
             options[arg] = True
     gen = gen_factory.getCombinedGenerator(preload=True)
     CategoryDoubleRedirectFixerBot(generator=gen, site=site, **options).run()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
