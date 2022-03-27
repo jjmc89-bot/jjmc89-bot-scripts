@@ -26,10 +26,6 @@ docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
     "&params;": parameterHelp
 }
 EXCEPTIONS = ("comment", "math", "nowiki", "pre", "source")
-SUMMARIES = {
-    "redirect": "[[WP:G8|G8]]: Redirect to deleted page {}",
-    "talk": "[[WP:G8|G8]]: Talk page of deleted page {}",
-}
 TEXTLINK_NAMESPACES = (118,)
 TPL: dict[str, Iterable[str | pywikibot.Page]] = {
     "cat": ["c", "cl", "lc"],
@@ -539,24 +535,22 @@ def check_instruction(instruction: Instruction) -> bool:
 
 def delete_page(page: pywikibot.Page, summary: str) -> None:
     """Delete the page and dependent pages."""
-    page.delete(reason=summary, prompt=False)
+    page.delete(
+        reason=summary,
+        prompt=False,
+        deletetalk=page.toggleTalkPage().exists(),
+    )
     if page.exists():
         return
-    page_link = page.title(as_link=True)
     for redirect in page.redirects():
         redirect.delete(
-            reason=SUMMARIES["redirect"].format(page_link), prompt=False
+            reason=(
+                "[[WP:G8|G8]]: Redirect to deleted page "
+                f"{page.title(as_link=True)}"
+            ),
+            prompt=False,
+            deletetalk=redirect.toggleTalkPage().exists(),
         )
-    talk_page = page.toggleTalkPage()
-    if talk_page.exists():
-        talk_page.delete(
-            reason=SUMMARIES["talk"].format(page_link), prompt=False
-        )
-        talk_link = talk_page.title(as_link=True)
-        for redirect in talk_page.redirects():
-            redirect.delete(
-                reason=SUMMARIES["redirect"].format(talk_link), prompt=False
-            )
 
 
 def do_instruction(instruction: Instruction) -> None:
