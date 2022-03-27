@@ -1,13 +1,9 @@
-#!/usr/bin/env python3
 """Tag draftified articles."""
-# Author : JJMC89
-# License: MIT
 from __future__ import annotations
 
 import argparse
 import re
-from functools import lru_cache
-from typing import Any, Generator, Iterable
+from typing import Any, Generator
 
 import pywikibot
 from pywikibot.bot import (
@@ -17,62 +13,19 @@ from pywikibot.bot import (
     SingleSiteBot,
 )
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
-
-
-@lru_cache()
-def get_redirects(
-    pages: frozenset[pywikibot.Page],
-) -> frozenset[pywikibot.Page]:
-    """Given pages, return all possible titles."""
-    link_pages = set()
-    for page in pages:
-        while page.isRedirectPage():
-            try:
-                page = page.getRedirectTarget()
-            except pywikibot.exceptions.CircularRedirectError:
-                break
-        if not page.exists():
-            continue
-        link_pages.add(page)
-        for redirect in page.redirects():
-            link_pages.add(redirect)
-    return frozenset(link_pages)
-
-
-def has_template(
-    page: pywikibot.Page,
-    templates: str | Iterable[pywikibot.Page | str],
-) -> bool:
-    """
-    Return True if the page has one of the templates. False otherwise.
-
-    :param page: page to check
-    :param templates: templates to check
-    """
-    if isinstance(templates, str):
-        templates = [templates]
-    template_pages = get_redirects(
-        frozenset(
-            tpl
-            if isinstance(tpl, pywikibot.Page)
-            else pywikibot.Page(page.site, tpl, ns=10)
-            for tpl in templates
-        )
-    )
-    return bool(template_pages & set(page.templates()))
+from pywikibot_extensions.page import Page
 
 
 class DfyTaggerBot(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
     """Bot to tag draftified articles."""
 
+    update_options = {
+        "summary": "Add {{{{{tpl}}}}}",
+        "template": "drafts moved from mainspace",
+    }
+
     def __init__(self, **kwargs: Any) -> None:
         """Initialize."""
-        self.available_options.update(  # pylint: disable=no-member
-            {
-                "summary": "Add {{{{{tpl}}}}}",
-                "template": "drafts moved from mainspace",
-            }
-        )
         super().__init__(**kwargs)
         template = self.opt.template
         self.add_text = f"\n\n{{{{subst:{template}}}}}"
@@ -83,7 +36,7 @@ class DfyTaggerBot(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
         if page.namespace() != 118:
             pywikibot.warning(f"{page!r} is not a draft.")
             return True
-        if has_template(page, self.opt.template):
+        if Page(page).has_template(self.opt.template):
             pywikibot.warning(f"{page!r} already has the template.")
             return True
         return super().skip_page(page)
@@ -128,7 +81,7 @@ def draftified_page_generator(
             yield move.target_page
 
 
-def main(*args: str) -> None:
+def main(*args: str) -> int:
     """Process command line arguments and invoke bot."""
     local_args = pywikibot.handle_args(args, do_help=False)
     site = pywikibot.Site()
@@ -169,7 +122,8 @@ def main(*args: str) -> None:
     gen = None if gen_factory.gens else draftified_page_generator(site, start)
     gen = gen_factory.getCombinedGenerator(gen=gen)
     DfyTaggerBot(generator=gen, site=site, **parsed_args).run()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Generate a tabular report of draftifications over a specified range."""
 from __future__ import annotations
 
@@ -6,17 +5,13 @@ import argparse
 import datetime
 import re
 from datetime import date, time, timedelta
-from typing import Collection, Iterable
+from typing import Iterable
 
 import pywikibot
 from pywikibot.bot import _GLOBAL_HELP
 from pywikibot.pagegenerators import PrefixingPageGenerator
-
-
-BOT_START_END = re.compile(
-    r"^(.*?<!--\s*bot start\s*-->).*?(<!--\s*bot end\s*-->.*)$",
-    flags=re.S | re.I,
-)
+from pywikibot_extensions.page import Page
+from pywikibot_extensions.textlib import iterable_to_wikitext
 
 
 def get_xfds(pages: Iterable[pywikibot.Page]) -> set[str]:
@@ -31,31 +26,6 @@ def get_xfds(pages: Iterable[pywikibot.Page]) -> set[str]:
         gen = PrefixingPageGenerator(prefix, namespace=4, site=page.site)
         xfds = xfds.union(xfd_page.title(as_link=True) for xfd_page in gen)
     return xfds
-
-
-def iterable_to_wikitext(items: Collection[object]) -> str:
-    """Convert iterable to wikitext."""
-    if len(items) == 1:
-        return f"{next(iter(items))}"
-    text = ""
-    for item in items:
-        text += f"\n* {item}"
-    return text
-
-
-def save_bot_start_end(
-    save_text: str, page: pywikibot.Page, summary: str
-) -> None:
-    """Write the text to the given page."""
-    save_text = save_text.strip()
-    if page.exists():
-        if BOT_START_END.match(page.text):
-            page.text = BOT_START_END.sub(rf"\1\n{save_text}\2", page.text)
-        else:
-            page.text = save_text
-        page.save(summary=summary, minor=False, botflag=False)
-    else:
-        pywikibot.error(f"{page!r} does not exist. Skipping.")
 
 
 def output_move_log(
@@ -141,7 +111,7 @@ def output_move_log(
         )
     else:
         text = "None"
-    save_bot_start_end(text, page, "Updating draftification report")
+    page.save_bot_start_end(text, summary="Updating draftification report")
 
 
 def main(*args: str) -> int:
@@ -179,7 +149,7 @@ def main(*args: str) -> int:
     parsed_args = parser.parse_args(args=local_args)
     site.login()
     output_move_log(
-        page=pywikibot.Page(site, parsed_args.page),
+        page=Page(site, parsed_args.page),
         start=parsed_args.start,
         end=parsed_args.end,
     )

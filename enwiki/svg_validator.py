@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Validate SVGs using the W3C nu validator.
 
@@ -10,7 +9,6 @@ The following arguments are supported:
 """
 from __future__ import annotations
 
-from functools import lru_cache
 from typing import Any
 
 import mwparserfromhell
@@ -21,32 +19,13 @@ from pywikibot.bot import ExistingPageBot, FollowRedirectPageBot, SingleSiteBot
 from pywikibot.comms.http import user_agent
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import removeDisabledParts
+from pywikibot_extensions.page import get_redirects
 from requests.exceptions import RequestException, Timeout
 
 
 docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
     "&params;": parameterHelp
 }
-
-
-@lru_cache()
-def get_redirects(
-    pages: frozenset[pywikibot.Page],
-) -> frozenset[pywikibot.Page]:
-    """Given pages, return all possible titles."""
-    link_pages = set()
-    for page in pages:
-        while page.isRedirectPage():
-            try:
-                page = page.getRedirectTarget()
-            except pywikibot.exceptions.CircularRedirectError:
-                break
-        if not page.exists():
-            continue
-        link_pages.add(page)
-        for redirect in page.redirects():
-            link_pages.add(redirect)
-    return frozenset(link_pages)
 
 
 class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
@@ -67,7 +46,8 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
                     pywikibot.Page(self.site, "Invalid SVG", ns=10),
                     pywikibot.Page(self.site, "Valid SVG", ns=10),
                 }
-            )
+            ),
+            namespaces=10,
         )
 
     def teardown(self) -> None:
@@ -218,7 +198,7 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
         self.put_current(str(wikicode), summary=summary, minor=not errors)
 
 
-def main(*args: str) -> None:
+def main(*args: str) -> int:
     """Process command line arguments and invoke bot."""
     options = {}
     local_args = pywikibot.handle_args(args)
@@ -232,7 +212,8 @@ def main(*args: str) -> None:
         options[arg] = True
     gen = gen_factory.getCombinedGenerator(preload=True)
     SVGValidatorBot(generator=gen, site=site, **options).run()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

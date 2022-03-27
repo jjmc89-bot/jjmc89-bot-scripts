@@ -1,24 +1,23 @@
-#!/usr/bin/env python3
 """
 This script processes Categories for discussion working pages.
 
 &params;
 """
-# Author : JJMC89
-# License: MIT
 from __future__ import annotations
 
 import re
 from contextlib import suppress
 from itertools import chain
-from typing import Any, Generator, Iterable, TypeVar, Union
+from typing import Any, Generator, Iterable
 
 import mwparserfromhell
 import pywikibot
 from mwparserfromhell.nodes import Node, Template, Text, Wikilink
 from pywikibot.bot import ExistingPageBot, SingleSiteBot
+from pywikibot.page import PageSourceType
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import removeDisabledParts, replaceExcept
+from pywikibot_extensions.page import Page
 from typing_extensions import TypedDict
 
 
@@ -38,12 +37,6 @@ TPL: dict[str, Iterable[str | pywikibot.Page]] = {
     ],
     "old cfd": ["Old CfD"],
 }
-
-
-PageSource = Union[
-    pywikibot.Page, pywikibot.site.BaseSite, pywikibot.page.BaseLink
-]
-PageType = TypeVar("PageType", bound="Page")
 
 
 class BotOptions(TypedDict, total=False):
@@ -148,34 +141,10 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
         )
 
 
-class Page(pywikibot.Page):
-    """Represents a MediaWiki page."""
-
-    @classmethod
-    def from_wikilink(
-        cls: type[PageType],
-        wikilink: object,
-        site: pywikibot.site.BaseSite,
-        default_namespace: int = 0,
-    ) -> PageType:
-        """
-        Create a Page from a wikilink.
-
-        :param wikilink: the wikilink text
-        :param site: Site with the wikilink
-        :param default_namespace: a namespace to use if the link does not
-            contain one (defaults to 0)
-        """
-        text = removeDisabledParts(str(wikilink), site=site)
-        text = text.strip(" _\r\n\t").lstrip("[").rstrip("]")
-        link = pywikibot.Link(text, site, default_namespace)
-        return cls(link)
-
-
 class CfdPage(Page):
     """Represents a CFD page."""
 
-    def __init__(self, source: PageSource, title: str = "") -> None:
+    def __init__(self, source: PageSourceType, title: str = "") -> None:
         """Initialize."""
         super().__init__(source, title)
         if not (
@@ -262,7 +231,7 @@ class CFDWPage(Page):
 
     MODES = ("move", "merge", "empty", "retain")
 
-    def __init__(self, source: PageSource, title: str = "") -> None:
+    def __init__(self, source: PageSourceType, title: str = "") -> None:
         """Initialize."""
         super().__init__(source, title)
         if not (
@@ -711,7 +680,7 @@ def remove_cfd_tpl(page: pywikibot.Page, summary: str) -> None:
     page.save(summary=summary)
 
 
-def main(*args: str) -> None:
+def main(*args: str) -> int:
     """
     Process command line arguments and invoke bot.
 
@@ -730,7 +699,8 @@ def main(*args: str) -> None:
         page = CFDWPage(page)
         if page.protection().get("edit", ("", ""))[0] == "sysop":
             page.parse()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
