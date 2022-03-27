@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Reports and notifies inactive admins.
 
@@ -10,8 +9,6 @@ The following parameters are supported:
 
 -max_attempts     The maximum number of attempts to notify (default: 3)
 """
-# Author : JJMC89
-# License: MIT
 from __future__ import annotations
 
 import json
@@ -421,13 +418,13 @@ def main(*args):
             options[arg] = True
     if "config" not in options:
         pywikibot.bot.suggest_help(missing_parameters=["config"])
-        return False
+        return 1
     options.update(
         get_json_from_page(pywikibot.Page(site, options.pop("config")))
     )
     if not validate_options(options):
         pywikibot.error("Invalid options.")
-        return False
+        return 1
     page = pywikibot.Page(
         site, f"Wikipedia:Inactive administrators/{options['date']:%Y}"
     )
@@ -468,8 +465,8 @@ def main(*args):
         summary += "Reporting"
     summary += " inactive admins"
     page.save(summary=summary, minor=False, botflag=False, force=True)
-    return True
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

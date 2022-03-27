@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
 """Update user groups MassMessage lists."""
-# Author : JJMC89
-# License: MIT
 from __future__ import annotations
 
 import argparse
@@ -353,7 +350,7 @@ def get_group_changes(
     return sorted(group_changes, key=itemgetter("timestamp"))
 
 
-def main(*args: str) -> None:
+def main(*args: str) -> int:
     """
     Process command line arguments and invoke bot.
 
@@ -369,7 +366,7 @@ def main(*args: str) -> None:
     config = get_json_from_page(config_page)
     if not validate_config(config, site):
         pywikibot.error("The specified configuration is invalid.")
-        return
+        return 1
     options["config"] = config
     meta = pywikibot.Site("meta", "meta") if options.pop("meta") else None
     start = options.pop("start")
@@ -387,7 +384,8 @@ def main(*args: str) -> None:
         config[key]["page"] for key in config if config[key]["enabled"]
     )
     UserGroupsMassMessageListUpdater(generator=gen, site=site, **options).run()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
