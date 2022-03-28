@@ -34,7 +34,7 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
         self.potd_title = f"Template:Potd/{date}"
         potd_tpl = pywikibot.Page(self.commons, self.potd_title)
         potd_fn_titles = [
-            p.title()
+            p.title(with_ns=False)
             for p in get_redirects(
                 frozenset((Page(self.commons, "Template:Potd filename"),)),
                 namespaces=10,
@@ -50,7 +50,7 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
         else:
             raise ValueError("Failed to find the POTD.")
         self.potd_desc_titles = [
-            p.title()
+            p.title(with_ns=False)
             for p in get_redirects(
                 frozenset((Page(self.commons, "Template:Potd description"),)),
                 namespaces=10,
