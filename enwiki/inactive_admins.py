@@ -285,16 +285,17 @@ class User(pywikibot.User):
             "diff2": None,
         }
 
-    def is_active(self, cutoff=date.today() + relativedelta(years=-1)):
+    def is_active(self, cutoff=None):
         """
         Return True if the user is active.
 
         A user is active if they have an edit or log entry since the cutoff.
 
         :param cutoff: Cutoff for user activity
-        :type cutoff: datetime.date
+        :type cutoff: Optional[datetime.date]
         :rtype: bool
         """
+        cutoff = cutoff or date.today() + relativedelta(years=-1)
         if self.last_edit and self.last_edit[2].date() >= cutoff:
             return True
         if self.last_event and self.last_event.timestamp().date() >= cutoff:
