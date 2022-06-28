@@ -34,11 +34,6 @@ repos:
       - id: python-no-eval
       - id: python-no-log-warn
       - id: python-use-type-annotations
-  - repo: https://github.com/Lucas-C/pre-commit-hooks
-    rev: v1.2.0
-    hooks:
-      - id: remove-crlf
-      - id: remove-tabs
   - repo: https://github.com/asottile/pyupgrade
     rev: v2.34.0
     hooks:
