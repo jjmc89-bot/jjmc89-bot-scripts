@@ -6,23 +6,19 @@ import re
 from typing import Any, Generator
 
 import pywikibot
-from pywikibot.bot import (
-    _GLOBAL_HELP,
-    ExistingPageBot,
-    NoRedirectPageBot,
-    SingleSiteBot,
-)
+from pywikibot.bot import _GLOBAL_HELP, ExistingPageBot, SingleSiteBot
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot_extensions.page import Page
 
 
-class DfyTaggerBot(SingleSiteBot, ExistingPageBot, NoRedirectPageBot):
+class DfyTaggerBot(SingleSiteBot, ExistingPageBot):
     """Bot to tag draftified articles."""
 
     update_options = {
         "summary": "Add {{{{{tpl}}}}}",
         "template": "drafts moved from mainspace",
     }
+    use_redirects = False
 
     def __init__(self, **kwargs: Any) -> None:
         """Initialize."""
