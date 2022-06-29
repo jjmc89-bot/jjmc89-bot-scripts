@@ -18,7 +18,7 @@ import re
 from typing import Any, Pattern
 
 import pywikibot
-from pywikibot.bot import ExistingPageBot, NoRedirectPageBot, SingleSiteBot
+from pywikibot.bot import ExistingPageBot, SingleSiteBot
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import replaceExcept
 
@@ -130,14 +130,14 @@ def split_into_sections(text: str) -> list[str]:
     return sections
 
 
-class MagicLinksReplacer(SingleSiteBot, NoRedirectPageBot, ExistingPageBot):
+class MagicLinksReplacer(SingleSiteBot, ExistingPageBot):
     """Bot to replace magic links."""
+
+    update_options = {"summary": None, "ISBN": None, "PMID": None, "RFC": None}
+    use_redirects = False
 
     def __init__(self, **kwargs: Any) -> None:
         """Initialize."""
-        self.available_options.update(  # pylint: disable=no-member
-            {"summary": None, "ISBN": None, "PMID": None, "RFC": None}
-        )
         super().__init__(**kwargs)
         _create_regexes()
         self.replace_exceptions: list[Pattern[str] | str] = [

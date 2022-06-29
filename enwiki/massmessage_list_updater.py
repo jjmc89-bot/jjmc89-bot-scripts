@@ -13,12 +13,7 @@ from operator import itemgetter
 from typing import Any, Dict, Set, Union
 
 import pywikibot
-from pywikibot.bot import (
-    _GLOBAL_HELP,
-    ExistingPageBot,
-    NoRedirectPageBot,
-    SingleSiteBot,
-)
+from pywikibot.bot import _GLOBAL_HELP, ExistingPageBot, SingleSiteBot
 from pywikibot.pagegenerators import PreloadingGenerator
 from typing_extensions import TypedDict
 
@@ -45,23 +40,15 @@ class Rename(TypedDict):
     timestamp: pywikibot.Timestamp
 
 
-class UserGroupsMassMessageListUpdater(
-    SingleSiteBot, NoRedirectPageBot, ExistingPageBot
-):
+class UserGroupsMassMessageListUpdater(SingleSiteBot, ExistingPageBot):
     """Bot to update MassMessage lists."""
 
-    def __init__(self, **kwargs: Any) -> None:
-        """Initialize."""
-        self.available_options.update(  # pylint: disable=no-member
-            {
-                "config": {},
-                "group_changes": [],
-                "renames": [
-                    {"olduser": None, "newuser": None, "timestamp": None}
-                ],
-            }
-        )
-        super().__init__(**kwargs)
+    update_options = {
+        "config": {},
+        "group_changes": [],
+        "renames": [{"olduser": None, "newuser": None, "timestamp": None}],
+    }
+    use_redirects = False
 
     def check_disabled(self) -> None:
         """Check if the task is disabled. If so, quit."""

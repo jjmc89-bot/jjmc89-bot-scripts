@@ -260,7 +260,7 @@ class CFDWPage(Page):
             try:
                 self._parse_section(str(section))
             except (ValueError, pywikibot.exceptions.Error):
-                pywikibot.exception(tb=True)
+                pywikibot.exception()
         self._check_run()
 
     def _parse_section(self, section: str) -> None:
