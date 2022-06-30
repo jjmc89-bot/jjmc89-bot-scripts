@@ -120,7 +120,7 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
             else:
                 break
         response.raise_for_status()
-        pywikibot.debug(response.text, _logger)
+        pywikibot.debug(response.text, layer=_logger)
         data = response.json()
         assert "messages" in data and isinstance(
             data["messages"], list
@@ -154,7 +154,7 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
             elif message["subType"] == "warning":
                 warnings.append(message["message"])
             else:
-                pywikibot.debug(str(message), _logger)
+                pywikibot.debug(str(message), layer=_logger)
         return errors
 
     def treat_page(self) -> None:
