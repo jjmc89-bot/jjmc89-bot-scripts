@@ -584,6 +584,7 @@ def do_instruction(instruction: Instruction) -> None:
                 bot_options["new_cats"][0].title(),
                 reason=cfd_link,
                 noredirect=instruction["noredirect"],
+                movesubpages=False,
             )
             remove_cfd_tpl(bot_options["new_cats"][0], "Category moved")
         bot_options["summary"] = (
