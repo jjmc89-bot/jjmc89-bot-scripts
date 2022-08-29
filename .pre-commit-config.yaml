@@ -41,7 +41,7 @@ repos:
         args:
           - --py37-plus
   - repo: https://github.com/fsouza/autoflake8
-    rev: v0.3.2
+    rev: v0.4.0
     hooks:
       - id: autoflake8
   - repo: https://github.com/PyCQA/isort
