@@ -40,10 +40,10 @@ repos:
       - id: pyupgrade
         args:
           - --py37-plus
-  - repo: https://github.com/fsouza/autoflake8
-    rev: v0.3.2
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v1.5.1
     hooks:
-      - id: autoflake8
+      - id: autoflake
   - repo: https://github.com/PyCQA/isort
     rev: 5.10.1
     hooks:
