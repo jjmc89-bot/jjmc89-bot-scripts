@@ -372,9 +372,13 @@ class CFDWPage(Page):
             cats = {old_cat}
             cats.update(instruction["bot_options"]["new_cats"])
             if cats & skip:
-                pywikibot.warning(
+                pywikibot.error(
                     f"{old_cat!r} is involved in multiple instructions. "
                     f"Skipping: {instruction!r}."
+                )
+            elif any(c.isDisambig() for c in cats):
+                pywikibot.error(
+                    f"{instruction!r} involves a disambiguation. Skipping."
                 )
             elif check_instruction(instruction):
                 self.instructions.append(instruction)
