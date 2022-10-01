@@ -3,7 +3,7 @@ This script replaces magic links.
 
 The following parameters are required:
 
--config           The page title that has the JSON config (object).
+-config_title     The page title that has the JSON config (object).
 
 The following parameters are supported:
 
@@ -201,7 +201,7 @@ def main(*args: str) -> int:
     for arg in script_args:
         arg, _, value = arg.partition(":")
         arg = arg[1:]
-        if arg == "config":
+        if arg == "config_title":
             if not value:
                 value = pywikibot.input(
                     f"Please enter a value for {arg}", default=None
@@ -210,10 +210,12 @@ def main(*args: str) -> int:
         else:
             options[arg] = True
     gen = gen_factory.getCombinedGenerator(preload=True)
-    if "config" not in options:
-        pywikibot.bot.suggest_help(missing_parameters=["config"])
+    if "config_title" not in options:
+        pywikibot.bot.suggest_help(missing_parameters=["config_title"])
         return 1
-    config = get_json_from_page(pywikibot.Page(site, options.pop("config")))
+    config = get_json_from_page(
+        pywikibot.Page(site, options.pop("config_title"))
+    )
     if validate_config(config):
         options.update(config)
     else:
