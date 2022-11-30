@@ -398,11 +398,11 @@ def add_old_cfd(
     for tpl in wikicode.ifilter_templates():
         try:
             template = Page.from_wikilink(tpl.name, page.site, 10)
-            if template not in TPL["old cfd"] or not tpl.has(
-                "date", ignore_empty=True
-            ):
-                continue
-        except pywikibot.exceptions.InvalidTitleError:
+        except ValueError:
+            continue
+        if template not in TPL["old cfd"] or not tpl.has(
+            "date", ignore_empty=True
+        ):
             continue
         if tpl.get("date").value.strip() == date:
             # Template already present.
@@ -677,10 +677,10 @@ def remove_cfd_tpl(page: pywikibot.Page, summary: str) -> None:
     for tpl in wikicode.ifilter_templates():
         try:
             template = Page.from_wikilink(tpl.name, page.site, 10)
-            if template in TPL["cfd"]:
-                wikicode.remove(tpl)
-        except pywikibot.exceptions.InvalidTitleError:
+        except ValueError:
             continue
+        if template in TPL["cfd"]:
+            wikicode.remove(tpl)
     page.text = str(wikicode).strip()
     page.save(summary=summary)
 
