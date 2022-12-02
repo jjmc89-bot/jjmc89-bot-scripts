@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import argparse
 import re
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 
 import pywikibot
 from pywikibot.bot import _GLOBAL_HELP, ExistingPageBot, SingleSiteBot

@@ -15,7 +15,8 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Pattern
+from re import Pattern
+from typing import Any
 
 import pywikibot
 from pywikibot.bot import ExistingPageBot, SingleSiteBot

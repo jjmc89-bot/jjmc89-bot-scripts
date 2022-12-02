@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from itertools import chain
-from typing import Tuple
 
 import pywikibot
 from dateutil.relativedelta import relativedelta
@@ -10,7 +9,7 @@ from pywikibot.logentries import LogEntry
 from pywikibot.page import PageSourceType
 
 
-UserContrib = Tuple[pywikibot.Page, int, pywikibot.Timestamp, str]
+UserContrib = tuple[pywikibot.Page, int, pywikibot.Timestamp, str]
 
 
 _unchecked = object()

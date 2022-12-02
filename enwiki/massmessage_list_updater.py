@@ -10,7 +10,7 @@ from contextlib import suppress
 from datetime import date, time, timedelta
 from itertools import chain
 from operator import itemgetter
-from typing import Any, Dict, Set, Union
+from typing import Any, Union
 
 import pywikibot
 from pywikibot.bot import _GLOBAL_HELP, ExistingPageBot, SingleSiteBot
@@ -18,8 +18,8 @@ from pywikibot.pagegenerators import PreloadingGenerator
 from typing_extensions import TypedDict
 
 
-PageDict = Dict[
-    Union[str, pywikibot.User], Union[pywikibot.Page, Set[pywikibot.Page]]
+PageDict = dict[
+    Union[str, pywikibot.User], Union[pywikibot.Page, set[pywikibot.Page]]
 ]
 
 
