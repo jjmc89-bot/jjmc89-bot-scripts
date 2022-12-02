@@ -4,8 +4,8 @@ from __future__ import annotations
 import argparse
 import datetime
 import re
+from collections.abc import Iterable
 from datetime import date, time, timedelta
-from typing import Iterable
 
 import pywikibot
 from pywikibot.bot import _GLOBAL_HELP

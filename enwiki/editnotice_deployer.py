@@ -21,7 +21,8 @@ The following parameters are supported:
 """
 from __future__ import annotations
 
-from typing import Any, Generator, Iterable
+from collections.abc import Generator, Iterable
+from typing import Any
 
 import pywikibot
 from pywikibot import pagegenerators

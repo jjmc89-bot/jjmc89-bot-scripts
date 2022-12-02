@@ -6,9 +6,10 @@ This script processes Categories for discussion working pages.
 from __future__ import annotations
 
 import re
+from collections.abc import Generator, Iterable
 from contextlib import suppress
 from itertools import chain
-from typing import Any, Generator, Iterable
+from typing import Any
 
 import mwparserfromhell
 import pywikibot
