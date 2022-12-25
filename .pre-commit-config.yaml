@@ -92,5 +92,6 @@ repos:
         args: []
         additional_dependencies:
           - pywikibot-extensions
+          - types-pymysql
           - types-python-dateutil
           - types-requests
