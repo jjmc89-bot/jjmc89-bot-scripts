@@ -1,6 +1,6 @@
 mwparserfromhell == 0.6.4
 pymysql == 1.0.2
 python-dateutil == 2.8.2
-pywikibot [mysql,mwoauth] == 7.7.1
+pywikibot [mysql,mwoauth] == 7.7.3
 pywikibot-extensions == 22.11.12
 typing-extensions == 4.4.0
