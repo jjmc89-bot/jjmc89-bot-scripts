@@ -85,10 +85,10 @@ class User(pywikibot.User):
         """
         if isinstance(self._has_cssjs_edit, (bool, type(None))):
             return self._has_cssjs_edit
-        kwa = dict(
-            namespaces=(2, 8),
-            end=self.site.server_time() + relativedelta(months=-6),
-        )
+        kwa = {
+            "namespaces": (2, 8),
+            "end": self.site.server_time() + relativedelta(months=-6),
+        }
         for page, _, _, summary in self.contributions(total=None, **kwa):
             if not (
                 page.content_model not in ("css", "javascript")
