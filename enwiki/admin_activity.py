@@ -596,10 +596,10 @@ def notify_c2(site: APISite) -> None:
     FROM `users`
     WHERE `user_sysop` = TRUE
     AND `user_bot` = FALSE
-    AND `user_c2_desysop_timestamp` IS NOT NULL
+    AND `user_c2_editcount` < %(c2_min_edits)s
     """
     with connect() as connection, connection.cursor() as cursor:
-        cursor.execute(sql)
+        cursor.execute(sql, {"c2_min_edits": C2_MIN_EDITS})
         result = cursor.fetchall()
     for dct in result:
         user = User(site, dct["user_name"])
