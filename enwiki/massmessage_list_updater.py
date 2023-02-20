@@ -10,12 +10,11 @@ from contextlib import suppress
 from datetime import date, time, timedelta
 from itertools import chain
 from operator import itemgetter
-from typing import Any, Union
+from typing import Any, TypedDict, Union
 
 import pywikibot
 from pywikibot.bot import _GLOBAL_HELP, ExistingPageBot, SingleSiteBot
 from pywikibot.pagegenerators import PreloadingGenerator
-from typing_extensions import TypedDict
 
 
 PageDict = dict[
