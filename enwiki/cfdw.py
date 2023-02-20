@@ -9,7 +9,7 @@ import re
 from collections.abc import Generator, Iterable
 from contextlib import suppress
 from itertools import chain
-from typing import Any
+from typing import Any, TypedDict
 
 import mwparserfromhell
 import pywikibot
@@ -19,7 +19,6 @@ from pywikibot.page import PageSourceType
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import removeDisabledParts, replaceExcept
 from pywikibot_extensions.page import Page
-from typing_extensions import TypedDict
 
 
 docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
