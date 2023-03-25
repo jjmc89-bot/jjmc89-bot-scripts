@@ -7,7 +7,7 @@ import json
 import re
 from collections import OrderedDict
 from contextlib import suppress
-from datetime import date, time, timedelta
+from datetime import time, timedelta
 from itertools import chain
 from operator import itemgetter
 from typing import Any, TypedDict, Union
@@ -191,7 +191,7 @@ def make_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Rename logs will be parsed. If --meta, from metawiki.",
     )
-    yesterday = date.today() - timedelta(days=1)
+    yesterday = datetime.datetime.utcnow().date() - timedelta(days=1)
     parser.add_argument(
         "--start",
         default=datetime.datetime.combine(yesterday, time.min),
