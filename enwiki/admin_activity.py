@@ -231,7 +231,38 @@ class User(pywikibot.page.User):
     @cached_property
     def last_event(self) -> LogEntry | None:
         """User's last log entry."""
-        last = next(self.logevents(total=50), None)
+        try:
+            last = super().last_event
+        except pywikibot.exceptions.Error:
+            with connect(self.site) as connection:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        """
+                        SELECT *
+                        FROM `logging_userindex`
+                        INNER JOIN `actor_logging`
+                        ON `log_actor` = `actor_id`
+                        WHERE `actor_user` = %s
+                        ORDER BY `log_timestamp` DESC
+                        LIMIT 1
+                        """,
+                        self.userid,
+                    )
+                    res = cursor.fetchone()
+            if res is None:
+                last = None
+            else:
+                result = {
+                    k: v.decode() if isinstance(v, bytes) else v
+                    for k, v in res.items()
+                }
+                fakeapidata = {
+                    "logid": result["log_id"],
+                    "type": result["log_type"],
+                    "action": result["log_action"],
+                    "timestamp": Timestamp.set_timestamp(result["timestamp"]),
+                }
+                last = LogEntry(fakeapidata, self.site)
         for alias in self.aliases:
             if alias.last_event is None:
                 continue
@@ -472,24 +503,35 @@ def _aliases() -> Mapping[str, str]:
     return {}
 
 
-def connect() -> Connection[pymysql.cursors.DictCursor]:
+def connect(
+    site: APISite | None = None,
+) -> Connection[pymysql.cursors.DictCursor]:
     """Return a database connection."""
     return pymysql.connect(
-        host=_database_config().host,
-        user=_database_config().user,
-        password=_database_config().password,
-        database=_database_config().database,
-        port=_database_config().port,
+        host=_database_config(site).host,
+        user=_database_config(site).user,
+        password=_database_config(site).password,
+        database=_database_config(site).database,
+        port=_database_config(site).port,
         cursorclass=pymysql.cursors.DictCursor,
     )
 
 
 @cache
-def _database_config() -> _DatabaseConfig:
+def _database_config(site: APISite | None = None) -> _DatabaseConfig:
     """Return the database configuration."""
     parser = configparser.ConfigParser(interpolation=None)
     parser.read(DB_CONFIGS)
     client = parser["client"]
+    if site:
+        dbname = site.dbName()
+        return _DatabaseConfig(
+            user=client["user"],
+            password=client["password"],
+            database=pywikibot.config.db_name_format.format(dbname),
+            host=pywikibot.config.db_hostname_format.format(dbname),
+            port=pywikibot.config.db_port,
+        )
     return _DatabaseConfig(
         user=client["user"],
         password=client["password"],
