@@ -19,6 +19,7 @@ import pywikibot.config
 import pywikibot.page
 from dateutil.relativedelta import relativedelta
 from pywikibot.bot import _GLOBAL_HELP
+from pywikibot.logentries import LogEntry
 from pywikibot.time import Timestamp
 from pywikibot_extensions.page import Page
 
@@ -27,7 +28,6 @@ if TYPE_CHECKING:
     from collections.abc import Container, Mapping
 
     from pymysql.connections import Connection
-    from pywikibot.logentries import LogEntry
     from pywikibot.site import APISite
 
 
@@ -256,11 +256,12 @@ class User(pywikibot.page.User):
                     k: v.decode() if isinstance(v, bytes) else v
                     for k, v in res.items()
                 }
+                timestamp = Timestamp.set_timestamp(result["log_timestamp"])
                 fakeapidata = {
                     "logid": result["log_id"],
                     "type": result["log_type"],
                     "action": result["log_action"],
-                    "timestamp": Timestamp.set_timestamp(result["timestamp"]),
+                    "timestamp": timestamp,
                 }
                 last = LogEntry(fakeapidata, self.site)
         for alias in self.aliases:
