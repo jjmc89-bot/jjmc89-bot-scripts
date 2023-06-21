@@ -1,29 +1,16 @@
-"""
-This script fixes double (or more) category redirects.
-
-The following parameters are supported:
-
--always           Don't prompt to save changes.
-
--summary          Specify an edit aummary for the bot.
-
-&params;
-"""
+"""Fix double (or more) category redirects."""
 from __future__ import annotations
 
+import argparse
+import re
 from typing import Any
 
 import mwparserfromhell
 import pywikibot
-from pywikibot.bot import ExistingPageBot, SingleSiteBot
+from pywikibot.bot import _GLOBAL_HELP, ExistingPageBot, SingleSiteBot
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import removeDisabledParts
 from pywikibot_extensions.page import get_redirects
-
-
-docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
-    "&params;": parameterHelp
-}
 
 
 class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
@@ -107,36 +94,53 @@ class CategoryDoubleRedirectFixerBot(SingleSiteBot, ExistingPageBot):
             except pywikibot.exceptions.InvalidTitleError:
                 continue
             if template in self.templates:
-                tpl.add("1", target.title(with_ns=False))
+                tpl.add("1", target.title())
                 break
         self.put_current(str(wikicode), summary=self.opt.summary)
 
 
 def main(*args: str) -> int:
-    """
-    Process command line arguments and invoke bot.
-
-    :param args: command line arguments
-    """
-    options = {}
+    """Process command line arguments and invoke bot."""
     local_args = pywikibot.handle_args(args)
     site = pywikibot.Site()
-    site.login()
     gen_factory = GeneratorFactory(site)
     script_args = gen_factory.handle_args(local_args)
-    for arg in script_args:
-        arg, _, value = arg.partition(":")
-        arg = arg[1:]
-        if arg == "summary":
-            if not value:
-                value = pywikibot.input(
-                    f"Please enter a value for {arg}", default=None
-                )
-            options[arg] = value
-        else:
-            options[arg] = True
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        epilog=parameterHelp
+        + re.sub(
+            r"\n\n?-help +.+?(\n\n-|\s*$)",
+            r"\1",
+            _GLOBAL_HELP,
+            flags=re.S,
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        allow_abbrev=False,
+    )
+    parser.add_argument(
+        "--always",
+        action="store_true",
+        help="do not prompt to save changes",
+    )
+    parser.add_argument(
+        "--summary",
+        help="edit aummary for the bot",
+        default=argparse.SUPPRESS,
+    )
+    parsed_args = parser.parse_args(args=script_args)
+    site.login()
+    if not gen_factory.gens:
+        pywikibot.error(
+            "Unable to execute because no generator was defined. "
+            "Use --help for further information."
+        )
+        return 1
     gen = gen_factory.getCombinedGenerator(preload=True)
-    CategoryDoubleRedirectFixerBot(generator=gen, site=site, **options).run()
+    CategoryDoubleRedirectFixerBot(
+        generator=gen,
+        site=site,
+        **vars(parsed_args),
+    ).run()
     return 0
 
 
