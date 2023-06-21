@@ -590,6 +590,12 @@ def do_instruction(instruction: Instruction) -> None:
                 noredirect=instruction["noredirect"],
                 movesubpages=False,
             )
+            if not instruction["noredirect"]:
+                redirect_cat(
+                    old_cat,
+                    bot_options["new_cats"][0],
+                    "This category redirect should be kept",
+                )
             remove_cfd_tpl(bot_options["new_cats"][0], "Category moved")
         bot_options["summary"] = (
             f"Moving {old_cat.title(as_link=True, textlink=True)} to "
@@ -654,9 +660,10 @@ def redirect_cat(
     :param summary: Edit summary
     """
     tpl = Template("Category redirect")
-    tpl.add("1", target.title(with_ns=False))
+    tpl.add("1", target.title())
+    tpl.add("keep", "yes")
     cat.text = str(tpl)
-    cat.save(summary=summary)
+    cat.save(summary=summary, minor=False)
 
 
 def remove_cfd_tpl(page: pywikibot.Page, summary: str) -> None:
