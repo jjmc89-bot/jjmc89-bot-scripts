@@ -1,14 +1,22 @@
 version: 2
 updates:
-  - package-ecosystem: 'github-actions'
-    directory: '/'
-    schedule:
-      interval: 'monthly'
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
     labels:
       - "ci"
-  - package-ecosystem: 'pip'
-    directory: '/'
     schedule:
-      interval: 'monthly'
+      interval: "monthly"
+  - package-ecosystem: "pip"
+    directory: "/"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
     labels:
-      - 'dependencies'
+      - "dependencies"
+    schedule:
+      interval: "monthly"
