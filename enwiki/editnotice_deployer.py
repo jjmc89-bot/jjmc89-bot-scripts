@@ -30,9 +30,7 @@ from pywikibot.bot import CurrentPageBot, SingleSiteBot
 from pywikibot_extensions.page import Page
 
 
-docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
-    "&params;": pagegenerators.parameterHelp
-}
+docuReplacements = {"&params;": pagegenerators.parameterHelp}  # noqa: N816
 
 
 def validate_options(

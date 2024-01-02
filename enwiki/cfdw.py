@@ -21,9 +21,7 @@ from pywikibot.textlib import removeDisabledParts, replaceExcept
 from pywikibot_extensions.page import Page
 
 
-docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
-    "&params;": parameterHelp
-}
+docuReplacements = {"&params;": parameterHelp}  # noqa: N816
 EXCEPTIONS = ("comment", "math", "nowiki", "pre", "source")
 TEXTLINK_NAMESPACES = (118,)
 TPL: dict[str, Iterable[str | pywikibot.Page]] = {
@@ -207,7 +205,6 @@ class CfdPage(Page):
             if heading.title.strip() == self.section():
                 break
         else:
-            section = None  # Trick pylint.
             return result, action
         for line in str(section).splitlines():
             matches = re.findall(

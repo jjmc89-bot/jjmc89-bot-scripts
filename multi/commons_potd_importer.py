@@ -18,9 +18,7 @@ from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot_extensions.page import Page, get_redirects
 
 
-docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
-    "&params;": parameterHelp
-}
+docuReplacements = {"&params;": parameterHelp}  # noqa: N816
 
 
 class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
