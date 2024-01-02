@@ -560,7 +560,7 @@ def _notifications() -> Mapping[str, Mapping[str, str]]:
             "summary": parser[note_type]["summary"],
             "text": parser[note_type]["text"],
         }
-        for note_type in _Notification._member_names_  # pylint: disable=no-member,protected-access  # noqa: E501
+        for note_type in _Notification._member_names_
     }
 
 

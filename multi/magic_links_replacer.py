@@ -24,9 +24,7 @@ from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import replaceExcept
 
 
-docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
-    "&params;": parameterHelp
-}
+docuReplacements = {"&params;": parameterHelp}  # noqa: N816
 # For _create_regexes().
 _regexes: dict[str, Pattern[str]] = {}
 

@@ -23,9 +23,7 @@ from pywikibot_extensions.page import get_redirects
 from requests.exceptions import RequestException, Timeout
 
 
-docuReplacements = {  # noqa: N816 # pylint: disable=invalid-name
-    "&params;": parameterHelp
-}
+docuReplacements = {"&params;": parameterHelp}  # noqa: N816
 
 
 class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
