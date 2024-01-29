@@ -1,4 +1,5 @@
 """Purge pages."""
+
 from __future__ import annotations
 
 import argparse

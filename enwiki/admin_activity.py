@@ -1,4 +1,5 @@
 """Track admin activity and notify inactive admins."""
+
 from __future__ import annotations
 
 import argparse
@@ -180,23 +181,23 @@ class User(pywikibot.page.User):
             id=result["user_id"],
             name=result["user_name"],
             last_rev_id=result["user_last_rev_id"],
-            last_rev_timestamp=Timestamp.set_timestamp(
-                result["user_last_rev_timestamp"]
-            )
-            if result["user_last_rev_timestamp"]
-            else None,
+            last_rev_timestamp=(
+                Timestamp.set_timestamp(result["user_last_rev_timestamp"])
+                if result["user_last_rev_timestamp"]
+                else None
+            ),
             last_log_id=result["user_last_log_id"],
-            last_log_timestamp=Timestamp.set_timestamp(
-                result["user_last_log_timestamp"]
-            )
-            if result["user_last_log_timestamp"]
-            else None,
+            last_log_timestamp=(
+                Timestamp.set_timestamp(result["user_last_log_timestamp"])
+                if result["user_last_log_timestamp"]
+                else None
+            ),
             c2_editcount=result["user_c2_editcount"],
-            c2_desysop_timestamp=Timestamp.set_timestamp(
-                result["user_c2_desysop_timestamp"]
-            )
-            if result["user_c2_desysop_timestamp"]
-            else None,
+            c2_desysop_timestamp=(
+                Timestamp.set_timestamp(result["user_c2_desysop_timestamp"])
+                if result["user_c2_desysop_timestamp"]
+                else None
+            ),
             c2_risk_editcount=result["user_c2_risk_editcount"],
             sysop=bool(result["user_sysop"]),
             bot=bool(result["user_bot"]),

@@ -3,6 +3,7 @@ This script processes Categories for discussion working pages.
 
 &params;
 """
+
 from __future__ import annotations
 
 import re

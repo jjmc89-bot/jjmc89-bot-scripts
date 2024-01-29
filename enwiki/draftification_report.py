@@ -1,4 +1,5 @@
 """Generate a tabular report of draftifications over a specified range."""
+
 from __future__ import annotations
 
 import argparse
