@@ -1,4 +1,5 @@
 """Fix double (or more) category redirects."""
+
 from __future__ import annotations
 
 import argparse

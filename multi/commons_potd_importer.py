@@ -7,6 +7,7 @@ The following parameters are supported:
 
 &params;
 """
+
 from __future__ import annotations
 
 from typing import Any

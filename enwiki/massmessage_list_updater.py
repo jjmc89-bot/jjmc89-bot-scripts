@@ -1,4 +1,5 @@
 """Update user groups MassMessage lists."""
+
 from __future__ import annotations
 
 import argparse

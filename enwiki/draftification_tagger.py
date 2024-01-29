@@ -1,4 +1,5 @@
 """Tag draftified articles."""
+
 from __future__ import annotations
 
 import argparse
