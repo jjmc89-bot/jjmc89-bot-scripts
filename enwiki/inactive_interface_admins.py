@@ -2,18 +2,15 @@
 
 from __future__ import annotations
 
+from functools import cached_property
 from itertools import chain
 
 import pywikibot
 from dateutil.relativedelta import relativedelta
 from pywikibot.logentries import LogEntry
-from pywikibot.page import PageSourceType
 
 
 UserContrib = tuple[pywikibot.Page, int, pywikibot.Timestamp, str]
-
-
-_unchecked = object()
 
 
 def get_inactive_users(
@@ -37,14 +34,7 @@ def get_inactive_users(
 class User(pywikibot.User):
     """Extended pywikibot.User."""
 
-    def __init__(self, source: PageSourceType, title: str = "") -> None:
-        """Initialize."""
-        super().__init__(source, title)
-        self._has_cssjs_edit: object = _unchecked
-        self._last_edit = None
-        self._last_event = None
-
-    @property
+    @cached_property
     def is_active(self) -> bool:
         """
         Return True if the user is active, False otherwise.
@@ -62,21 +52,17 @@ class User(pywikibot.User):
             return True
         return False
 
-    @property
+    @cached_property
     def last_edit(self) -> UserContrib | None:
         """Return the user's last edit."""
-        if self._last_edit is None:
-            self._last_edit = super().last_edit
-        return self._last_edit
+        return super().last_edit
 
-    @property
+    @cached_property
     def last_event(self) -> LogEntry | None:
         """Return the user's last log entry."""
-        if self._last_event is None:
-            self._last_event = super().last_event
-        return self._last_event
+        return super().last_event
 
-    @property
+    @cached_property
     def has_cssjs_edit(self) -> bool | None:
         """
         Return True if the user has edited a CSS/JS page in the last year.
@@ -84,8 +70,6 @@ class User(pywikibot.User):
         None if the user has not been an interface-admin for 1 year.
         False otherwise.
         """
-        if isinstance(self._has_cssjs_edit, (bool, type(None))):
-            return self._has_cssjs_edit
         kwa = {
             "namespaces": (2, 8),
             "end": self.site.server_time() + relativedelta(years=-1),
@@ -96,11 +80,10 @@ class User(pywikibot.User):
                 or page.title().startswith(f"{self.title()}/")
                 or "while renaming the user" in summary
             ):
-                self._has_cssjs_edit = True
-                return self._has_cssjs_edit
+                return True
         pywikibot.log(f"{self!r}: No CSS/JS edit")
         got_group = kwa["end"]
-        rights_events = sorted(
+        for logevent in sorted(
             chain(
                 self.site.logevents(logtype="rights", page=self),
                 pywikibot.Site("meta", "meta").logevents(
@@ -110,18 +93,15 @@ class User(pywikibot.User):
             ),
             key=lambda logevent: logevent.timestamp(),
             reverse=True,
-        )
-        for logevent in rights_events:
+        ):
             added_groups = set(logevent.newgroups) - set(logevent.oldgroups)
             if "interface-admin" in added_groups:
                 got_group = logevent.timestamp()
                 break
         if kwa["end"] < got_group:
             pywikibot.log(f"{self!r}: Not iadmin for 1 year.")
-            self._has_cssjs_edit = None
-            return self._has_cssjs_edit
-        self._has_cssjs_edit = False
-        return self._has_cssjs_edit
+            return None
+        return False
 
 
 def main(*args: str) -> int:
