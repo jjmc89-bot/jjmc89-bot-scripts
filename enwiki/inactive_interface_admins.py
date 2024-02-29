@@ -50,7 +50,7 @@ class User(pywikibot.User):
         Return True if the user is active, False otherwise.
 
         A user is active if they have both
-         1) a CSS/JS edit in the last 6 months
+         1) a CSS/JS edit in the last year
          2) an edit or log entry in the last 2 months
         """
         cutoff = self.site.server_time() + relativedelta(months=-2)
@@ -79,16 +79,16 @@ class User(pywikibot.User):
     @property
     def has_cssjs_edit(self) -> bool | None:
         """
-        Return True if the user has edited a CSS/JS page in the last 6 months.
+        Return True if the user has edited a CSS/JS page in the last year.
 
-        None if the user has not been an interface-admin for 6 months.
+        None if the user has not been an interface-admin for 1 year.
         False otherwise.
         """
         if isinstance(self._has_cssjs_edit, (bool, type(None))):
             return self._has_cssjs_edit
         kwa = {
             "namespaces": (2, 8),
-            "end": self.site.server_time() + relativedelta(months=-6),
+            "end": self.site.server_time() + relativedelta(years=-1),
         }
         for page, _, _, summary in self.contributions(total=None, **kwa):
             if not (
@@ -117,7 +117,7 @@ class User(pywikibot.User):
                 got_group = logevent.timestamp()
                 break
         if kwa["end"] < got_group:
-            pywikibot.log(f"{self!r}: Not iadmin for 6 mo.")
+            pywikibot.log(f"{self!r}: Not iadmin for 1 year.")
             self._has_cssjs_edit = None
             return self._has_cssjs_edit
         self._has_cssjs_edit = False
