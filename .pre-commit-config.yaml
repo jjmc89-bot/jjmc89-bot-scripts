@@ -91,6 +91,7 @@ repos:
       - id: mypy
         args: []
         additional_dependencies:
+          - mwparserfromhell-stubs
           - pywikibot-extensions
           - types-pymysql
           - types-python-dateutil

@@ -110,7 +110,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
         if len(new_cats) == 1 and new_cats[0] not in cats:
             # Update the title to keep the sort key.
             prefix = ":" if textlinks else ""
-            old_cat_link.title = f"{prefix}{new_cats[0].title()}"
+            old_cat_link.title = f"{prefix}{new_cats[0].title()}"  # type: ignore[assignment]  # noqa: E501
             text = str(wikicode)
         else:
             for cat in new_cats:
