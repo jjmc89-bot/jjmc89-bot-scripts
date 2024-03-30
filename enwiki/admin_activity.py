@@ -672,7 +672,9 @@ def notify_c2r(site: APISite) -> None:
         "c2n2": _Notification.C2N2.value,
         "c2r": _Notification.C2R.value,
         "c2_risk_edits": C2_RISK_EDITS,
-        "this_year": (NOW + relativedelta(years=-1)).totimestampformat(),
+        "this_year": Timestamp.combine(
+            TODAY + relativedelta(years=-1), datetime.time.max
+        ).totimestampformat(),
     }
     with connect() as connection, connection.cursor() as cursor:
         cursor.execute(sql, sql_dct)
