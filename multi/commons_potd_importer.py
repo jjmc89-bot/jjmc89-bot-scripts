@@ -1,25 +1,16 @@
-"""
-Update page with Wikimedia Commons picture of the day.
-
-The following parameters are supported:
-
--always           Don't prompt to save changes.
-
-&params;
-"""
+"""Update page with Wikimedia Commons picture of the day."""
 
 from __future__ import annotations
 
+import argparse
+import re
 from typing import Any
 
 import mwparserfromhell
 import pywikibot
-from pywikibot.bot import ExistingPageBot, MultipleSitesBot
-from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
+from pywikibot.bot import _GLOBAL_HELP, ExistingPageBot, MultipleSitesBot
+from pywikibot.pagegenerators import GeneratorFactory
 from pywikibot_extensions.page import Page, get_redirects
-
-
-docuReplacements = {"&params;": parameterHelp}  # noqa: N816
 
 
 class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
@@ -55,15 +46,13 @@ class CommonsPotdImporter(MultipleSitesBot, ExistingPageBot):
                 namespaces=10,
             )
         ]
-        # T242081, T243701
-        # repo = self.commons.data_repository
-        # self.DOC_ITEM = pywikibot.ItemPage(repo, 'Q4608595')
+        repo = self.commons.data_repository()
+        self.doc_item = pywikibot.ItemPage(repo, "Q4608595")
 
     def treat_page(self) -> None:
         """Process one page."""
         site = self.current_page.site
-        # doc_tpl = self.DOC_ITEM.getSitelink(site)
-        doc_tpl = pywikibot.Page(site, "Documentation", ns=10)
+        doc_tpl = pywikibot.Page(site, self.doc_item.getSitelink(site))
         summary = "Updating Commons picture of the day, "
         caption = ""
         for lang in (site.lang, "en"):
@@ -111,17 +100,30 @@ def main(*args: str) -> int:
 
     :param args: command line arguments
     """
-    options = {}
     local_args = pywikibot.handle_args(args)
     site = pywikibot.Site()
     site.login()
     gen_factory = GeneratorFactory(site)
     script_args = gen_factory.handle_args(local_args)
-    for arg in script_args:
-        if arg == "-always":
-            options["always"] = True
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        epilog=re.sub(
+            r"\n\n?-help +.+?(\n\n-|\s*$)",
+            r"\1",
+            _GLOBAL_HELP,
+            flags=re.S,
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        allow_abbrev=False,
+    )
+    parser.add_argument(
+        "--always",
+        action="store_true",
+        help="do not prompt to save changes",
+    )
+    parsed_args = parser.parse_args(args=script_args)
     gen = gen_factory.getCombinedGenerator()
-    CommonsPotdImporter(generator=gen, **options).run()
+    CommonsPotdImporter(generator=gen, **vars(parsed_args)).run()
     return 0
 
 
