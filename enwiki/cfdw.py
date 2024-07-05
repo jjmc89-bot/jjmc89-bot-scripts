@@ -289,6 +289,11 @@ class CFDWPage(Page):
             instruction["cfd_page"] = cfd
             if self.mode == "merge":
                 instruction["redirect"] = "REDIRECT" in prefix
+                instruction["result"] = self.mode
+                _, action = cfd.get_result_action(
+                    instruction["bot_options"]["old_cat"]
+                )
+                instruction["action"] = action or "merging"
             elif self.mode == "move":
                 instruction["noredirect"] = "REDIRECT" not in prefix
             elif self.mode == "retain":
@@ -461,6 +466,9 @@ def check_instruction(instruction: Instruction) -> bool:
                 f"merge mode has no new categories for {old_cat!r}."
             )
             return False
+        if not instruction["action"] or not instruction["result"]:
+            pywikibot.error(f"Missing action or result for {old_cat!r}.")
+            return False
         for new_cat in new_cats:
             if not new_cat.exists():
                 pywikibot.error(f"{new_cat!r} does not exist.")
@@ -577,6 +585,13 @@ def do_instruction(instruction: Instruction) -> None:
                     old_cat,
                     bot_options["new_cats"][0],
                     f"Merged to {new_cats} per {cfd_link}",
+                )
+                add_old_cfd(
+                    old_cat.toggleTalkPage(),
+                    cfd_page,
+                    instruction["action"],
+                    instruction["result"],
+                    f"{cfd_link} closed as {instruction['result']}",
                 )
             else:
                 delete_page(old_cat, cfd_link)
