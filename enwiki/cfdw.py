@@ -630,7 +630,7 @@ def do_instruction(instruction: Instruction) -> None:
 
 def doc_page_add_generator(
     generator: Iterable[pywikibot.Page],
-) -> Generator[pywikibot.Page, None, None]:
+) -> Generator[pywikibot.Page]:
     """
     Add documentation subpages for pages from another generator.
 

@@ -65,7 +65,7 @@ class DfyTaggerBot(SingleSiteBot, ExistingPageBot):
 def draftified_page_generator(
     site: pywikibot.site.BaseSite,
     start: pywikibot.Timestamp | None,
-) -> Generator[pywikibot.Page, None, None]:
+) -> Generator[pywikibot.Page]:
     """
     Yield draftified pages based on page moves.
 

@@ -65,7 +65,7 @@ def validate_options(
 def page_with_subject_page_generator(
     generator: Iterable[pywikibot.Page],
     return_subject_only: bool = False,
-) -> Generator[pywikibot.Page, None, None]:
+) -> Generator[pywikibot.Page]:
     """
     Yield pages and associated subject pages from another generator.
 
@@ -81,7 +81,7 @@ def page_with_subject_page_generator(
 
 def subject_page_generator(
     generator: Iterable[pywikibot.Page],
-) -> Generator[pywikibot.Page, None, None]:
+) -> Generator[pywikibot.Page]:
     """Yield subject pages from another generator."""
     for page in generator:
         if not page.isTalkPage():
@@ -90,7 +90,7 @@ def subject_page_generator(
 
 def talk_page_generator(
     generator: Iterable[pywikibot.Page],
-) -> Generator[pywikibot.Page, None, None]:
+) -> Generator[pywikibot.Page]:
     """Yield talk pages from another generator."""
     for page in generator:
         if page.isTalkPage():
@@ -99,7 +99,7 @@ def talk_page_generator(
 
 def editnotice_page_generator(
     generator: Iterable[pywikibot.Page],
-) -> Generator[pywikibot.Page, None, None]:
+) -> Generator[pywikibot.Page]:
     """
     Yield editnotice pages from another generator.
 
