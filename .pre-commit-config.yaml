@@ -55,7 +55,7 @@ repos:
           - flake8-typing-imports
           - pep8-naming
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.4.2
+    rev: 24.8.0
     hooks:
       - id: black
         args:
