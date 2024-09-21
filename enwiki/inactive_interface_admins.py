@@ -126,7 +126,7 @@ def main(*args: str) -> int:
     text += "\n~~~~"
     pywikibot.Page(
         site, "Wikipedia:Interface administrators' noticeboard"
-    ).save(text=text, section="new", summary=heading, botflag=False)
+    ).save(text=text, section="new", summary=heading, bot=False)
     return 0
 
 
