@@ -6,10 +6,12 @@ import argparse
 import datetime
 import re
 from collections.abc import Iterable
+from contextlib import suppress
 from datetime import time, timedelta
 
 import pywikibot
 from pywikibot.bot import _GLOBAL_HELP
+from pywikibot.exceptions import InvalidTitleError
 from pywikibot.pagegenerators import PrefixingPageGenerator
 from pywikibot_extensions.page import Page
 from pywikibot_extensions.textlib import iterable_to_wikitext
@@ -24,8 +26,9 @@ def get_xfds(pages: Iterable[pywikibot.Page]) -> set[str]:
         else:
             prefix = "Miscellany for deletion/"
         prefix += page.title()
-        gen = PrefixingPageGenerator(prefix, namespace=4, site=page.site)
-        xfds = xfds.union(xfd_page.title(as_link=True) for xfd_page in gen)
+        with suppress(InvalidTitleError):
+            gen = PrefixingPageGenerator(prefix, namespace=4, site=page.site)
+            xfds = xfds.union(xfd_page.title(as_link=True) for xfd_page in gen)
     return xfds
 
 
