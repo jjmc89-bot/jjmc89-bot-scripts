@@ -1,5 +1,5 @@
 mwparserfromhell == 0.6.6
 pymysql == 1.1.1
 python-dateutil == 2.9.0.post0
-pywikibot [mysql,mwoauth] == 9.3.1
+pywikibot [mysql,mwoauth] == 9.5.0
 pywikibot-extensions == 24.9.21
