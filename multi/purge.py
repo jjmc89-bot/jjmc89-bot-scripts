@@ -6,6 +6,7 @@ import argparse
 import re
 
 import pywikibot
+import pywikibot.exceptions
 from pywikibot.bot import _GLOBAL_HELP, ExistingPageBot, MultipleSitesBot
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 
@@ -22,10 +23,16 @@ class PurgeBot(MultipleSitesBot, ExistingPageBot):
 
     def treat_page(self) -> None:
         """Process one page."""
-        if self.current_page.purge(**self.opt):
-            pywikibot.info(f"Purged {self.current_page!r}")
-        else:
-            pywikibot.error("Failed to purge {self.current_page}")
+        try:
+            if self.current_page.purge(**self.opt):
+                pywikibot.info(f"Purged {self.current_page!r}")
+            else:
+                pywikibot.error("Failed to purge {self.current_page}")
+        except (
+            pywikibot.exceptions.ServerError,
+            pywikibot.exceptions.TimeoutError,
+        ):
+            pywikibot.exception()
 
 
 def main(*args: str) -> int:
