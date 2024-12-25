@@ -142,7 +142,7 @@ class UserGroupsMassMessageListUpdater(SingleSiteBot, ExistingPageBot):
                 page_dict.pop(">nonusers") | set(page_dict.values())
             ):
                 new_page_json["targets"].append({"title": page.title()})
-            text = json.dumps(new_page_json, ensure_ascii=False, indent=4)
+            text = json.dumps(new_page_json, ensure_ascii=False, indent="\t")
             if added_count + removed_count + renamed_count == 0:
                 return
             summary_parts = []
