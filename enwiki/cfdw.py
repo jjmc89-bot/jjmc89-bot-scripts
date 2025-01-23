@@ -1,5 +1,5 @@
 """
-This script processes Categories for discussion working pages.
+Process Categories for discussion working pages.
 
 &params;
 """
@@ -10,23 +10,25 @@ import re
 from collections.abc import Generator, Iterable
 from contextlib import suppress
 from itertools import chain
-from typing import Any, TypedDict
+from typing import Any, Literal, TypedDict
 
 import mwparserfromhell
 import pywikibot
 from mwparserfromhell.nodes import Node, Template, Text, Wikilink
+from mwparserfromhell.wikicode import Wikicode
+from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
 from pywikibot.bot import ExistingPageBot, SingleSiteBot
 from pywikibot.page import PageSourceType
 from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import removeDisabledParts, replaceExcept
-from pywikibot_extensions.page import Page
+from pywikibot_extensions.page import Page, get_redirects
 
 
 docuReplacements = {"&params;": parameterHelp}  # noqa: N816
+CONFIG: Config
 EXCEPTIONS = ("comment", "math", "nowiki", "pre", "source")
 TEXTLINK_NAMESPACES = (118,)
 TPL: dict[str, Iterable[str | pywikibot.Page]] = {
-    "cat": ["c", "cl", "lc"],
     "cfd": [
         "Cfd full",
         "Cfm full",
@@ -38,9 +40,57 @@ TPL: dict[str, Iterable[str | pywikibot.Page]] = {
 }
 
 
-class BotOptions(TypedDict, total=False):
-    """Bot optsions."""
+class TemplateConfig(BaseModel):
+    template: Page = Field(validation_alias="title")
+    params_re: re.Pattern[str] | None = Field(
+        default=None,
+        validation_alias="params",
+    )
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("template", mode="before")
+    @classmethod
+    def transform_title(cls, title: str) -> Page:
+        return Page.from_wikilink(title, pywikibot.Site(), 10)
+
+    @field_validator("params_re", mode="before")
+    @classmethod
+    def transform_params(cls, expr: str | None) -> re.Pattern[str] | None:
+        return re.compile(expr) if expr else None
+
+    def __contains__(self, item: object) -> bool:
+        return item in self.redirects
+
+    @property
+    def redirects(self) -> frozenset[Page]:
+        return get_redirects(frozenset((self.template,)), 10)
+
+
+CFG_KEYS = Literal["cfd", "update"]
+CFG_VALUES = list[TemplateConfig]
+
+
+class Config(RootModel[dict[CFG_KEYS, CFG_VALUES]]):
+
+    def __getitem__(self, item: CFG_KEYS) -> CFG_VALUES:
+        return self.root[item]
+
+    def lookup_template(
+        self,
+        item: CFG_KEYS,
+        template: Page,
+    ) -> TemplateConfig | None:
+        for v in self[item]:
+            if template in v.redirects:
+                return v
+        return None
+
+    def templates(self, item: CFG_KEYS) -> set[Page]:
+        return set(chain.from_iterable(v.redirects for v in self[item]))
+
+
+class BotOptions(TypedDict, total=False):
     old_cat: pywikibot.Category
     new_cats: list[pywikibot.Category]
     generator: Iterable[pywikibot.Page]
@@ -49,8 +99,6 @@ class BotOptions(TypedDict, total=False):
 
 
 class Instruction(TypedDict, total=False):
-    """Instruction."""
-
     mode: str
     bot_options: BotOptions
     cfd_page: CfdPage
@@ -61,8 +109,6 @@ class Instruction(TypedDict, total=False):
 
 
 class LineResults(TypedDict):
-    """Line results."""
-
     cfd_page: CfdPage | None
     new_cats: list[pywikibot.Category]
     old_cat: pywikibot.Category | None
@@ -71,7 +117,6 @@ class LineResults(TypedDict):
 
 
 class CfdBot(SingleSiteBot, ExistingPageBot):
-    """Bot to update categories."""
 
     update_options = {
         "always": True,
@@ -81,15 +126,49 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
     }
 
     def __init__(self, **kwargs: Any) -> None:
-        """Initialize."""
         super().__init__(**kwargs)
         self.opt.new_cats = sorted(self.opt.new_cats, reverse=True)
 
-    def treat_wikilinks(self, text: str, textlinks: bool = False) -> str:
-        """Process wikilinks."""
+    def treat_templates(self, wikicode: Wikicode) -> None:
+        new_cats = self.opt.new_cats
+        if len(new_cats) != 1:
+            return
+        if not (
+            CONFIG.templates("update") & set(self.current_page.itertemplates())
+        ):
+            return
+        new_cat: str = new_cats[0].title(with_ns=False)
+        for tpl in wikicode.ifilter_templates():
+            try:
+                template = Page.from_wikilink(tpl.name, self.site, 10)
+            except ValueError:
+                continue
+            tpl_cfg = CONFIG.lookup_template("update", template)
+            if tpl_cfg is None:
+                continue
+            for param in tpl.params:
+                if not (
+                    tpl_cfg.params_re is None
+                    or tpl_cfg.params_re.fullmatch(param.name.strip())
+                ):
+                    continue
+                try:
+                    param_value = param.value.strip()
+                    param_page = Page.from_wikilink(param_value, self.site, 14)
+                    param_cat = pywikibot.Category(param_page)
+                except (ValueError, pywikibot.exceptions.Error):
+                    continue
+                if param_cat == self.opt.old_cat:
+                    param.value = new_cat  # type: ignore[assignment]
+
+    def treat_wikilinks(
+        self,
+        wikicode: Wikicode,
+        *,
+        textlinks: bool = False,
+    ) -> str:
         cats = []
         old_cat_link = None
-        wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         for wikilink in wikicode.ifilter_wikilinks():
             if wikilink.title.strip().startswith(":") != textlinks:
                 continue
@@ -103,35 +182,37 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
                 old_cat_link = wikilink
         if not old_cat_link:
             pywikibot.log(
-                f"Did not find {self.opt.old_cat!r} in {self.current_page!r}."
+                f"{self.opt.old_cat!r} not directly in {self.current_page!r}"
             )
-            return text
+            return str(wikicode)
         new_cats = self.opt.new_cats
         if len(new_cats) == 1 and new_cats[0] not in cats:
             # Update the title to keep the sort key.
             prefix = ":" if textlinks else ""
             old_cat_link.title = f"{prefix}{new_cats[0].title()}"  # type: ignore[assignment]  # noqa: E501
-            text = str(wikicode)
-        else:
-            for cat in new_cats:
-                if cat not in cats:
-                    wikicode.insert_after(
-                        old_cat_link,
-                        f"\n{cat.title(as_link=True, textlink=textlinks)}",
-                    )
-            old_cat_regex = re.compile(
-                rf"\n?{re.escape(str(old_cat_link))}", re.M
-            )
-            text = replaceExcept(
-                str(wikicode), old_cat_regex, "", EXCEPTIONS, site=self.site
-            )
-        return text
+            return str(wikicode)
+        for cat in new_cats:
+            if cat not in cats:
+                wikicode.insert_after(
+                    old_cat_link,
+                    f"\n{cat.title(as_link=True, textlink=textlinks)}",
+                )
+        return replaceExcept(
+            str(wikicode),
+            re.compile(rf"\n?{re.escape(str(old_cat_link))}", re.M),
+            "",
+            EXCEPTIONS,
+            site=self.site,
+        )
 
     def treat_page(self) -> None:
-        """Process one page."""
-        text = self.treat_wikilinks(self.current_page.text)
+        text = self.current_page.text
+        wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
+        self.treat_templates(wikicode)
+        text = self.treat_wikilinks(wikicode)
         if self.current_page.namespace() in TEXTLINK_NAMESPACES:
-            text = self.treat_wikilinks(text, textlinks=True)
+            wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
+            text = self.treat_wikilinks(wikicode, textlinks=True)
         self.put_current(
             text,
             summary=self.opt.summary,
@@ -141,10 +222,8 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
 
 
 class CfdPage(Page):
-    """Represents a CFD page."""
 
     def __init__(self, source: PageSourceType, title: str = "") -> None:
-        """Initialize."""
         super().__init__(source, title)
         if not (
             self.title(with_ns=False).startswith("Categories for discussion/")
@@ -153,11 +232,6 @@ class CfdPage(Page):
             raise ValueError(f"{self!r} is not a CFD page.")
 
     def find_discussion(self, category: pywikibot.Category) -> CfdPage:
-        """
-        Return the relevant discussion.
-
-        :param category: The category being discussed
-        """
         if self.section():
             return self
         text = removeDisabledParts(self.text, tags=EXCEPTIONS, site=self.site)
@@ -191,11 +265,6 @@ class CfdPage(Page):
     def get_result_action(
         self, category: pywikibot.Category
     ) -> tuple[str, str]:
-        """
-        Return the discussion result and action.
-
-        :param category: The category being discussed
-        """
         result = action = ""
         if not self.section():
             return result, action
@@ -225,12 +294,10 @@ class CfdPage(Page):
 
 
 class CFDWPage(Page):
-    """Represents a CFDW page."""
 
     MODES = ("move", "merge", "empty", "retain")
 
     def __init__(self, source: PageSourceType, title: str = "") -> None:
-        """Initialize."""
         super().__init__(source, title)
         if not (
             self.title(with_ns=False).startswith(
@@ -243,7 +310,6 @@ class CFDWPage(Page):
         self.instructions: list[Instruction] = []
 
     def parse(self) -> None:
-        """Parse the page."""
         text = removeDisabledParts(self.text, tags=EXCEPTIONS, site=self.site)
         wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
         for section in wikicode.get_sections(flat=True, include_lead=False):
@@ -262,7 +328,6 @@ class CFDWPage(Page):
         self._check_run()
 
     def _parse_section(self, section: str) -> None:
-        """Parse a section of a page."""
         cfd_page = None
         cfd_prefix = cfd_suffix = ""
         for line in section.splitlines():
@@ -320,7 +385,6 @@ class CFDWPage(Page):
             self.instructions.append(instruction)
 
     def _parse_line(self, line: str) -> LineResults:
-        """Parse a line of wikitext."""
         results = LineResults(
             cfd_page=None,
             old_cat=None,
@@ -352,7 +416,6 @@ class CFDWPage(Page):
         return results
 
     def _check_run(self) -> None:
-        """Check and run the instructions."""
         instructions = []
         seen = set()
         skip = set()
@@ -395,7 +458,6 @@ def add_old_cfd(
     result: str,
     summary: str,
 ) -> None:
-    """Add {{Old CfD}} to the talk page."""
     date = cfd_page.title(with_section=False).rpartition("/")[2]
     wikicode = mwparserfromhell.parse(page.text, skip_style_tags=True)
     for tpl in wikicode.ifilter_templates():
@@ -424,12 +486,6 @@ def add_old_cfd(
 def cat_from_node(
     node: Node, site: pywikibot.site.BaseSite
 ) -> pywikibot.Category | None:
-    """
-    Return the category from the node.
-
-    :param node: Node to get a category from
-    :param site: Site the wikicode is on
-    """
     with suppress(
         ValueError,
         pywikibot.exceptions.InvalidTitleError,
@@ -437,7 +493,7 @@ def cat_from_node(
     ):
         if isinstance(node, Template):
             tpl = Page.from_wikilink(node.name, site, 10)
-            if tpl in TPL["cat"] and node.has("1"):
+            if tpl in CONFIG.templates("cfd") and node.has("1"):
                 title = node.get("1").strip()
                 page = Page.from_wikilink(title, site, 14)
                 return pywikibot.Category(page)
@@ -449,7 +505,6 @@ def cat_from_node(
 
 
 def check_instruction(instruction: Instruction) -> bool:
-    """Check if the instruction can be performeed."""
     bot_options = instruction["bot_options"]
     old_cat = bot_options["old_cat"]
     new_cats = bot_options["new_cats"]
@@ -513,7 +568,6 @@ def check_instruction(instruction: Instruction) -> bool:
 
 
 def delete_page(page: pywikibot.Page, summary: str) -> None:
-    """Delete the page and dependent pages."""
     page.delete(
         reason=summary,
         prompt=False,
@@ -533,7 +587,6 @@ def delete_page(page: pywikibot.Page, summary: str) -> None:
 
 
 def do_instruction(instruction: Instruction) -> None:
-    """Perform the instruction."""
     cfd_page = instruction["cfd_page"]
     bot_options = instruction["bot_options"]
     old_cat = bot_options["old_cat"]
@@ -631,11 +684,6 @@ def do_instruction(instruction: Instruction) -> None:
 def doc_page_add_generator(
     generator: Iterable[pywikibot.Page],
 ) -> Generator[pywikibot.Page]:
-    """
-    Add documentation subpages for pages from another generator.
-
-    :param generator: Pages to iterate over
-    """
     for page in generator:
         yield page
         if not page.namespace().subpages:
@@ -649,7 +697,6 @@ def doc_page_add_generator(
 def get_template_pages(
     templates: Iterable[pywikibot.Page],
 ) -> set[pywikibot.Page]:
-    """Given an iterable of templates, return a set of pages."""
     pages = set()
     for template in templates:
         if template.isRedirectPage():
@@ -662,16 +709,16 @@ def get_template_pages(
     return pages
 
 
+def load_config() -> None:
+    site = pywikibot.Site()
+    page = Page(site, f"{site.username()}/config/CFDW/templates.json", 2)
+    global CONFIG
+    CONFIG = Config.model_validate_json(page.text)
+
+
 def redirect_cat(
     cat: pywikibot.Category, target: pywikibot.Category, summary: str
 ) -> None:
-    """
-    Redirect a category to another category.
-
-    :param cat: Category to redirect
-    :param target: Category redirect target
-    :param summary: Edit summary
-    """
     tpl = Template("Category redirect")
     tpl.add("1", target.title())
     tpl.add("keep", "yes")
@@ -680,12 +727,6 @@ def redirect_cat(
 
 
 def remove_cfd_tpl(page: pywikibot.Page, summary: str) -> None:
-    """
-    Remove the CfD template from the page.
-
-    :param page: Page to edit
-    :param summary: Edit summary
-    """
     text = re.sub(
         r"<!--\s*BEGIN CFD TEMPLATE\s*-->.*?"
         r"<!--\s*END CFD TEMPLATE\s*-->\n*",
@@ -706,11 +747,6 @@ def remove_cfd_tpl(page: pywikibot.Page, summary: str) -> None:
 
 
 def main(*args: str) -> int:
-    """
-    Process command line arguments and invoke bot.
-
-    :param args: command line arguments
-    """
     local_args = pywikibot.handle_args(args)
     site = pywikibot.Site()
     site.login()
@@ -720,6 +756,7 @@ def main(*args: str) -> int:
         TPL[key] = get_template_pages(
             [pywikibot.Page(site, tpl, ns=10) for tpl in value]
         )
+    load_config()
     for page in gen_factory.getCombinedGenerator():
         page = CFDWPage(page)
         if page.protection().get("edit", ("", ""))[0] == "sysop":
