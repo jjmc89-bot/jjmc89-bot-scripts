@@ -51,7 +51,6 @@ repos:
       - id: yesqa
         additional_dependencies:
           - flake8-bugbear
-          - flake8-docstrings
           - flake8-typing-imports
           - pep8-naming
   - repo: https://github.com/psf/black-pre-commit-mirror
@@ -79,7 +78,6 @@ repos:
           - 3.11.0
         additional_dependencies:
           - flake8-bugbear
-          - flake8-docstrings
           - flake8-typing-imports
           - pep8-naming
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -89,6 +87,7 @@ repos:
         args: []
         additional_dependencies:
           - mwparserfromhell-stubs
+          - pydantic
           - pywikibot-extensions
           - types-pymysql
           - types-python-dateutil
