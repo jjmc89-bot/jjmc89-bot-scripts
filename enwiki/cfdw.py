@@ -170,10 +170,16 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
         cats = []
         old_cat_link = None
         for wikilink in wikicode.ifilter_wikilinks():
-            if wikilink.title.strip().startswith(":") != textlinks:
+            link_title = wikilink.title.strip()
+            if link_title.startswith(":") != textlinks:
                 continue
+            if "{{" in link_title and self.current_page.namespace() == 14:
+                link_title = self.site.expand_text(
+                    text=link_title,
+                    title=self.current_page.title(),
+                )
             try:
-                link_page = Page.from_wikilink(wikilink, self.site)
+                link_page = Page.from_wikilink(link_title, self.site)
                 link_cat = pywikibot.Category(link_page)
             except (ValueError, pywikibot.exceptions.Error):
                 continue
