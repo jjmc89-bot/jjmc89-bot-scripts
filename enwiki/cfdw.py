@@ -662,12 +662,6 @@ def do_instruction(instruction: Instruction) -> None:
                 noredirect=instruction["noredirect"],
                 movesubpages=False,
             )
-            if not instruction["noredirect"]:
-                redirect_cat(
-                    old_cat,
-                    bot_options["new_cats"][0],
-                    "This category redirect should be kept",
-                )
             remove_cfd_tpl(bot_options["new_cats"][0], "Category moved")
         bot_options["summary"] = (
             f"Moving {old_cat.title(as_link=True, textlink=True)} to "
@@ -675,6 +669,13 @@ def do_instruction(instruction: Instruction) -> None:
             f" per {cfd_link}"
         )
         CfdBot(**bot_options).run()
+        pywikibot.sleep(pywikibot.config.put_throttle)
+        if not instruction["noredirect"]:
+            redirect_cat(
+                old_cat,
+                bot_options["new_cats"][0],
+                "This category redirect should be kept",
+            )
     elif instruction["mode"] == "retain":
         summary = f"{cfd_link} closed as {instruction['result']}"
         remove_cfd_tpl(old_cat, summary)
