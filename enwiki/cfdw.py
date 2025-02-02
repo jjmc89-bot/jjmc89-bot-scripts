@@ -219,12 +219,15 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
         if self.current_page.namespace() in TEXTLINK_NAMESPACES:
             wikicode = mwparserfromhell.parse(text, skip_style_tags=True)
             text = self.treat_wikilinks(wikicode, textlinks=True)
-        self.put_current(
-            text,
-            summary=self.opt.summary,
-            asynchronous=False,
-            nocreate=True,
-        )
+        if text == self.current_page.text:
+            self.current_page.purge(forcelinkupdate=True)
+        else:
+            self.put_current(
+                text,
+                summary=self.opt.summary,
+                asynchronous=False,
+                nocreate=True,
+            )
 
 
 class CfdPage(Page):
@@ -669,8 +672,8 @@ def do_instruction(instruction: Instruction) -> None:
             f" per {cfd_link}"
         )
         CfdBot(**bot_options).run()
-        pywikibot.sleep(pywikibot.config.put_throttle)
         if not instruction["noredirect"]:
+            pywikibot.sleep(pywikibot.config.put_throttle)
             redirect_cat(
                 old_cat,
                 bot_options["new_cats"][0],
