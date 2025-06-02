@@ -159,7 +159,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
                 except (ValueError, pywikibot.exceptions.Error):
                     continue
                 if param_cat == self.opt.old_cat:
-                    param.value = new_cat  # type: ignore[assignment]
+                    param.value = new_cat
 
     def treat_wikilinks(
         self,
@@ -195,7 +195,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
         if len(new_cats) == 1 and new_cats[0] not in cats:
             # Update the title to keep the sort key.
             prefix = ":" if textlinks else ""
-            old_cat_link.title = f"{prefix}{new_cats[0].title()}"  # type: ignore[assignment]  # noqa: E501
+            old_cat_link.title = f"{prefix}{new_cats[0].title()}"
             return str(wikicode)
         for cat in new_cats:
             if cat not in cats:
