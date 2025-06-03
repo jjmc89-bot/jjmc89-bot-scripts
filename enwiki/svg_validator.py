@@ -194,7 +194,12 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
         else:
             wikicode.insert(0, "\n")
             wikicode.insert(0, new_tpl)
-        self.put_current(str(wikicode), summary=summary, minor=not errors)
+        self.put_current(
+            str(wikicode),
+            summary=summary,
+            minor=not errors,
+            asynchronous=False,
+        )
 
 
 def main(*args: str) -> int:
