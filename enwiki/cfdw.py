@@ -40,6 +40,10 @@ TPL: dict[str, Iterable[str | pywikibot.Page]] = {
 }
 
 
+class CfdwError(ValueError):
+    pass
+
+
 class TemplateConfig(BaseModel):
     template: Page = Field(validation_alias="title")
     params_re: re.Pattern[str] | None = Field(
@@ -345,7 +349,11 @@ class CFDWPage(Page):
                 mode=self.mode,
                 bot_options=BotOptions(),
             )
-            line_results = self._parse_line(line)
+            try:
+                line_results = self._parse_line(line)
+            except CfdwError:
+                pywikibot.error()
+                continue
             instruction["bot_options"]["old_cat"] = line_results["old_cat"]
             instruction["bot_options"]["new_cats"] = line_results["new_cats"]
             if line_results["cfd_page"]:
@@ -402,22 +410,30 @@ class CFDWPage(Page):
             suffix="",
         )
         link_found = False
+        to_found = False
         wikicode = mwparserfromhell.parse(line, skip_style_tags=True)
         nodes = wikicode.filter(recursive=False)
         for index, node in enumerate(nodes, start=1):
             if isinstance(node, Text):
+                text = node.strip()
                 if not link_found:
-                    results["prefix"] = str(node).strip()
+                    results["prefix"] = text
+                elif link_found and text == "to":
+                    to_found = True
                 elif link_found and index == len(nodes):
-                    results["suffix"] = str(node).strip()
+                    results["suffix"] = text
             else:
                 page = cat_from_node(node, self.site)
                 if page:
                     link_found = True
                     if not results["old_cat"]:
                         results["old_cat"] = page
-                    else:
+                    elif to_found:
                         results["new_cats"].append(page)
+                    else:
+                        raise CfdwError(
+                            f"More than one old category in {line!r}"
+                        )
                 elif isinstance(node, Wikilink):
                     link_found = True
                     page = CfdPage.from_wikilink(node, self.site)
