@@ -63,7 +63,7 @@ repos:
           - --target-version
           - py311
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.8.6
+    rev: 1.9.0
     hooks:
       - id: bandit
         args:
