@@ -30,7 +30,6 @@ from pywikibot import pagegenerators
 from pywikibot.bot import CurrentPageBot, SingleSiteBot
 from pywikibot_extensions.page import Page
 
-
 docuReplacements = {"&params;": pagegenerators.parameterHelp}  # noqa: N816
 
 

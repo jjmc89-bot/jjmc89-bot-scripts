@@ -24,7 +24,6 @@ from pywikibot.logentries import LogEntry
 from pywikibot.time import Timestamp
 from pywikibot_extensions.page import Page
 
-
 if TYPE_CHECKING:
     from collections.abc import Container, Mapping
 
