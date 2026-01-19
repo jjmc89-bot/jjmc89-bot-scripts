@@ -9,7 +9,6 @@ import pywikibot
 from dateutil.relativedelta import relativedelta
 from pywikibot.logentries import LogEntry
 
-
 UserContrib = tuple[pywikibot.Page, int, pywikibot.Timestamp, str]
 
 

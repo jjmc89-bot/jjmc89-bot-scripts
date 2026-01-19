@@ -23,7 +23,6 @@ from pywikibot.pagegenerators import GeneratorFactory, parameterHelp
 from pywikibot.textlib import removeDisabledParts, replaceExcept
 from pywikibot_extensions.page import Page, get_redirects
 
-
 docuReplacements = {"&params;": parameterHelp}  # noqa: N816
 CONFIG: Config
 EXCEPTIONS = ("comment", "math", "nowiki", "pre", "source")

@@ -23,7 +23,6 @@ from pywikibot.textlib import removeDisabledParts
 from pywikibot_extensions.page import get_redirects
 from requests.exceptions import RequestException, Timeout
 
-
 docuReplacements = {"&params;": parameterHelp}  # noqa: N816
 
 

@@ -17,7 +17,6 @@ import pywikibot
 from pywikibot.bot import _GLOBAL_HELP, ExistingPageBot, SingleSiteBot
 from pywikibot.pagegenerators import PreloadingGenerator
 
-
 PageDict = dict[
     Union[str, pywikibot.User], Union[pywikibot.Page, set[pywikibot.Page]]
 ]
