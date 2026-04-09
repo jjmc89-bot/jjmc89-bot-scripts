@@ -351,7 +351,7 @@ class CFDWPage(Page):
             try:
                 line_results = self._parse_line(line)
             except CfdwError:
-                pywikibot.error()
+                pywikibot.exception(exc_info=False)
                 continue
             instruction["bot_options"]["old_cat"] = line_results["old_cat"]
             instruction["bot_options"]["new_cats"] = line_results["new_cats"]
