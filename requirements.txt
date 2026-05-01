@@ -1,6 +1,6 @@
 mwparserfromhell == 0.7.2
-pydantic == 2.12.5
-pymysql == 1.1.2
+pydantic == 2.13.3
+pymysql == 1.1.3
 python-dateutil == 2.9.0.post0
-pywikibot [mysql,mwoauth] == 11.1.0
+pywikibot [mysql,mwoauth] == 11.2.0
 pywikibot-extensions == 26.4.9
