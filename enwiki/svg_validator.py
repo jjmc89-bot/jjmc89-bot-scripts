@@ -35,7 +35,7 @@ class SVGValidatorBot(SingleSiteBot, FollowRedirectPageBot, ExistingPageBot):
         self.nu_session = requests.Session()
         self.nu_session.headers["user-agent"] = user_agent(
             kwargs["site"],
-            "{script_product} ({script_comments}) {http_backend} {python}",
+            "{script} ({script_comments}) {python} {http_backend}",
         )
         self.nu_session.params = {"level": "error", "out": "json"}
         self.templates = get_redirects(
