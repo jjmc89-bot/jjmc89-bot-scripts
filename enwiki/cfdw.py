@@ -150,9 +150,10 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
             if tpl_cfg is None:
                 continue
             for param in tpl.params:
+                param_name = param.name.strip()
                 if not (
                     tpl_cfg.params_re is None
-                    or tpl_cfg.params_re.fullmatch(param.name.strip())
+                    or tpl_cfg.params_re.fullmatch(param_name)
                 ):
                     continue
                 try:
@@ -162,7 +163,7 @@ class CfdBot(SingleSiteBot, ExistingPageBot):
                 except (ValueError, pywikibot.exceptions.Error):
                     continue
                 if param_cat == self.opt.old_cat:
-                    param.value = new_cat
+                    tpl.add(param_name, new_cat)
 
     def treat_wikilinks(
         self,
