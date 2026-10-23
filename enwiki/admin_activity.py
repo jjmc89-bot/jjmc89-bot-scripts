@@ -171,7 +171,7 @@ class User(pywikibot.page.User):
         with connect() as connection, connection.cursor() as cursor:
             cursor.execute(
                 "SELECT * FROM `users` WHERE `user_id` = %s",
-                self.userid,
+                (self.userid,),
             )
             result = cursor.fetchone()
         if not result:
@@ -246,7 +246,7 @@ class User(pywikibot.page.User):
                         ORDER BY `log_timestamp` DESC
                         LIMIT 1
                         """,
-                        self.userid,
+                        (self.userid,),
                     )
                     res = cursor.fetchone()
             if res is None:
@@ -322,7 +322,7 @@ class User(pywikibot.page.User):
         with connect() as connection, connection.cursor() as cursor:
             cursor.execute(
                 "SELECT * FROM `notifications` WHERE `note_user_id` = %s",
-                self.userid,
+                (self.userid,),
             )
             for note in cursor.fetchall():
                 dtm = Timestamp.set_timestamp(note["note_rev_timestamp"])
@@ -747,7 +747,7 @@ def _c2_table(site: APISite, dtm: Timestamp) -> str:
     AND `user_c2_desysop_timestamp` LIKE %s
     """
     with connect() as connection, connection.cursor() as cursor:
-        cursor.execute(sql, f"{dtm:%Y%m}%")
+        cursor.execute(sql, (f"{dtm:%Y%m}%",))
         result = cursor.fetchall()
     if not result:
         return ""
@@ -825,7 +825,7 @@ def update_admin_stats_all(site: APISite) -> None:
     AND `user_last_updated_timestamp` < %s
     """
     with connect() as connection, connection.cursor() as cursor:
-        cursor.execute(sql, NOW.totimestampformat())
+        cursor.execute(sql, (NOW.totimestampformat(),))
         connection.commit()
 
 
@@ -842,7 +842,7 @@ def update_admin_stats_recent(site: APISite) -> None:
     with connect() as connection, connection.cursor() as cursor:
         cursor.execute(
             sql,
-            (THIS_MONTH + relativedelta(months=-4)).totimestampformat(),
+            ((THIS_MONTH + relativedelta(months=-4)).totimestampformat(),),
         )
         user_ids = [d["user_id"] for d in cursor.fetchall()]
     limit = 500 if site.has_right("apihighlimits") else 50
