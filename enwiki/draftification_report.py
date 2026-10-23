@@ -135,7 +135,7 @@ def main(*args: str) -> int:
         allow_abbrev=False,
     )
     parser.add_argument("page", help="page to output the report to")
-    yesterday = datetime.datetime.utcnow().date() - timedelta(days=1)
+    yesterday = datetime.datetime.now(datetime.UTC).date() - timedelta(days=1)
     parser.add_argument(
         "--start",
         default=datetime.datetime.combine(yesterday, time.min),
