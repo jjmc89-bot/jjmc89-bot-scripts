@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 C2_MIN_EDITS = 100
 C2_RISK_EDITS = 50 * 5
-NOW = Timestamp.utcnow()
+NOW = Timestamp.now(datetime.UTC)
 TODAY = NOW.date()
 NOW_MINUS_5Y = NOW + relativedelta(years=-5)
 THIS_MONTH = Timestamp.combine(
@@ -384,7 +384,7 @@ class User(pywikibot.page.User):
                         (
                             edit_dtm + relativedelta(months=3)
                         ).totimestampformat(),
-                        Timestamp.utcnow().totimestampformat(),
+                        Timestamp.now(datetime.UTC).totimestampformat(),
                         self.userid,
                     ),
                 )
@@ -431,7 +431,7 @@ class User(pywikibot.page.User):
             "sysop": sysop,
             "bot": "bot" in self.groups(),
             "bureaucrat": "bureaucrat" in self.groups(),
-            "last_updated": Timestamp.utcnow().totimestampformat(),
+            "last_updated": Timestamp.now(datetime.UTC).totimestampformat(),
         }
 
     def update_database(self) -> None:

@@ -191,7 +191,7 @@ def make_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Rename logs will be parsed. If --meta, from metawiki.",
     )
-    yesterday = datetime.datetime.utcnow().date() - timedelta(days=1)
+    yesterday = datetime.datetime.now(datetime.UTC).date() - timedelta(days=1)
     parser.add_argument(
         "--start",
         default=datetime.datetime.combine(yesterday, time.min),
