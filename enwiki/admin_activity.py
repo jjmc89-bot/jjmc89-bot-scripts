@@ -205,14 +205,14 @@ class User(pywikibot.page.User):
 
     @cached_property
     def _last_contrib(self) -> tuple[int, Timestamp] | None:
-        last_live = self.last_edit
+        last_live = next(self.contribs(total=1), None)
         last_deleted = next(self.deleted_contributions(total=1), None)
         if last_live and last_deleted:
-            if last_live[2] > last_deleted[1].timestamp:
-                return last_live[1], last_live[2]
+            if last_live.timestamp > last_deleted[1].timestamp:
+                return last_live.revid, last_live.timestamp
             return last_deleted[1].revid, last_deleted[1].timestamp
         if last_live:
-            return last_live[1], last_live[2]
+            return last_live.revid, last_live.timestamp
         if last_deleted:
             return last_deleted[1].revid, last_deleted[1].timestamp
         return None
